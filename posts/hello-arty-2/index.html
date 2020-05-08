@@ -181,39 +181,44 @@ set_property <span style="color:#f92672">-</span>dict <span style="color:#66d9ef
 <p><img src="/img/posts/hello-arty/blinkenlights.gif" alt="Flashing LEDs" title="Blinkenlights!"></p>
 <p><strong><code>LD7</code></strong> on our board (<strong><code>led[3]</code></strong> in Verilog) looks like it&rsquo;s on all time, but is less bright. It&rsquo;s blinking fifty times per second, so fast that your eyes hardly see the flashes. We&rsquo;ll make use of this later.</p>
 <h2 id="division-of-time">Division of Time</h2>
-<p>Earlier we said we would always use a single clock in our designs. What happens if we want to do something less than 100 million times a second? We could take a bit from a counter, but there&rsquo;s a more elegant way using the <strong>concatenate operator</strong> <code>{a,b,…}</code> and overflow to create a <strong>strobe</strong>:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">logic</span> stb;        <span style="color:#75715e">// strobe
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt;  <span style="color:#75715e">// 8-bit counter
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
-    {stb, cnt} <span style="color:#f92672">&lt;=</span> cnt <span style="color:#f92672">+</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;d85</span>;
+<p>Earlier we said we would always use a single clock in our designs. What happens if we want to do something less than 100 million times a second? We could take a bit from a counter, but there&rsquo;s a more elegant way using a <strong>strobe</strong>. For example, to divide by three:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">logic</span> stb;
+<span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+<span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
+    cnt <span style="color:#f92672">&lt;=</span> (cnt <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">2</span><span style="color:#ae81ff">&#39;d2</span>) <span style="color:#f92672">?</span> cnt <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
+    stb <span style="color:#f92672">&lt;=</span> (cnt <span style="color:#f92672">==</span> <span style="color:#ae81ff">2</span><span style="color:#ae81ff">&#39;d2</span>) <span style="color:#f92672">?</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
 <span style="color:#66d9ef">end</span>
-</code></pre></div><p><em>Thanks to <a href="https://zipcpu.com/blog/2017/06/02/generating-timing.html">Daniel Gisselquist</a> for this design. You&rsquo;ll find many great FPGA resources on <a href="https://zipcpu.com">zipcpu.com</a>.</em></p>
-<p>This example divides our clock by three. When the counter overflows, the strobe <code>stb</code> gets set to 1. The next cycle <code>stb</code> goes back to 0 and <code>cnt</code> is left with the remainder.</p>
-<p>You may have spotted that our maths is a little bit iffy. Our counter is eight bits wide (256 possible values), but <code>3 x 85 = 255</code>, so occasionally our strobe happens every four, rather than three cycles. With this 8-bit counter the error is about 3%; we can reduce this with a wider counter. For example: with a 16-bit counter 65,536/21,845 = 3.00005. Much better (though it takes more logic on your FPGA).</p>
+</code></pre></div><p>This example divides by three because we start counting at zero: 0, 1, 2, 0, 1, 2&hellip;</p>
+<p>The strobe is high for one clock cycle, rather than half the time like a counter bit would be: this is much more desirable in practice.</p>
 <p>To use the strobe, you add a test for it inside your always block:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
     <span style="color:#66d9ef">if</span> (stb) <span style="color:#66d9ef">begin</span>
         <span style="color:#75715e">// do something every time the strobe fires
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">end</span>
-</code></pre></div><h3 id="every-second-counts">Every Second Counts</h3>
-<p>Let&rsquo;s say you want a one-second strobe: our clock is 100 MHz, so we need to divide by 100 million! No one wants an inaccurate timer, so we need a counter wide enough to do this precisely.</p>
-<p>Let&rsquo;s try a 40-bit counter: 2<sup>40</sup> / 100 million = 10,995.1. The error is only 1 part in 100,000. Given there are 84,600 seconds in a day this seems like sufficient accuracy for most purposes.</p>
-<p>We can use our new second strobe to turn the four green LEDs into a simple binary clock [<a href="https://github.com/projf/projf-explore/blob/master/hello-arty/G/top.sv">src</a>]:</p>
+</code></pre></div><p><em>ProTip: To divide by a non-integer value, check out Dan Gisselquist&rsquo;s <a href="https://zipcpu.com/blog/2017/06/02/generating-timing.html">Fractional Clock Divider</a>.</em></p>
+<h3 id="every-second-counts">Every Second Counts</h3>
+<p>Let&rsquo;s say you want a one-second strobe: our clock is 100 MHz, so we need to divide by 100 million! Our counter needs to be 27 bits wide because log<sub>2</sub>(100,000,000) = 26.6.</p>
+<p>We can use our new one-second strobe to turn the four green LEDs into a simple binary clock [<a href="https://github.com/projf/projf-explore/blob/master/hello-arty/G/top.sv">src</a>]:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top (
     <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,
     <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] led
     );
 
+    <span style="color:#66d9ef">localparam</span> DIV_BY <span style="color:#f92672">=</span> <span style="color:#ae81ff">27</span><span style="color:#ae81ff">&#39;d100</span>_000_000 <span style="color:#f92672">-</span> <span style="color:#ae81ff">27</span><span style="color:#ae81ff">&#39;d1</span>;
+
     <span style="color:#66d9ef">logic</span> stb;
-    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">39</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt;
-    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) {stb, cnt} <span style="color:#f92672">&lt;=</span> cnt <span style="color:#f92672">+</span> <span style="color:#ae81ff">40</span><span style="color:#ae81ff">&#39;d10995</span>;
+    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">26</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
+        cnt <span style="color:#f92672">&lt;=</span> (cnt <span style="color:#f92672">&lt;</span> DIV_BY) <span style="color:#f92672">?</span> cnt <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
+        stb <span style="color:#f92672">&lt;=</span> (cnt <span style="color:#f92672">==</span> DIV_BY) <span style="color:#f92672">?</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
+    <span style="color:#66d9ef">end</span>
 
     <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">if</span> (stb) led <span style="color:#f92672">&lt;=</span> led <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
-</code></pre></div><p><em>ProTip: If you only have one statement in a block you don&rsquo;t need <code>begin</code> and <code>end</code>.</em></p>
+</code></pre></div><p>All four LEDs are treated like one four bit value, so we can perform normal arithmetic on them. We set a constant with <code>localparam</code> to avoid having to repeat 100 million in our design.</p>
 <h2 id="brighter-dimmer">Brighter, Dimmer</h2>
 <p>Earlier we used a counter to blink LEDs. At low switching speeds they blink, but at higher speeds, they look like they&rsquo;re on all the time, but less bright. By altering the <em>proportion</em> of time the signal is high, and hence the LED is illuminated, we can control the perceived brightness. The is known as <strong>pulse width modulation</strong> or <strong>PWM</strong>.</p>
 <p>PWN is commonly used in digital circuits to control the speed of motors as well as the brightness of lights (for example in the backlight of LCD screens).</p>
@@ -250,11 +255,10 @@ set_property <span style="color:#f92672">-</span>dict <span style="color:#66d9ef
         cnt <span style="color:#f92672">&lt;=</span> cnt <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
     <span style="color:#66d9ef">end</span>
 
-    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        pwm_out <span style="color:#f92672">=</span> (cnt <span style="color:#f92672">&lt;</span> duty);
-    <span style="color:#66d9ef">end</span>
+    <span style="color:#66d9ef">always_comb</span> pwm_out <span style="color:#f92672">=</span> (cnt <span style="color:#f92672">&lt;</span> duty);
 <span style="color:#66d9ef">endmodule</span>
-</code></pre></div><p>Note how this design makes use of an <code>always_comb</code> and an <code>always_ff</code> block. <code>pwm_out</code> only depends on its current inputs, so we use an <code>always_comb</code> block.</p>
+</code></pre></div><p><em>ProTip: If you only have one statement in a block you don&rsquo;t need <code>begin</code> and <code>end</code>.</em></p>
+<p>Note how this design makes use of an <code>always_comb</code> and an <code>always_ff</code> block. <code>pwm_out</code> only depends on its current inputs, so we use an <code>always_comb</code> block.</p>
 <blockquote>
 <p><strong>Quick Aside: Logic Types</strong></p>
 <p><strong>Combinational logic</strong> depends on its present inputs only: it has no memory of the past.
