@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"  lang="en-gb">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+<title>Exploring FPGA Graphics | Project F</title>
+
+<meta property='og:title' content='Exploring FPGA Graphics - Project F'>
+<meta property='og:description' content='Welcome to FPGA Graphics at Project F. In this series, we&rsquo;ll be exploring FPGA graphics of all kinds, from a static square, through Pong and the Mandelbrot set, to bitmaps, text scrollers, and even 3D modelling. There&rsquo;s no microcontroller in any of these designs: they&rsquo;re all simple logic described in SystemVerilog.
+This first post is a quick introduction to FPGA graphics: you&rsquo;ll learn about display signals and how to create simple colour graphics.'>
+<meta property='og:url' content='https://projectf.io/posts/fpga-graphics/'>
+<meta property='og:site_name' content='Project F'>
+<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/fpga-graphics-card.jpg'><meta property='article:published_time' content='2020-05-20T00:00:00Z'/><meta property='article:modified_time' content='2020-05-20T00:00:00Z'/><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
+
+
+<link href="https://projectf.io/index.xml" rel="alternate" type="application/rss+xml" title="Project F" />
+
+<link rel="stylesheet" href="/css/style.css"/><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+<link rel="canonical" href="https://projectf.io/posts/fpga-graphics/">
+<meta name="msapplication-TileColor" content="#da532c">
+<meta name="theme-color" content="#ffffff">
+</head>
+<body>
+<section class="section">
+  <div class="container">
+    <nav id="nav-main" class="nav">
+      <div id="nav-name" class="nav-left">
+        <a id="nav-anchor" class="nav-item" href="https://projectf.io">
+          <h1 id="nav-heading" class="title is-4">Project F</h1>
+        </a>
+      </div>
+      <div class="nav-right">
+        <nav id="nav-items" class="nav-item level is-mobile"><a class="level-item" aria-label="github" href='https://github.com/projf'
+            target='_blank' rel='noopener'>
+            <span class="icon">
+              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
+    
+    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
+    
+  </svg></i>
+            </span>
+          </a><a class="level-item" aria-label="twitter" href='https://twitter.com/WillFlux'
+            target='_blank' rel='noopener'>
+            <span class="icon">
+              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
+    
+    <path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"/>
+    
+  </svg></i>
+            </span>
+          </a><a class="level-item" aria-label="rss" href='/index.xml'
+            target='_blank' rel='noopener'>
+            <span class="icon">
+              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
+    
+    <path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle>
+    
+  </svg></i>
+            </span>
+          </a></nav>
+      </div>
+    </nav>
+
+    <nav class="nav">
+      
+      <div class="nav-left"><a class="nav-item" href="/tags/cookbook">
+          <h2 class="title is-5">Cookbook</h2>
+        </a><a class="nav-item" href="/tags/explore">
+          <h2 class="title is-5">Explore</h2>
+        </a><a class="nav-item" href="/tags/tools">
+          <h2 class="title is-5">Tools</h2>
+        </a></div>
+      
+
+      
+    </nav>
+
+  </div>
+  <script src="/js/navicon-shift.js"></script>
+</section>
+<section class="section">
+  <div class="container">
+    <div class="subtitle tags is-6 is-pulled-right">
+      
+      
+<a class="subtitle is-6" href="/tags/explore/">#explore</a>
+
+
+
+
+      
+    </div>
+    <h2 class="subtitle is-6">May 20, 2020</h2>
+    <h1 class="title">Exploring FPGA Graphics</h1>
+    
+    <div class="content">
+      <p>Welcome to FPGA Graphics at Project F. In this series, we&rsquo;ll be exploring FPGA graphics of all kinds, from a static square, through Pong and the Mandelbrot set, to bitmaps, text scrollers, and even 3D modelling. There&rsquo;s no microcontroller in any of these designs: they&rsquo;re all simple logic described in SystemVerilog.</p>
+<p>This first post is a quick introduction to FPGA graphics: you&rsquo;ll learn about display signals and how to create simple colour graphics. In part two, we&rsquo;ll race the beam to create an animated starfield and learn about the first arcade video game. Part two should be available in late May 2020.</p>
+<p><strong>PREVIEW POST: This post is still being refined.</strong> <em>Feedback to <a href="https://twitter.com/WillFlux">@WillFlux</a> is most welcome.</em></p>
+<h3 id="requirements">Requirements</h3>
+<p>For this series, you need an FPGA board with video output. We&rsquo;ll be working at 640x480, so pretty much any video output will do. You should also be comfortable with programming your FPGA board and reasonably familiar with Verilog. We&rsquo;ll demo the projects with these boards:</p>
+<ul>
+<li><strong><a href="https://github.com/icebreaker-fpga/icebreaker">iCEBreaker</a></strong> with <strong><a href="https://github.com/icebreaker-fpga/icebreaker">12-Bit DVI Pmod</a></strong> or <strong><a href="https://reference.digilentinc.com/reference/pmod/pmodvga/reference-manual">Pmod VGA</a></strong></li>
+<li><strong><a href="https://reference.digilentinc.com/reference/programmable-logic/arty-a7/reference-manual">Digilent Arty A7-35T</a></strong> with <strong><a href="https://reference.digilentinc.com/reference/pmod/pmodvga/reference-manual">Pmod VGA</a></strong></li>
+</ul>
+<p>Follow the <a href="https://github.com/projf/projf-explore/tree/master/fpga-graphics">README</a> instructions to quickly build a project for either of these boards.</p>
+<h3 id="source">Source</h3>
+<p>All the designs featured in this series are available in the <a href="https://github.com/projf/projf-explore/tree/master/fpga-graphics">Exploring FPGAs GitHub</a>: look out for <strong>[src]</strong> links as your read. The designs are open source under the permissive MIT licence, but this post is subject to normal copyright restrictions.</p>
+<blockquote>
+<p><strong>Quick Aside: SystemVerilog?!</strong><br>
+We&rsquo;re using a few choice features from SystemVerilog to make Verilog a little more pleasant (no laughing at the back). If you&rsquo;re familiar with Verilog, you&rsquo;ll have no trouble.</p>
+</blockquote>
+<h2 id="space-and-time">Space and Time</h2>
+<p>The screen you&rsquo;re looking at is a little universe with its own rules of space and time.</p>
+<p>When you look at a screen, you experience a two-dimensional image. From a distance, the picture looks smooth, but looking more closely, you see many individual blocks: these are <strong>pixels</strong>. A typical high-definition image is 1920 pixels across and 1,080 lines down: over 2 million pixels in total. Even a 640x480 display has over 300,000 pixels.</p>
+<p>A VGA cable has five main signals: red, green, blue, horizontal sync, and vertical sync. There are no addressing signals to tell the display which pixels should be drawn where. The secret is time, demarcated by the sync signals. The colour of each pixel is sent one after another using the red, green, and blue wires. Each pixel lasts a fixed length of time; when the display receives a <strong>horizontal sync</strong>, it starts a new line; when it receives a <strong>vertical sync</strong>, it starts a new frame.</p>
+<p>There are <strong>blanking</strong> intervals before and after the sync signals. Originally designed to allow an electron gun to move to the next line or top of the screen, blanking intervals have been retained and repurposed in contemporary displays: HDMI uses them to transmit audio. The blanking interval has three parts; in order, these are <strong>front porch</strong>, <strong>sync</strong>, and <strong>back porch</strong>.</p>
+<p><img src="/img/posts/fpga-graphics/display-timings.png" alt="Display Timings" title="Display Timings"></p>
+<h2 id="display-timings">Display Timings</h2>
+<p>In this series, we&rsquo;re going to use <strong>640x480</strong> as our display resolution. 640x480 is supported by almost all displays, and has low resource requirements, making it possible to work with even small FPGAs. All the same principles apply at higher resolutions, such as 1280x720 or 4K.</p>
+<p>We&rsquo;ll use traditional timings, based on the original VGA display:</p>
+<pre><code>640x480 Timings      HOR    VER
+-------------------------------
+Active Pixels        640    480
+Front Porch           16     10
+Sync Width            96      2
+Back Porch            48     33
+Blanking Total       160     45
+Total Pixels         800    525
+Sync Polarity        neg    neg
+</code></pre>
+<p>Taking blanking into account, we have a total of 800x525 pixels. A typical LCD refreshes 60 times a second, so the number of pixels per second is: <code>800 x 525 x 60 = 25,200,000</code>. This means we need a <strong>pixel clock</strong> of 25.2 MHz.</p>
+<blockquote>
+<p><strong>CAUTION: CRT Monitors</strong><br>
+Any modern display, including <a href="https://en.wikipedia.org/wiki/Multisync_monitor">multisync CRTs</a>, should be fine with a 25.2 or 25 MHz pixel clock. If you&rsquo;re using an older fixed-frequency CRT, it could be damaged by anything other than its supported frequency. You have been warned.</p>
+</blockquote>
+<h2 id="running-to-time">Running to Time</h2>
+<p>We&rsquo;ve decided we need a pixel clock of 25.2 MHz pixel clock, but neither of our demo boards has a clock close to 25 MHz. To reach the required frequency, we&rsquo;re going to use a <a href="https://en.wikipedia.org/wiki/Phase-locked_loop">phase-locked loop</a> (PLL). Almost all FPGAs include one or more PLLs, but there isn&rsquo;t a standard way to configure them in Verilog, so we have to use vendor-specific designs.</p>
+<p>We have provided implementations for Xilinx 7 Series (XC7) and Lattice iCE40; for other FPGAs, you&rsquo;ll need to consult your vendor documentation. If you can&rsquo;t reach 25.2 MHz exactly, then 25 MHz or thereabouts should be fine (but see note about CRTs, above). The iCE40 can&rsquo;t generate 25.2 MHz using the oscillators on iCEBreaker but works fine at 25.125 MHz.</p>
+<h3 id="clock-generator-modules">Clock Generator Modules</h3>
+<ul>
+<li>Xilinx 7 Series: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/xc7/clock_gen.sv">xc7/clock_gen.sv</a></strong></li>
+<li>iCE40: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/ice40/clock_gen.sv">ice40/clock_gen.sv</a></strong></li>
+</ul>
+<h2 id="display-timings-module">Display Timings Module</h2>
+<p>Using our ~25 MHz pixel clock, we can generate timings for our 640x480 display <strong>[<a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/display_timings.sv">src</a>]</strong>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> display_timings (
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_pix,          <span style="color:#75715e">// pixel clock
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst,              <span style="color:#75715e">// reset
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">9</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx,         <span style="color:#75715e">// horizontal screen position
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">9</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sy,         <span style="color:#75715e">// vertical screen position
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> hsync,            <span style="color:#75715e">// horizontal sync
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> vsync,            <span style="color:#75715e">// vertical sync
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> de                <span style="color:#75715e">// data enable (low in blanking interval)
+</span><span style="color:#75715e"></span>    );
+
+    <span style="color:#75715e">// horizontal timings
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> HA_END <span style="color:#f92672">=</span> <span style="color:#ae81ff">639</span>;             <span style="color:#75715e">// end of active pixels
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> HS_STA <span style="color:#f92672">=</span> HA_END <span style="color:#f92672">+</span> <span style="color:#ae81ff">16</span>;     <span style="color:#75715e">// sync starts after front porch
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> HS_END <span style="color:#f92672">=</span> HS_STA <span style="color:#f92672">+</span> <span style="color:#ae81ff">96</span>;     <span style="color:#75715e">// sync ends
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> LINE   <span style="color:#f92672">=</span> <span style="color:#ae81ff">799</span>;             <span style="color:#75715e">// last pixel on line (after back porch)
+</span><span style="color:#75715e"></span>
+    <span style="color:#75715e">// vertical timings
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> VA_END <span style="color:#f92672">=</span> <span style="color:#ae81ff">479</span>;             <span style="color:#75715e">// end of active pixels
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> VS_STA <span style="color:#f92672">=</span> VA_END <span style="color:#f92672">+</span> <span style="color:#ae81ff">10</span>;     <span style="color:#75715e">// sync starts after front porch
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> VS_END <span style="color:#f92672">=</span> HS_STA <span style="color:#f92672">+</span> <span style="color:#ae81ff">2</span>;      <span style="color:#75715e">// sync ends
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> SCREEN <span style="color:#f92672">=</span> <span style="color:#ae81ff">524</span>;             <span style="color:#75715e">// last line on screen (after back porch)
+</span><span style="color:#75715e"></span>
+    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+        hsync <span style="color:#f92672">=</span> <span style="color:#f92672">~</span>(sx <span style="color:#f92672">&gt;=</span> HS_STA <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">&lt;</span> HS_END);  <span style="color:#75715e">// invert: hsync polarity is negative
+</span><span style="color:#75715e"></span>        vsync <span style="color:#f92672">=</span> <span style="color:#f92672">~</span>(sy <span style="color:#f92672">&gt;=</span> VS_STA <span style="color:#f92672">&amp;&amp;</span> sy <span style="color:#f92672">&lt;</span> VS_END);  <span style="color:#75715e">// invert: vsync polarity is negative
+</span><span style="color:#75715e"></span>        de <span style="color:#f92672">=</span> (sx <span style="color:#f92672">&lt;=</span> HA_END <span style="color:#f92672">&amp;&amp;</span> sy <span style="color:#f92672">&lt;=</span> VA_END);
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// calculate horizontal and vertical screen position
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @ (<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">if</span> (sx <span style="color:#f92672">==</span> LINE) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// last pixel on line?
+</span><span style="color:#75715e"></span>            sx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            sy <span style="color:#f92672">&lt;=</span> (sy <span style="color:#f92672">==</span> SCREEN) <span style="color:#f92672">?</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">:</span> sy <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// last line on screen?
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
+            sx <span style="color:#f92672">&lt;=</span> sx <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+        <span style="color:#66d9ef">end</span>
+        <span style="color:#66d9ef">if</span> (rst) <span style="color:#66d9ef">begin</span>
+            sx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            sy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+        <span style="color:#66d9ef">end</span>
+    <span style="color:#66d9ef">end</span>
+<span style="color:#66d9ef">endmodule</span>
+</code></pre></div><p><em>ProTip: The last flip-flop assignment wins, so the reset overrides the existing <code>x</code> and <code>y</code>.</em></p>
+<p>Most of the signals should be self-explanatory. <strong>de</strong> is data enable, which is low during the blanking interval: we use it to decide when to draw pixels.</p>
+<h2 id="test-benches">Test Benches</h2>
+<p>You can exercise the designs with the included test benches (currently Xilinx only):</p>
+<ul>
+<li><strong><a href="https://github.com/projf/projf-explore/tree/master/fpga-graphics/xc7/clock_gen_tb.sv">Clock Gen Test Bench</a></strong> (Xilinx 7 Series)</li>
+<li><strong><a href="https://github.com/projf/projf-explore/tree/master/fpga-graphics/display_timings_tb.sv">Display Timings Test Bench</a></strong> (Xilinx 7 Series)</li>
+</ul>
+<p>Some things to check:</p>
+<ul>
+<li>What is the pixel clock period?</li>
+<li>How long does the pixel clock take to lock?</li>
+<li>Does a frame last exactly 1/60th of a second?</li>
+<li>How much time does a single line last?</li>
+<li>What is the maximum values of <code>sx</code> and <code>sy</code> when <code>de</code> is low?</li>
+</ul>
+<h2 id="bringing-it-together">Bringing it Together</h2>
+<p>Now we have our display signals we&rsquo;re ready to start drawing. To begin we&rsquo;re going to keep it simple and draw a coloured square. There are three versions of this top module:</p>
+<ul>
+<li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/xc7/top_square.sv">xc7/top_square.sv</a></strong></li>
+<li>iCE40 DVI: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/ice40/top_square.sv">ice40/top_square.sv</a></strong></li>
+<li>iCE40 VGA: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/ice40/top_square_vga.sv">ice40/top_square_vga.sv</a></strong></li>
+</ul>
+<p>Shown below is the Xilinx version:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_square (
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_100m,         <span style="color:#75715e">// 100 MHz clock
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_rst,          <span style="color:#75715e">// reset button (active low)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> vga_hsync,        <span style="color:#75715e">// horizontal sync
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> vga_vsync,        <span style="color:#75715e">// vertical sync
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vga_red,    <span style="color:#75715e">// 4-bit VGA red
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vga_green,  <span style="color:#75715e">// 4-bit VGA green
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vga_blue    <span style="color:#75715e">// 4-bit VGA blue
+</span><span style="color:#75715e"></span>    );
+
+    <span style="color:#75715e">// generate pixel clock
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> clk_pix;
+    <span style="color:#66d9ef">logic</span> clk_locked;
+    clock_gen clock_640x480 (
+       .clk_100m,
+       .rst(<span style="color:#f92672">!</span>btn_rst),  <span style="color:#75715e">// reset button is active low
+</span><span style="color:#75715e"></span>       .clk_pix,
+       .clk_locked
+    );
+
+    <span style="color:#75715e">// display timings
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">9</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx, sy;
+    <span style="color:#66d9ef">logic</span> hsync, vsync;
+    <span style="color:#66d9ef">logic</span> de;
+    display_timings timings_640x480 (
+        .clk_pix,
+        .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for clock lock
+</span><span style="color:#75715e"></span>        .sx,
+        .sy,
+        .hsync,
+        .vsync,
+        .de
+    );
+
+    <span style="color:#75715e">// 32 x 32 pixel square
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> q_draw;
+    <span style="color:#66d9ef">always_comb</span> q_draw <span style="color:#f92672">=</span> (sx <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">32</span> <span style="color:#f92672">&amp;&amp;</span> sy <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">32</span>) <span style="color:#f92672">?</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
+
+    <span style="color:#75715e">// VGA output
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+        vga_hsync <span style="color:#f92672">=</span> hsync;
+        vga_vsync <span style="color:#f92672">=</span> vsync;
+        vga_red   <span style="color:#f92672">=</span> <span style="color:#f92672">!</span>de <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h0</span> <span style="color:#f92672">:</span> (q_draw <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hD</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h3</span>);
+        vga_green <span style="color:#f92672">=</span> <span style="color:#f92672">!</span>de <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h0</span> <span style="color:#f92672">:</span> (q_draw <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hA</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h7</span>);
+        vga_blue  <span style="color:#f92672">=</span> <span style="color:#f92672">!</span>de <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h0</span> <span style="color:#f92672">:</span> (q_draw <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h3</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;hD</span>);
+    <span style="color:#66d9ef">end</span>
+<span style="color:#66d9ef">endmodule</span>
+</code></pre></div><h2 id="let-there-be-pixels">Let there be Pixels</h2>
+<p>Combine <code>top_square</code>, <code>display_timings</code>, <code>clock_gen</code> modules with some suitable constraints, and you should be ready to drive a display.</p>
+<ul>
+<li>Arty: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/xc7/arty.xdc">arty.xdc</a></strong></li>
+<li>iCEBreaker DVI: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/ice40/icebreaker.pcf">icebreaker.pcf</a></strong></li>
+<li>iCEBreaker VGA: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/ice40/icebreaker_vga.pcf">icebreaker_vga.pcf</a></strong></li>
+</ul>
+<p>There are instructions on building the designs for Arty and iCEBreaker in the <a href="https://github.com/projf/projf-explore/tree/master/fpga-graphics">README</a>.</p>
+<p>You should see something like (the colours are #3377DD and #DDAA33):</p>
+<p><img src="/img/posts/fpga-graphics/vga-square.png" alt="A Square" title="Hip to be Square"></p>
+<h2 id="animation">Animation</h2>
+<p>A static square is a change from test cards, but a bit underwhelming all the same. Let&rsquo;s at least make it move before calling it a day.</p>
+<p>To create a simple animation, we need to update the position of the square every frame. If we updated the position of the square during active drawing, we risk tearing, so we create an <code>animate</code> signal that happens at the start of the blanking period.</p>
+<p>We&rsquo;re going to replicate the behaviour of the video display itself, scanning across then down the screen. The square &ldquo;beam&rdquo; disappears off the edge of the screen, like the signal in the blanking interval. Try rebuilding the design with <code>top_beam</code>.</p>
+<ul>
+<li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/xc7/top_beam.sv">xc7/top_beam.sv</a></strong></li>
+<li>iCE40 DVI: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/ice40/top_beam.sv">ice40/top_beam.sv</a></strong></li>
+<li>iCE40 VGA: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/ice40/top_beam_vga.sv">ice40/top_beam_vga.sv</a></strong></li>
+</ul>
+<p>Shown below is the iCE40 DVI version:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_beam (
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_12m,      <span style="color:#75715e">// 12 MHz clock
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_rst,      <span style="color:#75715e">// reset button (active low)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> dvi_clk,      <span style="color:#75715e">// DVI pixel clock
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> dvi_hsync,    <span style="color:#75715e">// DVI horizontal sync
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> dvi_vsync,    <span style="color:#75715e">// DVI vertical sync
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> dvi_de,       <span style="color:#75715e">// DVI data enable
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> dvi_r0, dvi_r1, dvi_r2, dvi_r3,   <span style="color:#75715e">// 4-bit DVI red
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> dvi_g0, dvi_g1, dvi_g2, dvi_g3,   <span style="color:#75715e">// 4-bit DVI green
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> dvi_b0, dvi_b1, dvi_b2, dvi_b3    <span style="color:#75715e">// 4-bit DVI blue
+</span><span style="color:#75715e"></span>    );
+
+    <span style="color:#75715e">// generate pixel clock
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> clk_pix;
+    <span style="color:#66d9ef">logic</span> clk_locked;
+    clock_gen clock_640x480 (
+       .clk(clk_12m),
+       .rst(btn_rst),  <span style="color:#75715e">// reset button is active low
+</span><span style="color:#75715e"></span>       .clk_pix,
+       .clk_locked
+    );
+
+    <span style="color:#75715e">// display timings
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">9</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx, sy;
+    <span style="color:#66d9ef">logic</span> de;
+    display_timings timings_640x480 (
+        .clk_pix,
+        .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for clock lock
+</span><span style="color:#75715e"></span>        .sx,
+        .sy,
+        .hsync(dvi_hsync),
+        .vsync(dvi_vsync),
+        .de
+    );
+
+    <span style="color:#75715e">// size of screen (including blanking)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> H_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">800</span>;
+    <span style="color:#66d9ef">localparam</span> V_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">525</span>;
+
+    <span style="color:#75715e">// square &#39;Q&#39; - origin at top-left
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> Q_SIZE <span style="color:#f92672">=</span> <span style="color:#ae81ff">32</span>; <span style="color:#75715e">// square size in pixels
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> Q_SPEED <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>; <span style="color:#75715e">// pixels moved per frame
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">9</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] qx, qy;     <span style="color:#75715e">// square position
+</span><span style="color:#75715e"></span>
+    <span style="color:#66d9ef">logic</span> animate;  <span style="color:#75715e">// high for one clock tick at start of blanking
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> animate <span style="color:#f92672">=</span> (sy <span style="color:#f92672">==</span> <span style="color:#ae81ff">480</span> <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>);
+
+    <span style="color:#75715e">// update square position once per frame
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">if</span> (animate) <span style="color:#66d9ef">begin</span>
+            <span style="color:#66d9ef">if</span> (qx <span style="color:#f92672">&gt;=</span> H_RES <span style="color:#f92672">-</span> Q_SIZE) <span style="color:#66d9ef">begin</span>
+                qx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                qy <span style="color:#f92672">&lt;=</span> (qy <span style="color:#f92672">&gt;=</span> V_RES <span style="color:#f92672">-</span> Q_SIZE) <span style="color:#f92672">?</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">:</span> qy <span style="color:#f92672">+</span> Q_SIZE;
+            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
+                qx <span style="color:#f92672">&lt;=</span> qx <span style="color:#f92672">+</span> Q_SPEED;
+            <span style="color:#66d9ef">end</span>
+        <span style="color:#66d9ef">end</span>
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// is square at current screen position?
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> q_draw;
+    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+        q_draw <span style="color:#f92672">=</span> (sx <span style="color:#f92672">&gt;=</span> qx) <span style="color:#f92672">&amp;&amp;</span> (sx <span style="color:#f92672">&lt;</span> qx <span style="color:#f92672">+</span> Q_SIZE)
+              <span style="color:#f92672">&amp;&amp;</span> (sy <span style="color:#f92672">&gt;=</span> qy) <span style="color:#f92672">&amp;&amp;</span> (sy <span style="color:#f92672">&lt;</span> qy <span style="color:#f92672">+</span> Q_SIZE);
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// DVI output
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+        dvi_clk <span style="color:#f92672">=</span> clk_pix;
+        dvi_de  <span style="color:#f92672">=</span> de;
+        {dvi_r3, dvi_r2, dvi_r1, dvi_r0} <span style="color:#f92672">=</span> <span style="color:#f92672">!</span>de <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h0</span> <span style="color:#f92672">:</span> (q_draw <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hD</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h3</span>);
+        {dvi_g3, dvi_g2, dvi_g1, dvi_g0} <span style="color:#f92672">=</span> <span style="color:#f92672">!</span>de <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h0</span> <span style="color:#f92672">:</span> (q_draw <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hA</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h7</span>);
+        {dvi_b3, dvi_b2, dvi_b1, dvi_b0} <span style="color:#f92672">=</span> <span style="color:#f92672">!</span>de <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h0</span> <span style="color:#f92672">:</span> (q_draw <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h3</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;hD</span>);
+    <span style="color:#66d9ef">end</span>
+<span style="color:#66d9ef">endmodule</span>
+</code></pre></div><h2 id="next-time">Next Time</h2>
+<p>That&rsquo;s all for this quick introduction to FPGA graphics. You should now have the basics in place for the rest of the series. If you&rsquo;d like experiment some more, then try creating different coloured squares that bounce off the edge of the screen.</p>
+<p>In the second part of this series, we&rsquo;ll create an animated starfield using linear feedback shift registers: look out for it in late May 2020.</p>
+
+      
+      <div class="related">
+
+<h3>Similar articles:</h3>
+<ul>
+	
+	<li><a href="/posts/hello-arty-2/">Hello Arty - Part 2</a></li>
+	
+	<li><a href="/posts/hello-arty-1/">Hello Arty - Part 1</a></li>
+	
+</ul>
+</div>
+      
+    </div>
+    
+  </div>
+</section>
+
+    <script src="/js/copycode.js"></script>
+
+
+
+<section class="section">
+  <div class="container has-text-centered">
+    <p>©2020 Will Green, Project F</p>
+    
+  </div>
+</section>
+
+
+
+<script>
+(function(f, a, t, h, o, m){
+a[h]=a[h]||function(){
+(a[h].q=a[h].q||[]).push(arguments)
+};
+o=f.createElement('script'),
+m=f.getElementsByTagName('script')[0];
+o.async=1; o.src=t; o.id='fathom-script';
+m.parentNode.insertBefore(o,m)
+})(document, window, 'https://cdn.usefathom.com/tracker.js', 'fathom');
+fathom('set', 'siteId', 'EVCGKVDN');
+fathom('trackPageview');
+</script>
+
+
+</body>
+</html>
+
