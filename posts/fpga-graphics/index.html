@@ -7,8 +7,8 @@
 <title>Exploring FPGA Graphics | Project F</title>
 
 <meta property='og:title' content='Exploring FPGA Graphics - Project F'>
-<meta property='og:description' content='Welcome to FPGA Graphics at Project F. In this series, we&rsquo;ll be exploring FPGA graphics of all kinds, from a static square, through Pong and the Mandelbrot set, to bitmaps, text scrollers, and even 3D modelling. There&rsquo;s no microcontroller in any of these designs: they&rsquo;re all simple logic described in SystemVerilog.
-This first post is a quick introduction to FPGA graphics: you&rsquo;ll learn about display signals and how to create simple colour graphics.'>
+<meta property='og:description' content='Welcome to Exploring FPGA Graphics with Project F. In this series, we&rsquo;ll be experimenting with FPGA graphics of all kinds, from a static square, through Pong and the Mandelbrot set, to bitmaps, text scrollers, and even 3D modelling. There&rsquo;s no microcontroller in any of these designs: they&rsquo;re simple logic described in SystemVerilog.
+This post is a quick introduction to generating graphics with FPGAs: you&rsquo;ll learn about display signals and simple colour graphics.'>
 <meta property='og:url' content='https://projectf.io/posts/fpga-graphics/'>
 <meta property='og:site_name' content='Project F'>
 <meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/fpga-graphics-card.png'><meta property='article:published_time' content='2020-05-20T00:00:00Z'/><meta property='article:modified_time' content='2020-05-20T00:00:00Z'/><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
@@ -99,30 +99,30 @@ This first post is a quick introduction to FPGA graphics: you&rsquo;ll learn abo
     <h1 class="title">Exploring FPGA Graphics</h1>
     
     <div class="content">
-      <p>Welcome to FPGA Graphics at Project F. In this series, we&rsquo;ll be exploring FPGA graphics of all kinds, from a static square, through Pong and the Mandelbrot set, to bitmaps, text scrollers, and even 3D modelling. There&rsquo;s no microcontroller in any of these designs: they&rsquo;re all simple logic described in SystemVerilog.</p>
-<p>This first post is a quick introduction to FPGA graphics: you&rsquo;ll learn about display signals and how to create simple colour graphics. In part two, we&rsquo;ll race the beam to create an animated starfield and learn about the first arcade video game. Part two should be available in late May 2020.</p>
-<p><strong>PREVIEW POST: This post is still being refined.</strong> <em>Feedback to <a href="https://twitter.com/WillFlux">@WillFlux</a> is most welcome.</em></p>
+      <p>Welcome to Exploring FPGA Graphics with Project F. In this series, we&rsquo;ll be experimenting with FPGA graphics of all kinds, from a static square, through Pong and the Mandelbrot set, to bitmaps, text scrollers, and even 3D modelling. There&rsquo;s no microcontroller in any of these designs: they&rsquo;re simple logic described in SystemVerilog.</p>
+<p>This post is a quick introduction to generating graphics with FPGAs: you&rsquo;ll learn about display signals and simple colour graphics. In the next part, we&rsquo;ll race the beam to create an animated starfield and learn about the first arcade video game. <em>Racing the Beam</em> should be available in late May 2020.</p>
+<p><em>Revised 2020-05-23. Feedback to <a href="https://twitter.com/WillFlux">@WillFlux</a> is most welcome.</em></p>
 <h3 id="requirements">Requirements</h3>
-<p>For this series, you need an FPGA board with video output. We&rsquo;ll be working at 640x480, so pretty much any video output will do. You should also be comfortable with programming your FPGA board and reasonably familiar with Verilog. We&rsquo;ll demo the projects with these boards:</p>
+<p>For this series, you need an FPGA board with video output. We&rsquo;ll be working at 640x480, so pretty much any video output will work. You should also be comfortable with programming your FPGA board and reasonably familiar with Verilog. We&rsquo;ll demo the projects with these boards:</p>
 <ul>
 <li><strong><a href="https://github.com/icebreaker-fpga/icebreaker">iCEBreaker</a></strong> with <strong><a href="https://github.com/icebreaker-fpga/icebreaker">12-Bit DVI Pmod</a></strong> or <strong><a href="https://reference.digilentinc.com/reference/pmod/pmodvga/reference-manual">Pmod VGA</a></strong></li>
 <li><strong><a href="https://reference.digilentinc.com/reference/programmable-logic/arty-a7/reference-manual">Digilent Arty A7-35T</a></strong> with <strong><a href="https://reference.digilentinc.com/reference/pmod/pmodvga/reference-manual">Pmod VGA</a></strong></li>
 </ul>
-<p>Follow the <a href="https://github.com/projf/projf-explore/tree/master/fpga-graphics">README</a> instructions to quickly build a project for either of these boards.</p>
+<p>Follow the <a href="https://github.com/projf/projf-explore/tree/master/fpga-graphics">README</a> instructions to build a design for either of these boards.</p>
 <h3 id="source">Source</h3>
-<p>All the designs featured in this series are available in the <a href="https://github.com/projf/projf-explore/tree/master/fpga-graphics">Exploring FPGAs GitHub</a>: look out for <strong>[src]</strong> links as your read. The designs are open source under the permissive MIT licence, but this post is subject to normal copyright restrictions.</p>
+<p>All the Verilog designs featured in this series are available on <a href="https://github.com/projf/projf-explore/">GitHub</a>: look out for <strong>[src]</strong> links as your read. The designs are open source under the permissive MIT licence, but this blog post is subject to normal copyright restrictions.</p>
 <blockquote>
 <p><strong>Quick Aside: SystemVerilog?!</strong><br>
 We&rsquo;re using a few choice features from SystemVerilog to make Verilog a little more pleasant (no laughing at the back). If you&rsquo;re familiar with Verilog, you&rsquo;ll have no trouble.</p>
 </blockquote>
 <h2 id="space-and-time">Space and Time</h2>
 <p>The screen you&rsquo;re looking at is a little universe with its own rules of space and time.</p>
-<p>When you look at a screen, you experience a two-dimensional image. From a distance, the picture looks smooth, but looking more closely, you see many individual blocks: these are <strong>pixels</strong>. A typical high-definition image is 1920 pixels across and 1,080 lines down: over 2 million pixels in total. Even a 640x480 display has over 300,000 pixels.</p>
-<p>A VGA cable has five main signals: red, green, blue, horizontal sync, and vertical sync. There are no addressing signals to tell the display which pixels should be drawn where. The secret is time, demarcated by the sync signals. The colour of each pixel is sent one after another using the red, green, and blue wires. Each pixel lasts a fixed length of time; when the display receives a <strong>horizontal sync</strong>, it starts a new line; when it receives a <strong>vertical sync</strong>, it starts a new frame.</p>
-<p>There are <strong>blanking</strong> intervals before and after the sync signals. Originally designed to allow an electron gun to move to the next line or top of the screen, blanking intervals have been retained and repurposed in contemporary displays: HDMI uses them to transmit audio. The blanking interval has three parts; in order, these are <strong>front porch</strong>, <strong>sync</strong>, and <strong>back porch</strong>.</p>
+<p>When you look at a screen from afar, you see a smooth two-dimensional image. Looking closely, you see many individual blocks: these are <strong>pixels</strong>. A typical high-definition image is 1920 pixels across and 1,080 lines down: over 2 million pixels in total. Even a 640x480 image has over 300,000 pixels. The need to handle so much information so quickly is a big part of the challenge of working with graphics.</p>
+<p>A VGA cable has five main signals: red, green, blue, horizontal sync, and vertical sync. There are no addressing signals to tell the display where to draw pixels; the secret is time, demarcated by the sync signals. The red, green, and blue wires carry the colour of each pixel in turn. Each pixel lasts a fixed length of time; when the display receives a <strong>horizontal sync</strong>, it starts a new line; when it receives a <strong>vertical sync</strong>, it starts a new frame.</p>
+<p>The sync signals are part of <strong>blanking</strong> intervals. Originally designed to allow an electron gun to move to the next line or top of the screen, blanking intervals have been retained and repurposed in contemporary displays: HDMI uses them to transmit audio. The blanking interval has three parts: <strong>front porch</strong>, <strong>sync</strong> and <strong>back porch</strong>.</p>
 <p><img src="/img/posts/fpga-graphics/display-timings.png" alt="Display Timings" title="Display Timings"></p>
 <h2 id="display-timings">Display Timings</h2>
-<p>In this series, we&rsquo;re going to use <strong>640x480</strong> as our display resolution. 640x480 is supported by almost all displays, and has low resource requirements, making it possible to work with even small FPGAs. All the same principles apply at higher resolutions, such as 1280x720 or 4K.</p>
+<p>In this series, we&rsquo;re going to use <strong>640x480</strong> as our display resolution. Almost all displays support 640x480, and its low resource requirements make it possible to work with even small FPGAs. All the same principles apply at higher resolutions, such as 1280x720 or 4K.</p>
 <p>We&rsquo;ll use traditional timings, based on the original VGA display:</p>
 <pre><code>640x480 Timings      HOR    VER
 -------------------------------
@@ -134,13 +134,13 @@ Blanking Total       160     45
 Total Pixels         800    525
 Sync Polarity        neg    neg
 </code></pre>
-<p>Taking blanking into account, we have a total of 800x525 pixels. A typical LCD refreshes 60 times a second, so the number of pixels per second is: <code>800 x 525 x 60 = 25,200,000</code>. This means we need a <strong>pixel clock</strong> of 25.2 MHz.</p>
+<p>Taking blanking into account, we have a total of 800x525 pixels. A typical LCD refreshes 60 times a second, so the number of pixels per second is: <code>800 x 525 x 60 = 25,200,000</code>, which equates to a <strong>pixel clock</strong> of 25.2 MHz.</p>
 <blockquote>
 <p><strong>CAUTION: CRT Monitors</strong><br>
-Any modern display, including <a href="https://en.wikipedia.org/wiki/Multisync_monitor">multisync CRTs</a>, should be fine with a 25.2 or 25 MHz pixel clock. If you&rsquo;re using an older fixed-frequency CRT, it could be damaged by anything other than its supported frequency. You have been warned.</p>
+Any modern display, including <a href="https://en.wikipedia.org/wiki/Multisync_monitor">multisync CRTs</a>, should be fine with a 25.2 or 25 MHz pixel clock. Fixed-frequency CRTs, such as the original IBM 85xx series, could be damaged by an out-of-spec signal. Use these designs at your own risk.</p>
 </blockquote>
 <h2 id="running-to-time">Running to Time</h2>
-<p>We&rsquo;ve decided we need a pixel clock of 25.2 MHz pixel clock, but neither of our demo boards has a clock close to 25 MHz. To reach the required frequency, we&rsquo;re going to use a <a href="https://en.wikipedia.org/wiki/Phase-locked_loop">phase-locked loop</a> (PLL). Almost all FPGAs include one or more PLLs, but there isn&rsquo;t a standard way to configure them in Verilog, so we have to use vendor-specific designs.</p>
+<p>We&rsquo;ve decided we need a pixel clock of 25.2 MHz pixel clock, but neither of our demo boards has a 25 MHz clock. To reach the required frequency, we&rsquo;re going to use a <a href="https://en.wikipedia.org/wiki/Phase-locked_loop">phase-locked loop</a> (PLL). Almost all FPGAs include one or more PLLs, but there isn&rsquo;t a standard way to configure them in Verilog, so we have to use vendor-specific designs.</p>
 <p>We have provided implementations for Xilinx 7 Series (XC7) and Lattice iCE40; for other FPGAs, you&rsquo;ll need to consult your vendor documentation. If you can&rsquo;t reach 25.2 MHz exactly, then 25 MHz or thereabouts should be fine (but see note about CRTs, above). The iCE40 can&rsquo;t generate 25.2 MHz using the oscillators on iCEBreaker but works fine at 25.125 MHz.</p>
 <h3 id="clock-generator-modules">Clock Generator Modules</h3>
 <ul>
@@ -273,7 +273,7 @@ Any modern display, including <a href="https://en.wikipedia.org/wiki/Multisync_m
 <p>You should see something like (the colours are #3377DD and #DDAA33):</p>
 <p><img src="/img/posts/fpga-graphics/vga-square.png" alt="A Square" title="Hip to be Square"></p>
 <h2 id="animation">Animation</h2>
-<p>A static square is a change from test cards, but a bit underwhelming all the same. Let&rsquo;s at least make it move before calling it a day.</p>
+<p>A static square is a change from test cards, but underwhelming all the same. Let&rsquo;s at least make it move before calling it a day.</p>
 <p>To create a simple animation, we need to update the position of the square every frame. If we updated the position of the square during active drawing, we risk tearing, so we create an <code>animate</code> signal that happens at the start of the blanking period.</p>
 <p>We&rsquo;re going to replicate the behaviour of the video display itself, scanning across then down the screen. The square &ldquo;beam&rdquo; disappears off the edge of the screen, like the signal in the blanking interval. Try rebuilding the design with <code>top_beam</code>.</p>
 <ul>
@@ -358,8 +358,8 @@ Any modern display, including <a href="https://en.wikipedia.org/wiki/Multisync_m
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
 </code></pre></div><h2 id="next-time">Next Time</h2>
-<p>That&rsquo;s all for this quick introduction to FPGA graphics. You should now have the basics in place for the rest of the series. If you&rsquo;d like experiment some more, then try creating different coloured squares that bounce off the edge of the screen.</p>
-<p>In the second part of this series, we&rsquo;ll create an animated starfield using linear feedback shift registers: look out for it in late May 2020.</p>
+<p>That&rsquo;s all for this quick introduction to FPGA graphics. If you&rsquo;d like experiment some more, try creating different coloured squares that bounce off the edge of the screen.</p>
+<p>In the next part of this series, we&rsquo;ll create an animated starfield using linear feedback shift registers: look out for it in late May 2020.</p>
 
       
       <div class="related">
