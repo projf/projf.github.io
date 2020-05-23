@@ -140,7 +140,7 @@ Sync Polarity        neg    neg
 Any modern display, including <a href="https://en.wikipedia.org/wiki/Multisync_monitor">multisync CRTs</a>, should be fine with a 25.2 or 25 MHz pixel clock. Fixed-frequency CRTs, such as the original IBM 85xx series, could be damaged by an out-of-spec signal. Use these designs at your own risk.</p>
 </blockquote>
 <h2 id="running-to-time">Running to Time</h2>
-<p>We&rsquo;ve decided we need a pixel clock of 25.2 MHz pixel clock, but neither of our demo boards has a 25 MHz clock. To reach the required frequency, we&rsquo;re going to use a <a href="https://en.wikipedia.org/wiki/Phase-locked_loop">phase-locked loop</a> (PLL). Almost all FPGAs include one or more PLLs, but there isn&rsquo;t a standard way to configure them in Verilog, so we have to use vendor-specific designs.</p>
+<p>We&rsquo;ve decided we need a pixel clock of 25.2 MHz pixel clock, but neither of our demo boards have such a clock. To reach the required frequency, we&rsquo;re going to use a <a href="https://en.wikipedia.org/wiki/Phase-locked_loop">phase-locked loop</a> (PLL). Almost all FPGAs include one or more PLLs, but there isn&rsquo;t a standard way to configure them in Verilog, so we have to use vendor-specific designs.</p>
 <p>We have provided implementations for Xilinx 7 Series (XC7) and Lattice iCE40; for other FPGAs, you&rsquo;ll need to consult your vendor documentation. If you can&rsquo;t reach 25.2 MHz exactly, then 25 MHz or thereabouts should be fine (but see note about CRTs, above). The iCE40 can&rsquo;t generate 25.2 MHz using the oscillators on iCEBreaker but works fine at 25.125 MHz.</p>
 <h3 id="clock-generator-modules">Clock Generator Modules</h3>
 <ul>
@@ -220,16 +220,16 @@ Any modern display, including <a href="https://en.wikipedia.org/wiki/Multisync_m
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_rst,          <span style="color:#75715e">// reset button (active low)
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> vga_hsync,        <span style="color:#75715e">// horizontal sync
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> vga_vsync,        <span style="color:#75715e">// vertical sync
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vga_red,    <span style="color:#75715e">// 4-bit VGA red
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vga_green,  <span style="color:#75715e">// 4-bit VGA green
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vga_blue    <span style="color:#75715e">// 4-bit VGA blue
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vga_r,      <span style="color:#75715e">// 4-bit VGA red
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vga_g,      <span style="color:#75715e">// 4-bit VGA green
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vga_b       <span style="color:#75715e">// 4-bit VGA blue
 </span><span style="color:#75715e"></span>    );
 
     <span style="color:#75715e">// generate pixel clock
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> clk_pix;
     <span style="color:#66d9ef">logic</span> clk_locked;
     clock_gen clock_640x480 (
-       .clk_100m,
+       .clk(clk_100m),
        .rst(<span style="color:#f92672">!</span>btn_rst),  <span style="color:#75715e">// reset button is active low
 </span><span style="color:#75715e"></span>       .clk_pix,
        .clk_locked
@@ -237,15 +237,14 @@ Any modern display, including <a href="https://en.wikipedia.org/wiki/Multisync_m
 
     <span style="color:#75715e">// display timings
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">9</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx, sy;
-    <span style="color:#66d9ef">logic</span> hsync, vsync;
     <span style="color:#66d9ef">logic</span> de;
     display_timings timings_640x480 (
         .clk_pix,
         .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for clock lock
 </span><span style="color:#75715e"></span>        .sx,
         .sy,
-        .hsync,
-        .vsync,
+        .hsync(vga_hsync),
+        .vsync(vga_vsync),
         .de
     );
 
@@ -255,11 +254,9 @@ Any modern display, including <a href="https://en.wikipedia.org/wiki/Multisync_m
 
     <span style="color:#75715e">// VGA output
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        vga_hsync <span style="color:#f92672">=</span> hsync;
-        vga_vsync <span style="color:#f92672">=</span> vsync;
-        vga_red   <span style="color:#f92672">=</span> <span style="color:#f92672">!</span>de <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h0</span> <span style="color:#f92672">:</span> (q_draw <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hD</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h3</span>);
-        vga_green <span style="color:#f92672">=</span> <span style="color:#f92672">!</span>de <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h0</span> <span style="color:#f92672">:</span> (q_draw <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hA</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h7</span>);
-        vga_blue  <span style="color:#f92672">=</span> <span style="color:#f92672">!</span>de <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h0</span> <span style="color:#f92672">:</span> (q_draw <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h3</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;hD</span>);
+        vga_r     <span style="color:#f92672">=</span> <span style="color:#f92672">!</span>de <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h0</span> <span style="color:#f92672">:</span> (q_draw <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hD</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h3</span>);
+        vga_g     <span style="color:#f92672">=</span> <span style="color:#f92672">!</span>de <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h0</span> <span style="color:#f92672">:</span> (q_draw <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hA</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h7</span>);
+        vga_b     <span style="color:#f92672">=</span> <span style="color:#f92672">!</span>de <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h0</span> <span style="color:#f92672">:</span> (q_draw <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h3</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;hD</span>);
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
 </code></pre></div><h2 id="let-there-be-pixels">Let there be Pixels</h2>
