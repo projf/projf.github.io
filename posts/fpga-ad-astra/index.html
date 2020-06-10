@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"  lang="en-gb">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+<title>FPGA Ad Astra | Project F</title>
+
+<meta property='og:title' content='FPGA Ad Astra - Project F'>
+<meta property='og:description' content='In this series, we&rsquo;ll be exploring FPGA graphics of all kinds, from the simplest static square, through Pong and the Mandelbrot set, to bitmaps, text scrollers, and even 3D modelling. There&rsquo;s no microcontroller in any of these designs: they&rsquo;re simple logic described in SystemVerilog. New to the series? Start with Exploring FPGA Graphics.
+Before framebuffers were ubiquitous, it was necessary to generate your graphics a line, or even a pixel, at a time.'>
+<meta property='og:url' content='https://projectf.io/posts/fpga-ad-astra/'>
+<meta property='og:site_name' content='Project F'>
+<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/fpga-ad-astra/social-card.jpg'><meta property='article:published_time' content='2020-06-10T00:00:00Z'/><meta property='article:modified_time' content='2020-06-10T00:00:00Z'/><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
+
+
+<link href="https://projectf.io/index.xml" rel="alternate" type="application/rss+xml" title="Project F" />
+
+<link rel="stylesheet" href="/css/style.css"/><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+<link rel="canonical" href="https://projectf.io/posts/fpga-ad-astra/">
+<meta name="msapplication-TileColor" content="#da532c">
+<meta name="theme-color" content="#ffffff">
+<meta name="referrer" content="no-referrer, same-origin">
+</head>
+<body>
+<section class="section">
+  <div class="container">
+    <nav id="nav-main" class="nav">
+      <div id="nav-name" class="nav-left">
+        <a id="nav-anchor" class="nav-item" href="https://projectf.io">
+          <h1 id="nav-heading" class="title is-4">Project F</h1>
+        </a>
+      </div>
+      <div class="nav-right">
+        <nav id="nav-items" class="nav-item level is-mobile"><a class="level-item" aria-label="github" href='https://github.com/projf'
+            target='_blank' rel='noopener'>
+            <span class="icon">
+              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
+    
+    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
+    
+  </svg></i>
+            </span>
+          </a><a class="level-item" aria-label="twitter" href='https://twitter.com/WillFlux'
+            target='_blank' rel='noopener'>
+            <span class="icon">
+              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
+    
+    <path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"/>
+    
+  </svg></i>
+            </span>
+          </a><a class="level-item" aria-label="rss" href='/index.xml'
+            target='_blank' rel='noopener'>
+            <span class="icon">
+              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
+    
+    <path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle>
+    
+  </svg></i>
+            </span>
+          </a></nav>
+      </div>
+    </nav>
+
+    <nav class="nav">
+      
+      <div class="nav-left"><a class="nav-item" href="/tags/cookbook">
+          <h2 class="title is-5">Cookbook</h2>
+        </a><a class="nav-item" href="/tags/explore">
+          <h2 class="title is-5">Explore</h2>
+        </a><a class="nav-item" href="/tags/tools">
+          <h2 class="title is-5">Tools</h2>
+        </a></div>
+      
+
+      
+    </nav>
+
+  </div>
+  <script src="/js/navicon-shift.js"></script>
+</section>
+<section class="section">
+  <div class="container">
+    <div class="subtitle tags is-6 is-pulled-right">
+      
+      
+<a class="subtitle is-6" href="/tags/explore/">#explore</a>
+
+
+
+
+      
+    </div>
+    <h2 class="subtitle is-6">June 10, 2020</h2>
+    <h1 class="title">FPGA Ad Astra</h1>
+    
+    <div class="content">
+      <p>In this series, we&rsquo;ll be exploring FPGA graphics of all kinds, from the simplest static square, through Pong and the Mandelbrot set, to bitmaps, text scrollers, and even 3D modelling. There&rsquo;s no microcontroller in any of these designs: they&rsquo;re simple logic described in SystemVerilog. New to the series? Start with <a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a>.</p>
+<p>Before framebuffers were ubiquitous, it was necessary to generate your graphics a line, or even a pixel, at a time. In this post, we take inspiration from the original video arcade game, Computer Space, and create a starfield. With a starfield (or three) in place, we&rsquo;re ready to greet the world.</p>
+<p><strong>This is a DRAFT: expect mistakes and frequent updates. Pictures coming soon.</strong><br>
+<em>Feedback to <a href="https://twitter.com/WillFlux">@WillFlux</a> is most welcome.</em></p>
+<h3 id="requirements">Requirements</h3>
+<p>For this series, you need an FPGA board with video output. We&rsquo;ll be working at 640x480, so pretty much any video output will do. You should also be comfortable with programming your FPGA board and reasonably familiar with Verilog. We&rsquo;ll demo the projects with these boards:</p>
+<ul>
+<li><strong><a href="https://github.com/icebreaker-fpga/icebreaker">iCEBreaker</a></strong> with <strong><a href="https://github.com/icebreaker-fpga/icebreaker">12-Bit DVI Pmod</a></strong></li>
+<li><strong><a href="https://reference.digilentinc.com/reference/programmable-logic/arty-a7/reference-manual">Digilent Arty A7-35T</a></strong> with <strong><a href="https://reference.digilentinc.com/reference/pmod/pmodvga/reference-manual">Pmod VGA</a></strong></li>
+</ul>
+<p>Follow the source <a href="https://github.com/projf/projf-explore/tree/master/fpga-ad-astra">README</a> instructions to quickly build a project for either of these boards.</p>
+<h3 id="source">Source</h3>
+<p>All the designs featured in this series are available on <a href="https://github.com/projf/projf-explore/">GitHub</a>: look out for <strong>[src]</strong> links as your read. The designs are open source under the permissive MIT licence, but this post is subject to normal copyright restrictions.</p>
+<h2 id="computer-space">Computer Space</h2>
+<p><a href="https://en.wikipedia.org/wiki/Computer_Space">Computer Space</a> was the first video arcade game: it features a simple backdrop of stars over which the player&rsquo;s rocket battles two flying saucers. The backdrop may have been simple, but this game was released in 1971, when a &ldquo;cheap&rdquo; computer, such as the <a href="https://www.computerhistory.org/revolution/minicomputers/11/338">Data General Nova</a>, cost around $8,000 (c. $40,000 in 2020). Unable to find anything both fast and cheap, developers Nolan Bushnell and Ted Dabney created their own custom hardware instead. It&rsquo;s strangely hard to find details of the Computer Space logic design on the Internet, but <a href="https://en.wikipedia.org/wiki/7400-series_integrated_circuits">TTL 7400s</a> were used.</p>
+<blockquote>
+<p><strong>Quick Aside: Computer Space Cabinet</strong><br>
+Computer Space had an amazing fibreglass cabinet. You can see more photos at <a href="https://web.archive.org/web/20090130053055/http://www.marvin3m.com/arcade/cspace.htm">Marvin&rsquo;s Marvelous Mechanical Museum</a> (courtesy of the Wayback Machine).</p>
+</blockquote>
+<h2 id="linear-feedback-shift-register">Linear Feedback Shift Register</h2>
+<p>I don&rsquo;t know how Computer Space created its starfield, but we&rsquo;re going to use a <strong>linear feedback shift register</strong> (henceforth LFSR). Rather like field programmable gate arrays themselves, their name makes LFSRs sound arcane and inscrutable; happily for us, this is not the case.</p>
+<p>An LFSR can create a pseudorandom number sequence in which every number appears just once. For example, an 8-bit LSFR can generate all the numbers from 1-255 in a repeatable sequence that seems random. The logic for an LFSR can be written in a single line of Verilog:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">sreg <span style="color:#f92672">&lt;=</span> {<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>, sreg[<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">1</span>]} <span style="color:#f92672">^</span> (sreg[<span style="color:#ae81ff">0</span>] <span style="color:#f92672">?</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b10111000</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b0</span>);
+</code></pre></div><p>The first part of the statement right-shifts the shift-register one bit. In the second part, we check the value of the bit we shifted: this is the feedback. If the feedback is true, we XOR the whole shift register with a magic pattern of bits known as <strong>taps</strong>. Values at the bit positions of the taps are flipped by the XOR. The initial value of an LFSR is known as the <strong>seed</strong>.</p>
+<p>For example, an 8-bit LFSR with a seed of 169:</p>
+<ul>
+<li><strong><code>10101001</code> - seed value (169)</strong></li>
+<li><code>01010100</code> - after right shift (bit shifted out was <code>1</code>)</li>
+<li><code>01010100 XOR 10111000</code> - XOR with taps</li>
+<li><strong><code>11101100</code> - 2nd value (236)</strong></li>
+<li><code>01110110</code> - after right shift (bit shifted out was <code>0</code>)</li>
+<li><code>01110110 XOR 00000000</code> - XOR with 0</li>
+<li><strong><code>01110110</code> - 3rd value (118)</strong></li>
+<li>&hellip;</li>
+</ul>
+<p>For an 8-bit LFSR, we set tap bits 8, 6, 5, and 4. To find taps for other lengths, you can refer to the <a href="https://en.wikipedia.org/wiki/Linear-feedback_shift_register#Some_polynomials_for_maximal_LFSRs">feedback polynomials on Wikipedia</a>.</p>
+<p>To create a starfield, we need a sequence that is the same length as the number of pixels we&rsquo;re drawing. If we iterate through our shift register every time we get to a new pixel, then each pixel will always be associated with the same number in the shift register. We could take a single bit and draw a star if it were true, but that would cover half the pixels on the screen with stars; instead, we only draw a star if a group of bits are all 1.</p>
+<p>We&rsquo;ll start with a 17-bit LFSR, as it&rsquo;s longest sequence, 2<sup>17</sup>-1, fits within 640x480. If we draw this within an area of 512x256, which has 2<sup>17</sup> pixels, then the starfield will move left by one pixel every frame.</p>
+<p>Create a LFSR module <code>lfsr.sv</code> <strong>[<a href="https://github.com/projf/projf-explore/blob/master/fpga-ad-astra/lfsr.sv">src</a>]</strong>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> lfsr #(
+    <span style="color:#66d9ef">parameter</span> LEN<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,                    <span style="color:#75715e">// shift register length
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> TAPS<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b10111000</span>,         <span style="color:#75715e">// XOR taps
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> SEED<span style="color:#f92672">=</span>{LEN{<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b1</span>}}          <span style="color:#75715e">// initial seed value
+</span><span style="color:#75715e"></span>    ) (
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,              <span style="color:#75715e">// clock
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst,              <span style="color:#75715e">// reset
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> en,               <span style="color:#75715e">// enable
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [LEN<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sreg    <span style="color:#75715e">// lfsr output
+</span><span style="color:#75715e"></span>    );
+
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">if</span> (en) sreg <span style="color:#f92672">&lt;=</span> {<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>, sreg[LEN<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">1</span>]} <span style="color:#f92672">^</span> (sreg[<span style="color:#ae81ff">0</span>] <span style="color:#f92672">?</span> TAPS <span style="color:#f92672">:</span> {LEN{<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>}});
+        <span style="color:#66d9ef">if</span> (rst) sreg <span style="color:#f92672">&lt;=</span> SEED;
+    <span style="color:#66d9ef">end</span>
+<span style="color:#66d9ef">endmodule</span>
+</code></pre></div><p>We use a simple top module to drive it, based on the design we used in <a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a>:</p>
+<ul>
+<li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-ad-astra/xc7/top_lfsr.sv">xc7/top_lfsr.sv</a></strong></li>
+<li>iCE40 DVI: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-ad-astra/ice40/top_lfsr.sv">ice40/top_lfsr.sv</a></strong></li>
+</ul>
+<p>Shown below is the XC7 version:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_lfsr (
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_100m,         <span style="color:#75715e">// 100 MHz clock
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_rst,          <span style="color:#75715e">// reset button (active low)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> vga_hsync,        <span style="color:#75715e">// horizontal sync
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> vga_vsync,        <span style="color:#75715e">// vertical sync
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vga_r,      <span style="color:#75715e">// 4-bit VGA red
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vga_g,      <span style="color:#75715e">// 4-bit VGA green
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vga_b       <span style="color:#75715e">// 4-bit VGA blue
+</span><span style="color:#75715e"></span>    );
+
+    <span style="color:#75715e">// generate pixel clock
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> clk_pix;
+    <span style="color:#66d9ef">logic</span> clk_locked;
+    clock_gen clock_640x480 (
+       .clk(clk_100m),
+       .rst(<span style="color:#f92672">!</span>btn_rst),  <span style="color:#75715e">// reset button is active low
+</span><span style="color:#75715e"></span>       .clk_pix,
+       .clk_locked
+    );
+
+    <span style="color:#75715e">// display timings
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>;  <span style="color:#75715e">// screen coordinate width in bits
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx, sy;
+    <span style="color:#66d9ef">logic</span> de;
+    display_timings timings_640x480 (
+        .clk_pix,
+        .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for clock lock
+</span><span style="color:#75715e"></span>        .sx,
+        .sy,
+        .hsync(vga_hsync),
+        .vsync(vga_vsync),
+        .de
+    );
+
+    <span style="color:#66d9ef">logic</span> sf_area;
+    <span style="color:#66d9ef">always_comb</span> sf_area <span style="color:#f92672">=</span> (sx <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">512</span> <span style="color:#f92672">&amp;&amp;</span> sy <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">256</span>);
+
+    <span style="color:#75715e">// 17-bit LFSR 
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">16</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sf_reg;
+    lfsr #(
+        .LEN(<span style="color:#ae81ff">17</span>),
+        .TAPS(<span style="color:#ae81ff">17</span><span style="color:#ae81ff">&#39;b10010000000000000</span>)
+    ) lsfr_sf (
+        .clk(clk_pix),
+        .rst(<span style="color:#f92672">!</span>btn_rst),
+        .en(sf_area <span style="color:#f92672">&amp;&amp;</span> de),
+        .sreg(sf_reg)
+    );
+
+    <span style="color:#75715e">// VGA output
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">logic</span> star;
+        star <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;</span>{sf_reg[<span style="color:#ae81ff">16</span><span style="color:#f92672">:</span><span style="color:#ae81ff">9</span>]};  <span style="color:#75715e">// (~512 stars for 8 bits with 512x256)
+</span><span style="color:#75715e"></span>        vga_r <span style="color:#f92672">=</span> (de <span style="color:#f92672">&amp;&amp;</span> sf_area <span style="color:#f92672">&amp;&amp;</span> star) <span style="color:#f92672">?</span> sf_reg[<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
+        vga_g <span style="color:#f92672">=</span> (de <span style="color:#f92672">&amp;&amp;</span> sf_area <span style="color:#f92672">&amp;&amp;</span> star) <span style="color:#f92672">?</span> sf_reg[<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
+        vga_b <span style="color:#f92672">=</span> (de <span style="color:#f92672">&amp;&amp;</span> sf_area <span style="color:#f92672">&amp;&amp;</span> star) <span style="color:#f92672">?</span> sf_reg[<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
+    <span style="color:#66d9ef">end</span>
+<span style="color:#66d9ef">endmodule</span>
+</code></pre></div><p>To build this example, you&rsquo;ll also need the display timings, clock generation, and constraints, that we created in <a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a>. These files are all available in the <a href="https://github.com/projf/projf-explore/fpga-ad-astra">fpga-ad-astra repo</a>. For more details on building this project, including makefile for iCEBreaker, and Vivado project for Arty, see the source <a href="https://github.com/projf/projf-explore/tree/master/fpga-ad-astra">README</a>.</p>
+<h2 id="a-screen-full-of-sky">A Screen Full of Sky</h2>
+<p>If we use the maximum sequence of an LFSR, then our starfield is extremely limited in the sizes it can be. If we want to fill a screen, we need more flexibility. To fill the screen, we choose an LFSR that produces a sequence longer than our number of pixels, then restart it when we reach the end of the screen. There are two ways to do this:</p>
+<ol>
+<li>Find the LFSR value at the point we want to restart (each value appears only once)</li>
+<li>Use a separate counter</li>
+</ol>
+<p>The first option is extremely efficient when it comes to logic. Historically, LFSR were used as counters, including on FPGAs. Xilinx has a nice application note describing this: <a href="https://www.xilinx.com/support/documentation/application_notes/xapp210.pdf">XAPP210</a>.</p>
+<p>The second option requires separate counter logic, but on contemporary FPGAs, the cost is minimal. The advantage of this approach is we can easily adjust the direction and speed of the starfield by counting a little more or a little less. This is the approach we&rsquo;ll use in this project.</p>
+<p>We&rsquo;re going to want a few starfields, so let&rsquo;s create a dedicated module <strong>[<a href="https://github.com/projf/projf-explore/blob/master/fpga-ad-astra/starfield.sv">src</a>]</strong>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> starfield #(
+    <span style="color:#66d9ef">parameter</span> H<span style="color:#f92672">=</span><span style="color:#ae81ff">800</span>,
+    <span style="color:#66d9ef">parameter</span> V<span style="color:#f92672">=</span><span style="color:#ae81ff">525</span>,
+    <span style="color:#66d9ef">parameter</span> INC<span style="color:#f92672">=-</span><span style="color:#ae81ff">1</span>,
+    <span style="color:#66d9ef">parameter</span> SEED<span style="color:#f92672">=</span><span style="color:#ae81ff">21&#39;h1FFFFF</span>,
+    <span style="color:#66d9ef">parameter</span> MASK<span style="color:#f92672">=</span><span style="color:#ae81ff">21&#39;hFFF</span>
+    ) (
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,              <span style="color:#75715e">// clock
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> en,               <span style="color:#75715e">// enable
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst,              <span style="color:#75715e">// reset
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> sf_on,            <span style="color:#75715e">// star on
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sf_star     <span style="color:#75715e">// star brightness
+</span><span style="color:#75715e"></span>    );
+
+    <span style="color:#66d9ef">localparam</span> RST_CNT <span style="color:#f92672">=</span> H <span style="color:#f92672">*</span> V <span style="color:#f92672">+</span> INC <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// counter starts at zero, so subtract 1
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">20</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sf_reg, sf_cnt;
+
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">if</span> (en) <span style="color:#66d9ef">begin</span>
+            sf_cnt <span style="color:#f92672">&lt;=</span> sf_cnt <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+            <span style="color:#66d9ef">if</span> (sf_cnt <span style="color:#f92672">==</span> RST_CNT) sf_cnt <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+        <span style="color:#66d9ef">end</span>
+        <span style="color:#66d9ef">if</span> (rst) sf_cnt <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// select some bits to form stars
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+        sf_on <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;</span>{sf_reg <span style="color:#f92672">|</span> MASK};
+        sf_star <span style="color:#f92672">=</span> sf_reg[<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>];
+    <span style="color:#66d9ef">end</span>
+
+    lfsr #(
+        .LEN(<span style="color:#ae81ff">21</span>),
+        .TAPS(<span style="color:#ae81ff">21</span><span style="color:#ae81ff">&#39;b101000000000000000000</span>),
+        .SEED(SEED)
+        ) lsfr_sf (
+        .clk,
+        .rst(sf_cnt <span style="color:#f92672">==</span> <span style="color:#ae81ff">21</span><span style="color:#ae81ff">&#39;b0</span>),
+        .en,
+        .sreg(sf_reg)
+    );
+<span style="color:#66d9ef">endmodule</span>
+</code></pre></div><p>The starfield module defaults to a 21-bit LFSR, which has a maximum sequence of just over two million. The starfield module takes the screen dimensions as parameters <code>H</code> and <code>W</code>: we&rsquo;re using the full screen, including the blanking interval, so the starfield doesn&rsquo;t immediately repeat. The <code>MASK</code> allows us to control the stellar density, the more 1s in the mask, the more stars there will be. Finally, the module outputs an 8-bit value for star brightness, which can be used to create a more varied starfield.</p>
+<h2 id="into-space">Into Space</h2>
+<p>Using our starfields module, we can create multiple starfields at different speeds and densities to give that real in-space feeling. Our example top module has three starfields:</p>
+<ul>
+<li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-ad-astra/xc7/top_starfields.sv">xc7/top_starfields.sv</a></strong></li>
+<li>iCE40: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-ad-astra/ice40/top_starfields.sv">ice40/top_starfields.sv</a></strong></li>
+</ul>
+<p>Rebuild your project with the new starfield and top modules. Try experimenting with the <code>INC</code> and <code>MASK</code> parameters to create different speeds and densities.</p>
+<h2 id="greetings-world">Greetings, World!</h2>
+<p>I had initially planned to do some more stuff with LFSRs, but on seeing the starfields, I couldn&rsquo;t help but think it would be an ideal backdrop for displaying a message. We don&rsquo;t have a bitmap on which to draw on, so I decided to design a quick hardware sprite. Sprites are not ideal for large quantities of text but do make for a fun way to display messages on screen.</p>
+<h2 id="hardware-sprite">Hardware Sprite</h2>
+<p>Our hardware sprite design attempts to balance simplicity and flexibility. We read a line of sprite pixels in the blanking interval before drawing them on the following line of the screen. We&rsquo;ve departed a little from the most straightforward design by adding a couple of features:</p>
+<ul>
+<li><strong>Scaling</strong> - so a small font can be used to create screen-sized messages</li>
+<li><strong>Bit Swapping</strong> - so sprite data can be MSB or LSB first (no more back-to-front text!)</li>
+</ul>
+<p>A hardware sprite has several different modes, such as loading data, waiting for screen position, and drawing; this makes it an ideal candidate for a finite state machine (FSM).</p>
+<p>To create the sprite, I worked out the states I wanted to include on pen and paper, then created combinatorial logic to describe the state transitions. Finally, I added the sequential logic to perform the actions for each state, such as loading data from memory. I put the logic for choosing the pixel to draw within the combinatorial process, which is a little ugly, but it has worked well in practice.</p>
+<p>Rather than describe each state, I&rsquo;ve commented the sprite module in some detail <strong>[<a href="https://github.com/projf/projf-explore/blob/master/fpga-ad-astra/sprite.sv">src</a>]</strong>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> sprite #(
+        <span style="color:#66d9ef">parameter</span> LSB<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>,      <span style="color:#75715e">// first pixel in LSB
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,    <span style="color:#75715e">// graphic width in pixels
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">parameter</span> HEIGHT<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,   <span style="color:#75715e">// graphic height in pixels
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">parameter</span> SCALE_X<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>,  <span style="color:#75715e">// sprite width scale-factor
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">parameter</span> SCALE_Y<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>,  <span style="color:#75715e">// sprite height scale-factor
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">parameter</span> ADDRW<span style="color:#f92672">=</span><span style="color:#ae81ff">9</span>,    <span style="color:#75715e">// width of graphic address bus
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">parameter</span> CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">10</span>    <span style="color:#75715e">// width of screen coordinates
+</span><span style="color:#75715e"></span>        ) (
+        <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,                        <span style="color:#75715e">// clock
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst,                        <span style="color:#75715e">// reset
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> start,                      <span style="color:#75715e">// start control
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> dma_avail,                  <span style="color:#75715e">// memory access control
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx,             <span style="color:#75715e">// horizontal screen position
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sprx,           <span style="color:#75715e">// horizontal sprite position
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] gfx_data,       <span style="color:#75715e">// sprite graphic data
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] gfx_addr_base,  <span style="color:#75715e">// graphic base address
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] gfx_addr,       <span style="color:#75715e">// graphic address (sprite line)
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> pix,                        <span style="color:#75715e">// pixel to draw
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> done                        <span style="color:#75715e">// sprite drawing is complete
+</span><span style="color:#75715e"></span>    );
+
+    <span style="color:#75715e">// position within sprite
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">/* verilator lint_off LITENDIAN */</span>
+    <span style="color:#66d9ef">logic</span> [$clog2(WIDTH)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>]  ox;
+    <span style="color:#66d9ef">logic</span> [$clog2(HEIGHT)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] oy;
+
+    <span style="color:#75715e">// scale counters
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(SCALE_X)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_x;
+    <span style="color:#66d9ef">logic</span> [$clog2(SCALE_Y)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_y;
+    <span style="color:#75715e">/* verilator lint_on LITENDIAN */</span>
+
+    <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] spr_line; <span style="color:#75715e">// local copy of sprite line
+</span><span style="color:#75715e"></span>
+    <span style="color:#66d9ef">enum</span> {
+        IDLE,       <span style="color:#75715e">// awaiting start signal
+</span><span style="color:#75715e"></span>        START,      <span style="color:#75715e">// prepare for new sprite drawing
+</span><span style="color:#75715e"></span>        AWAIT_DMA,  <span style="color:#75715e">// await DMA access to memory
+</span><span style="color:#75715e"></span>        READ_MEM,   <span style="color:#75715e">// read line of sprite from memory
+</span><span style="color:#75715e"></span>        AWAIT_POS,  <span style="color:#75715e">// await horizontal position
+</span><span style="color:#75715e"></span>        DRAW,       <span style="color:#75715e">// draw pixel
+</span><span style="color:#75715e"></span>        NEXT_LINE,  <span style="color:#75715e">// prepare for next line
+</span><span style="color:#75715e"></span>        DONE        <span style="color:#75715e">// set done signal, then go idle
+</span><span style="color:#75715e"></span>    } state, state_next;
+
+    <span style="color:#66d9ef">integer</span> i;  <span style="color:#75715e">// for bit reversal in READ_MEM
+</span><span style="color:#75715e"></span>
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
+        <span style="color:#75715e">// advance to next state
+</span><span style="color:#75715e"></span>        state <span style="color:#f92672">&lt;=</span> state_next;
+
+        <span style="color:#75715e">// START
+</span><span style="color:#75715e"></span>        <span style="color:#75715e">// clear done signal
+</span><span style="color:#75715e"></span>        <span style="color:#75715e">// set vertical position to start
+</span><span style="color:#75715e"></span>        <span style="color:#75715e">// set graphic address to base
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (state <span style="color:#f92672">==</span> START) <span style="color:#66d9ef">begin</span>
+            done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            oy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            cnt_y <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            gfx_addr <span style="color:#f92672">&lt;=</span> gfx_addr_base;
+        <span style="color:#66d9ef">end</span>
+
+        <span style="color:#75715e">// READ_MEM
+</span><span style="color:#75715e"></span>        <span style="color:#75715e">// read sprite line, reversing if MSB is left-most pixel
+</span><span style="color:#75715e"></span>        <span style="color:#75715e">// NB. Assumes read takes one clock cycle
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (state <span style="color:#f92672">==</span> READ_MEM) <span style="color:#66d9ef">begin</span>
+            <span style="color:#66d9ef">if</span> (LSB) <span style="color:#66d9ef">begin</span>
+                spr_line <span style="color:#f92672">&lt;=</span> gfx_data;
+            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
+                <span style="color:#66d9ef">for</span> (i<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>; i<span style="color:#f92672">&lt;</span>WIDTH; i<span style="color:#f92672">=</span>i<span style="color:#f92672">+</span><span style="color:#ae81ff">1</span>) spr_line[i] <span style="color:#f92672">&lt;=</span> gfx_data[(WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>)<span style="color:#f92672">-</span>i];
+            <span style="color:#66d9ef">end</span>
+         <span style="color:#66d9ef">end</span>
+
+        <span style="color:#75715e">// AWAIT_POS
+</span><span style="color:#75715e"></span>        <span style="color:#75715e">// set horizontal drawing position to start of sprite
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (state <span style="color:#f92672">==</span> AWAIT_DMA) <span style="color:#66d9ef">begin</span>
+            ox <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            cnt_x <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+        <span style="color:#66d9ef">end</span>
+
+        <span style="color:#75715e">// DRAW
+</span><span style="color:#75715e"></span>        <span style="color:#75715e">// count horizontal position, including scaling factor
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (state <span style="color:#f92672">==</span> DRAW) <span style="color:#66d9ef">begin</span>
+            <span style="color:#66d9ef">if</span> (SCALE_X <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">||</span> cnt_x <span style="color:#f92672">==</span> SCALE_X<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
+                ox <span style="color:#f92672">&lt;=</span> ox <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+                cnt_x <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
+                cnt_x <span style="color:#f92672">&lt;=</span> cnt_x <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+            <span style="color:#66d9ef">end</span>
+        <span style="color:#66d9ef">end</span>
+
+        <span style="color:#75715e">// NEXT_LINE
+</span><span style="color:#75715e"></span>        <span style="color:#75715e">// count vertical position, including scaling factor
+</span><span style="color:#75715e"></span>        <span style="color:#75715e">// increment memory address for new graphic line
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (state <span style="color:#f92672">==</span> NEXT_LINE) <span style="color:#66d9ef">begin</span>
+            <span style="color:#66d9ef">if</span> (SCALE_Y <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">||</span> cnt_y <span style="color:#f92672">==</span> SCALE_Y<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
+                oy <span style="color:#f92672">&lt;=</span> oy <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+                cnt_y <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                gfx_addr <span style="color:#f92672">&lt;=</span> gfx_addr <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
+                cnt_y <span style="color:#f92672">&lt;=</span> cnt_y <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+            <span style="color:#66d9ef">end</span>
+        <span style="color:#66d9ef">end</span>
+
+        <span style="color:#75715e">// DONE
+</span><span style="color:#75715e"></span>        <span style="color:#75715e">// set done signal
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (state <span style="color:#f92672">==</span> DONE) <span style="color:#66d9ef">begin</span>
+            done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+        <span style="color:#66d9ef">end</span>
+
+        <span style="color:#66d9ef">if</span> (rst) <span style="color:#66d9ef">begin</span>
+            state <span style="color:#f92672">&lt;=</span> IDLE;
+            ox <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            oy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            cnt_x <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            cnt_y <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            spr_line <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            gfx_addr <span style="color:#f92672">&lt;=</span> gfx_addr_base;
+            done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+        <span style="color:#66d9ef">end</span>
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#66d9ef">logic</span> line_complete, line_gfx_complete, draw_complete;
+    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+        <span style="color:#75715e">/* verilator lint_off WIDTH */</span>
+        line_complete      <span style="color:#f92672">=</span> (ox <span style="color:#f92672">==</span> WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span> <span style="color:#f92672">&amp;&amp;</span> cnt_x <span style="color:#f92672">==</span> SCALE_X<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>);
+        line_gfx_complete  <span style="color:#f92672">=</span> (cnt_y <span style="color:#f92672">==</span> SCALE_Y<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>);
+        draw_complete      <span style="color:#f92672">=</span> (oy <span style="color:#f92672">==</span> HEIGHT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span> <span style="color:#f92672">&amp;&amp;</span> line_complete <span style="color:#f92672">&amp;&amp;</span> line_gfx_complete);
+        <span style="color:#75715e">/* verilator lint_on WIDTH */</span>
+
+        pix <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+        state_next <span style="color:#f92672">=</span> IDLE;
+        <span style="color:#66d9ef">case</span>(state)
+            IDLE: state_next <span style="color:#f92672">=</span> (start) <span style="color:#f92672">?</span> START <span style="color:#f92672">:</span> IDLE;
+            START: state_next <span style="color:#f92672">=</span> AWAIT_DMA;
+            AWAIT_DMA: state_next <span style="color:#f92672">=</span> (dma_avail) <span style="color:#f92672">?</span> READ_MEM <span style="color:#f92672">:</span> AWAIT_DMA;
+            READ_MEM: state_next <span style="color:#f92672">=</span> AWAIT_POS;
+            AWAIT_POS: state_next <span style="color:#f92672">=</span> (sx <span style="color:#f92672">==</span> sprx) <span style="color:#f92672">?</span> DRAW <span style="color:#f92672">:</span> AWAIT_POS;
+            DRAW: <span style="color:#66d9ef">begin</span>
+                pix <span style="color:#f92672">=</span> spr_line[ox];
+                state_next <span style="color:#f92672">=</span> (draw_complete) <span style="color:#f92672">?</span> DONE <span style="color:#f92672">:</span>
+                             (line_complete) <span style="color:#f92672">?</span> NEXT_LINE <span style="color:#f92672">:</span> DRAW;
+            <span style="color:#66d9ef">end</span>
+            NEXT_LINE: state_next <span style="color:#f92672">=</span> (line_gfx_complete) <span style="color:#f92672">?</span> AWAIT_DMA <span style="color:#f92672">:</span> AWAIT_POS;
+            DONE: state_next <span style="color:#f92672">=</span> IDLE;
+        <span style="color:#66d9ef">endcase</span>
+    <span style="color:#66d9ef">end</span>
+<span style="color:#66d9ef">endmodule</span>
+</code></pre></div><p><em>ProTip: Using SystemVerilog enums makes finite state machines easier to understand and debug.</em></p>
+<h2 id="bitmap-font">Bitmap Font</h2>
+<p>If we&rsquo;re going to display text messages, we need a font. I&rsquo;ve experimented with a few simple bitmap fonts in the past, but <a href="http://pelulamu.net/unscii/">Unscii</a> is one of the best. It&rsquo;s available in 8x8 and 8x16/16x16 pixels with thousands of glyphs for many languages and those for ASCII art. Plus, the GNU Unifont hexdump version is trivial to convert to <code>readmemh</code> for use with Verilog.</p>
+<p>The full list of glyphs is too large to be held in internal FPGA memory. For the purposes of this demo, I&rsquo;ve created two subsets of the Unscii font: one for upper-case basic Latin (including punctuation and numbers), and one for <a href="https://en.wikipedia.org/wiki/Hiragana">Hiragana</a> (without marks):</p>
+<ul>
+<li><a href="https://github.com/projf/projf-explore/blob/master/fpga-ad-astra/font_unscii_8x8_latin_uc.mem"><code>font_unscii_8x8_latin_uc.mem</code></a>: (<a href="https://www.unicode.org/charts/PDF/U0000.pdf">U+0020 - U+005F</a>) - 4,096 bits (512 bytes)</li>
+<li><a href="https://github.com/projf/projf-explore/blob/master/fpga-ad-astra/font_unscii_16x16_hiragana.mem"><code>font_unscii_16x16_hiragana.mem</code></a>: (<a href="https://www.unicode.org/charts/PDF/U3040.pdf">U+3041 - U+3096</a>) - 11,008 bits (2,752 bytes)</li>
+</ul>
+<blockquote>
+<p><strong>Create Your Own Font</strong><br>
+You can easily create your own font version with different characters: check out the hex source on the <a href="http://pelulamu.net/unscii/">Unscii site</a>. Use VS Code <em>Column Selection Mode</em> to quickly turn Unifont hex into readmemh format. Just be aware you can&rsquo;t mix different glyph sizes with this sprite design, and watch out for memory usage: the Hiragana file uses 6/30 iCEBreaker BRAMs.</p>
+</blockquote>
+<h2 id="hello---こんにちは">Hello - こんにちは</h2>
+<p>Using the fonts we can create simple greetings. I&rsquo;ve done this for English and Japanese:</p>
+<ul>
+<li>Hello - Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-ad-astra/xc7/top_hello_en.sv">xc7/top_hello_en.sv</a></strong></li>
+<li>Hello - iCE40: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-ad-astra/ice40/top_hello_en.sv">ice40/top_hello_en.sv</a></strong></li>
+<li>こんにちは - Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-ad-astra/xc7/top_hello_jp.sv">xc7/top_hello_jp.sv</a></strong></li>
+<li>こんにちは - iCE40: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-ad-astra/ice40/top_hello_jp.sv">ice40/top_hello_jp.sv</a></strong></li>
+</ul>
+<p>Try creating your own five-character message. Check the fonts for which characters are available, or create your own font-variant to write in another language.</p>
+<h2 id="greetings-from-project-f">Greetings from Project F</h2>
+<p>At this point, I should have called it a day, but starfields and demos are a classic combination, so I couldn&rsquo;t resist sending a few greetings. To be able to express ourselves better, I expanded the number of sprites to eight, then reused them to form a second line of text. This gives us 16 characters to work with on each screen.</p>
+<p>We&rsquo;ve included greetings for a few of the open-source FPGA projects we love; apologies to everyone we missed. I used <code>readmemh</code> hex format for the greetings like we used for the fonts: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-ad-astra/greets.mem">greets.mem</a></strong>.</p>
+<p>For this design, the top module loads the character code point from the greetings ROM,then calculates the address in the font to pass to the sprite.</p>
+<ul>
+<li>Greetings - Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-ad-astra/xc7/top_greet.sv">xc7/top_greet.sv</a></strong></li>
+<li>Greetings - iCE40: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-ad-astra/ice40/top_greet.sv">ice40/top_greet.sv</a></strong></li>
+</ul>
+<p>A counter is used to switch between messages: I&rsquo;ve chosen 80 frames (1.25 seconds). You can adjust this with the <code>MSG_CHG</code> parameter.</p>
+<p>Rather than single colour for the text, we&rsquo;ve got gradients in the classic Amiga demo style (copperbars FTW!). I&rsquo;ve gone for a sky and earth colour scheme, but you can easily change the colours to your own taste using <code>COLR_A</code> and <code>COLR_B</code>.</p>
+<p><img src="/img/posts/fpga-ad-astra/fpga-ad-astra.png" alt="FPGA Ad Astra" title="To the stars!"></p>
+<h2 id="explore">Explore</h2>
+<p>I hope you enjoyed this instalment of Exploring FPGA graphics, but nothing beats creating your own design. Here are a few suggestions to get you started:</p>
+<ul>
+<li>Change starfield speed and direction with buttons on your FPGA board</li>
+<li>Cycle the greetings colours over time</li>
+<li>Create space ship and asteroid sprites</li>
+<li>Animate the text, so it slides in from the bottom of the screen</li>
+</ul>
+<p>If you create a cool demo, drop me a message <a href="https://twitter.com/WillFlux">@WillFlux</a>, and I&rsquo;ll add it to the blog.</p>
+<h2 id="next-time">Next Time</h2>
+<p>I&rsquo;ve started work on the design for the next part, but I&rsquo;m keeping the details under my hat. Follow <a href="https://twitter.com/WillFlux">@WillFlux</a> for updates.</p>
+
+      
+      <div class="related">
+
+<h3>Similar articles:</h3>
+<ul>
+	
+	<li><a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a></li>
+	
+	<li><a href="/posts/hello-arty-2/">Hello Arty - Part 2</a></li>
+	
+	<li><a href="/posts/hello-arty-1/">Hello Arty - Part 1</a></li>
+	
+</ul>
+</div>
+      
+    </div>
+    
+  </div>
+</section>
+
+    <script src="/js/copycode.js"></script>
+
+
+
+<section class="section">
+  <div class="container has-text-centered">
+    <p>©2020 Will Green, Project F</p>
+    
+  </div>
+</section>
+
+
+<script src="https://narwhal.projectf.io/script.js" site="EVCGKVDN" defer></script>
+</body>
+</html>
+
