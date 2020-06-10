@@ -11,7 +11,7 @@
 Before framebuffers were ubiquitous, it was necessary to generate your graphics a line, or even a pixel, at a time.'>
 <meta property='og:url' content='https://projectf.io/posts/fpga-ad-astra/'>
 <meta property='og:site_name' content='Project F'>
-<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/fpga-ad-astra/social-card.jpg'><meta property='article:published_time' content='2020-06-10T00:00:00Z'/><meta property='article:modified_time' content='2020-06-10T00:00:00Z'/><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
+<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/fpga-ad-astra/social-card.png'><meta property='article:published_time' content='2020-06-10T00:00:00Z'/><meta property='article:modified_time' content='2020-06-10T00:00:00Z'/><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
 
 
 <link href="https://projectf.io/index.xml" rel="alternate" type="application/rss+xml" title="Project F" />
@@ -101,7 +101,7 @@ Before framebuffers were ubiquitous, it was necessary to generate your graphics 
     
     <div class="content">
       <p>In this series, we&rsquo;ll be exploring FPGA graphics of all kinds, from the simplest static square, through Pong and the Mandelbrot set, to bitmaps, text scrollers, and even 3D modelling. There&rsquo;s no microcontroller in any of these designs: they&rsquo;re simple logic described in SystemVerilog. New to the series? Start with <a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a>.</p>
-<p>Before framebuffers were ubiquitous, it was necessary to generate your graphics a line, or even a pixel, at a time. In this post, we take inspiration from the original video arcade game, Computer Space, and create a starfield. With a starfield (or three) in place, we&rsquo;re ready to greet the world.</p>
+<p>Before framebuffers were ubiquitous, it was necessary to generate your graphics a line, or even a pixel, at a time. In this post, we take inspiration from the original video arcade game, Computer Space, and create a starfield. With starfields in place, we use hardware sprites to say hello.</p>
 <p><strong>This is a DRAFT: expect mistakes and frequent updates. Pictures coming soon.</strong><br>
 <em>Feedback to <a href="https://twitter.com/WillFlux">@WillFlux</a> is most welcome.</em></p>
 <h3 id="requirements">Requirements</h3>
@@ -136,9 +136,9 @@ Computer Space had an amazing fibreglass cabinet. You can see more photos at <a 
 <li>&hellip;</li>
 </ul>
 <p>For an 8-bit LFSR, we set tap bits 8, 6, 5, and 4. To find taps for other lengths, you can refer to the <a href="https://en.wikipedia.org/wiki/Linear-feedback_shift_register#Some_polynomials_for_maximal_LFSRs">feedback polynomials on Wikipedia</a>.</p>
-<p>To create a starfield, we need a sequence that is the same length as the number of pixels we&rsquo;re drawing. If we iterate through our shift register every time we get to a new pixel, then each pixel will always be associated with the same number in the shift register. We could take a single bit and draw a star if it were true, but that would cover half the pixels on the screen with stars; instead, we only draw a star if a group of bits are all 1.</p>
-<p>We&rsquo;ll start with a 17-bit LFSR, as it&rsquo;s longest sequence, 2<sup>17</sup>-1, fits within 640x480. If we draw this within an area of 512x256, which has 2<sup>17</sup> pixels, then the starfield will move left by one pixel every frame.</p>
-<p>Create a LFSR module <code>lfsr.sv</code> <strong>[<a href="https://github.com/projf/projf-explore/blob/master/fpga-ad-astra/lfsr.sv">src</a>]</strong>:</p>
+<p>To create a starfield, we need a sequence that&rsquo;s the same length as the number of pixels we&rsquo;re drawing. If we iterate through our shift register every time we get to a new pixel, then each pixel will always be associated with the same number in the shift register. We could take a single bit and draw a star if it were true, but that would cover half the pixels on the screen with stars; instead, we only draw a star if a group of bits are all 1.</p>
+<p>We&rsquo;ll start with a 17-bit LFSR, as its longest sequence, 2<sup>17</sup>-1, fits within 640x480. If we draw this within an area of 512x256, which has 2<sup>17</sup> pixels, then the starfield will move left by one pixel every frame.</p>
+<p>Create an LFSR module <code>lfsr.sv</code> <strong>[<a href="https://github.com/projf/projf-explore/blob/master/fpga-ad-astra/lfsr.sv">src</a>]</strong>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> lfsr #(
     <span style="color:#66d9ef">parameter</span> LEN<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,                    <span style="color:#75715e">// shift register length
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> TAPS<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b10111000</span>,         <span style="color:#75715e">// XOR taps
@@ -221,13 +221,13 @@ Computer Space had an amazing fibreglass cabinet. You can see more photos at <a 
 <span style="color:#66d9ef">endmodule</span>
 </code></pre></div><p>To build this example, you&rsquo;ll also need the display timings, clock generation, and constraints, that we created in <a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a>. These files are all available in the <a href="https://github.com/projf/projf-explore/fpga-ad-astra">fpga-ad-astra repo</a>. For more details on building this project, including makefile for iCEBreaker, and Vivado project for Arty, see the source <a href="https://github.com/projf/projf-explore/tree/master/fpga-ad-astra">README</a>.</p>
 <h2 id="a-screen-full-of-sky">A Screen Full of Sky</h2>
-<p>If we use the maximum sequence of an LFSR, then our starfield is extremely limited in the sizes it can be. If we want to fill a screen, we need more flexibility. To fill the screen, we choose an LFSR that produces a sequence longer than our number of pixels, then restart it when we reach the end of the screen. There are two ways to do this:</p>
+<p>If we use the maximum sequence of an LFSR, then our starfield is extremely limited in size. To fill the screen, we choose an LFSR that produces a sequence longer than our number of pixels, then restart it when we reach the end of the screen. There are two ways to do this:</p>
 <ol>
-<li>Find the LFSR value at the point we want to restart (each value appears only once)</li>
+<li>Find the LFSR value at the point we want to restart</li>
 <li>Use a separate counter</li>
 </ol>
-<p>The first option is extremely efficient when it comes to logic. Historically, LFSR were used as counters, including on FPGAs. Xilinx has a nice application note describing this: <a href="https://www.xilinx.com/support/documentation/application_notes/xapp210.pdf">XAPP210</a>.</p>
-<p>The second option requires separate counter logic, but on contemporary FPGAs, the cost is minimal. The advantage of this approach is we can easily adjust the direction and speed of the starfield by counting a little more or a little less. This is the approach we&rsquo;ll use in this project.</p>
+<p>The first option is extremely efficient when it comes to logic. As each value appears only once, it uniquely describes a position in the sequence. Historically, LFSR were used as counters, including on FPGAs. Xilinx has a nice application note describing this: <a href="https://www.xilinx.com/support/documentation/application_notes/xapp210.pdf">XAPP210</a>.</p>
+<p>The second option requires separate counter logic, but on a contemporary FPGA, the cost is minimal. The advantage of this approach is we can easily adjust the direction and speed of the starfield by counting a little more or a little less. This is the approach we&rsquo;ll use in this project.</p>
 <p>We&rsquo;re going to want a few starfields, so let&rsquo;s create a dedicated module <strong>[<a href="https://github.com/projf/projf-explore/blob/master/fpga-ad-astra/starfield.sv">src</a>]</strong>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> starfield #(
     <span style="color:#66d9ef">parameter</span> H<span style="color:#f92672">=</span><span style="color:#ae81ff">800</span>,
@@ -271,18 +271,18 @@ Computer Space had an amazing fibreglass cabinet. You can see more photos at <a 
         .sreg(sf_reg)
     );
 <span style="color:#66d9ef">endmodule</span>
-</code></pre></div><p>The starfield module defaults to a 21-bit LFSR, which has a maximum sequence of just over two million. The starfield module takes the screen dimensions as parameters <code>H</code> and <code>W</code>: we&rsquo;re using the full screen, including the blanking interval, so the starfield doesn&rsquo;t immediately repeat. The <code>MASK</code> allows us to control the stellar density, the more 1s in the mask, the more stars there will be. Finally, the module outputs an 8-bit value for star brightness, which can be used to create a more varied starfield.</p>
+</code></pre></div><p>The starfield module defaults to a 21-bit LFSR, which has a maximum sequence of just over two million. The module takes the screen dimensions as parameters <code>H</code> and <code>W</code>: we&rsquo;re using the full screen, including the blanking interval, so the starfield doesn&rsquo;t immediately repeat. The <code>MASK</code> allows us to control the stellar density, the more 1s in the mask, the more stars there will be. Finally, the module outputs an 8-bit value for star brightness, which can be used to create a more varied starfield.</p>
 <h2 id="into-space">Into Space</h2>
-<p>Using our starfields module, we can create multiple starfields at different speeds and densities to give that real in-space feeling. Our example top module has three starfields:</p>
+<p>Using our module, we can create multiple starfields at different speeds and densities to give that real in-space feeling. Our example top module has three starfields:</p>
 <ul>
 <li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-ad-astra/xc7/top_starfields.sv">xc7/top_starfields.sv</a></strong></li>
 <li>iCE40: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-ad-astra/ice40/top_starfields.sv">ice40/top_starfields.sv</a></strong></li>
 </ul>
 <p>Rebuild your project with the new starfield and top modules. Try experimenting with the <code>INC</code> and <code>MASK</code> parameters to create different speeds and densities.</p>
 <h2 id="greetings-world">Greetings, World!</h2>
-<p>I had initially planned to do some more stuff with LFSRs, but on seeing the starfields, I couldn&rsquo;t help but think it would be an ideal backdrop for displaying a message. We don&rsquo;t have a bitmap on which to draw on, so I decided to design a quick hardware sprite. Sprites are not ideal for large quantities of text but do make for a fun way to display messages on screen.</p>
+<p>I had initially planned to do some more stuff with LFSRs, but on seeing the starfields, I thought they&rsquo;d make an ideal backdrop for a message. We don&rsquo;t have a bitmap on which to draw on, so I decided to quickly design a hardware sprite. Sprites are not ideal for large quantities of text but do make for a fun way to display short messages on screen.</p>
 <h2 id="hardware-sprite">Hardware Sprite</h2>
-<p>Our hardware sprite design attempts to balance simplicity and flexibility. We read a line of sprite pixels in the blanking interval before drawing them on the following line of the screen. We&rsquo;ve departed a little from the most straightforward design by adding a couple of features:</p>
+<p>Our simple hardware sprite design reads a line of pixels in the blanking interval before drawing them on the following screen line. We&rsquo;ve departed a little from the most straightforward design by adding a couple of features:</p>
 <ul>
 <li><strong>Scaling</strong> - so a small font can be used to create screen-sized messages</li>
 <li><strong>Bit Swapping</strong> - so sprite data can be MSB or LSB first (no more back-to-front text!)</li>
@@ -444,7 +444,7 @@ Computer Space had an amazing fibreglass cabinet. You can see more photos at <a 
 <p>The full list of glyphs is too large to be held in internal FPGA memory. For the purposes of this demo, I&rsquo;ve created two subsets of the Unscii font: one for upper-case basic Latin (including punctuation and numbers), and one for <a href="https://en.wikipedia.org/wiki/Hiragana">Hiragana</a> (without marks):</p>
 <ul>
 <li><a href="https://github.com/projf/projf-explore/blob/master/fpga-ad-astra/font_unscii_8x8_latin_uc.mem"><code>font_unscii_8x8_latin_uc.mem</code></a>: (<a href="https://www.unicode.org/charts/PDF/U0000.pdf">U+0020 - U+005F</a>) - 4,096 bits (512 bytes)</li>
-<li><a href="https://github.com/projf/projf-explore/blob/master/fpga-ad-astra/font_unscii_16x16_hiragana.mem"><code>font_unscii_16x16_hiragana.mem</code></a>: (<a href="https://www.unicode.org/charts/PDF/U3040.pdf">U+3041 - U+3096</a>) - 11,008 bits (2,752 bytes)</li>
+<li><a href="https://github.com/projf/projf-explore/blob/master/fpga-ad-astra/font_unscii_16x16_hiragana.mem"><code>font_unscii_16x16_hiragana.mem</code></a>: (<a href="https://www.unicode.org/charts/PDF/U3040.pdf">U+3041 - U+3096</a>) - 22,016 bits (2,752 bytes)</li>
 </ul>
 <blockquote>
 <p><strong>Create Your Own Font</strong><br>
@@ -460,18 +460,18 @@ You can easily create your own font version with different characters: check out
 </ul>
 <p>Try creating your own five-character message. Check the fonts for which characters are available, or create your own font-variant to write in another language.</p>
 <h2 id="greetings-from-project-f">Greetings from Project F</h2>
-<p>At this point, I should have called it a day, but starfields and demos are a classic combination, so I couldn&rsquo;t resist sending a few greetings. To be able to express ourselves better, I expanded the number of sprites to eight, then reused them to form a second line of text. This gives us 16 characters to work with on each screen.</p>
+<p>At this point, I should have called it a day, but starfields and demos are a classic combination, so I couldn&rsquo;t resist sending a few greetings. To be able to express ourselves better, I expanded the number of sprites to eight, then reused them to form a second line of text. This gives us 16 characters to work with.</p>
 <p>We&rsquo;ve included greetings for a few of the open-source FPGA projects we love; apologies to everyone we missed. I used <code>readmemh</code> hex format for the greetings like we used for the fonts: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-ad-astra/greets.mem">greets.mem</a></strong>.</p>
-<p>For this design, the top module loads the character code point from the greetings ROM,then calculates the address in the font to pass to the sprite.</p>
+<p>For this design, the top module loads the character code point from the greetings ROM, then calculates the address in the font to pass to the sprite.</p>
 <ul>
 <li>Greetings - Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-ad-astra/xc7/top_greet.sv">xc7/top_greet.sv</a></strong></li>
 <li>Greetings - iCE40: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-ad-astra/ice40/top_greet.sv">ice40/top_greet.sv</a></strong></li>
 </ul>
-<p>A counter is used to switch between messages: I&rsquo;ve chosen 80 frames (1.25 seconds). You can adjust this with the <code>MSG_CHG</code> parameter.</p>
+<p>A counter is used to switch between messages: I&rsquo;ve chosen 80 frames (1.25 seconds). You can adjust this with the <code>MSG_CHG</code> parameter. You can adjust the size of the text with <code>SPR_SCALE_X</code> and <code>SPR_SCALE_Y</code>.</p>
 <p>Rather than single colour for the text, we&rsquo;ve got gradients in the classic Amiga demo style (copperbars FTW!). I&rsquo;ve gone for a sky and earth colour scheme, but you can easily change the colours to your own taste using <code>COLR_A</code> and <code>COLR_B</code>.</p>
 <p><img src="/img/posts/fpga-ad-astra/fpga-ad-astra.png" alt="FPGA Ad Astra" title="To the stars!"></p>
 <h2 id="explore">Explore</h2>
-<p>I hope you enjoyed this instalment of Exploring FPGA graphics, but nothing beats creating your own design. Here are a few suggestions to get you started:</p>
+<p>I hope you enjoyed this instalment of <em>Exploring FPGA Graphics</em>, but nothing beats creating your own design. Here are a few suggestions to get you started:</p>
 <ul>
 <li>Change starfield speed and direction with buttons on your FPGA board</li>
 <li>Cycle the greetings colours over time</li>
