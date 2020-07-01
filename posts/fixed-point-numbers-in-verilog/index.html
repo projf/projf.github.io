@@ -111,8 +111,8 @@ This post is part of a series of handy recipes to solve common FPGA development 
     
     <div class="content">
       <p>Sometimes you need more precision than integers can provide, but floating-point computation is not trivial (try reading <a href="https://en.wikipedia.org/wiki/IEEE_754">IEEE 754</a>). You could use a library or IP block, but simple fixed point maths can often get the job done with little effort. Furthermore, most FPGAs have dedicated DSP blocks that make multiplication and addition of integers fast; we can take advantage of that with a fixed-point approach.</p>
-<p>This post is part of a series of handy recipes to solve common FPGA development problems. Look out for more <a href="/tags/cookbook">FPGA recipes</a> soon.</p>
-<p><em>Feedback to <a href="https://twitter.com/WillFlux">@WillFlux</a> is most welcome.</em></p>
+<p>This post is part of a series of <a href="/tags/cookbook">handy recipes</a> to solve common FPGA development problems. There is also a post on <a href="/posts/division-in-verilog/">Division in Verilog</a>.</p>
+<p><em>Revised 2020-07-01. Feedback to <a href="https://twitter.com/WillFlux">@WillFlux</a> is most welcome.</em></p>
 <h2 id="what-is-a-fixed-point-number">What is a Fixed Point Number?</h2>
 <p>In a regular binary integer, the bits represent powers of two, with the least significant bit being <code>1</code>.</p>
 <p>For example, decimal <code>13</code> is <code>1101</code> in binary: <code>8 + 4 + 1 = 13</code>.</p>
@@ -132,11 +132,11 @@ This post is part of a series of handy recipes to solve common FPGA development 
 <p>All the usual binary maths work when used with fixed-point numbers. Verilog can generally synthesize addition, subtraction, and multiplication on an FPGA. We cannot synthesize division automatically, but we can multiply by fractional numbers, e.g. multiply by 0.1 instead of dividing by 10.</p>
 <h3 id="addition--subtraction">Addition &amp; Subtraction</h3>
 <p>Addition works in exactly the same way as for integers:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">. 0011.1010        3.6250
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">  0011.1010        3.6250
 + 0100.0001      + 4.0625
 = 0111.1011      = 7.6875
 </code></pre></div><p>We can also do subtraction using <a href="https://en.wikipedia.org/wiki/Two%27s_complement">two&rsquo;s complement</a> to express the negative number:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">. 0011.1010        3.6250
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">  0011.1010        3.6250
 + 1110.1000      - 1.5000
 = 0010.0010      = 2.1250
 </code></pre></div><p>How did we get the two&rsquo;s complement for -1.5?</p>
@@ -148,7 +148,7 @@ Add 1:  0000.0001
 Result: 1110.1000 (-1.5)
 </code></pre></div><h3 id="multiplication">Multiplication</h3>
 <p>Multiplication works as expected too, but the product contains twice the number of bits. Multiplying two Q4.4 numbers results in a Q8.8 product:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">. 0011.0100        3.2500
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">  0011.0100        3.2500
 x 0010.0001        2.0625
 </code></pre></div><p>You can do the long multiplication to produce:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">00000110.10110100 = 6.703125
@@ -156,17 +156,17 @@ x 0010.0001        2.0625
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">0000[0110.1011]0100 = 0110.1011 = 6.6875
 </code></pre></div><p>You can see we lost some precision there; this often happens when you convert to the original precision after multiplication. If our result had been 8 or higher, it would have overflowed our Q4.4 format because the largest digit we can represent with four bits in two&rsquo;s complement is 7. We discuss range and precision in more detail below.</p>
 <h3 id="division">Division</h3>
-<p>Division is hard. You can&rsquo;t synthesize it with regular Verilog unless it&rsquo;s by a power of two, which uses a right shift. A right shift truncates the result, so we lose the fractional part:</p>
+<p>Division is less straightforward. You can&rsquo;t synthesize it with regular Verilog unless it&rsquo;s by a power of two, which uses a right shift. A right shift truncates the result, so we lose the fractional part:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">0111    7
  &gt;&gt;1    right-shift 1 bit
 0011    3
 </code></pre></div><p>However, with fractional numbers, we can do accurate division by a constant using multiplication.</p>
 <p>For example, to divide by 2 we multiple by 0.5:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">. 0111.1000             7.5000
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">  0111.1000             7.5000
 x 0000.1000             0.5000
 = 00000011.11000000     3.7500
 </code></pre></div><p>Back in Q4.4: <code>0011.1100</code>. In this case, our answer is exact.</p>
-<p>Alas, if your denominator is not a constant, this is no help. I am working on a separate post on general division, but for now, let&rsquo;s consider the range and precision of our numbers.</p>
+<p>To be able to divide arbitrary fixed-point numbers see: <a href="/posts/division-in-verilog/">Division in Verilog</a>.</p>
 <h2 id="in-verilog">In Verilog</h2>
 <p>You can&rsquo;t use a point &lsquo;.&rsquo; in Verilog binary literals, but you can use an underscore. The following module demonstrates all the calculations we performed above:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> fixedtest();
@@ -231,17 +231,17 @@ Precision:  0.0000152...
 </blockquote>
 <h3 id="overflow">Overflow</h3>
 <p>All results so far have fitted in our Q4.4 representation, but this doesn&rsquo;t always happen. Let&rsquo;s consider what happens when we multiply 6.5 by 4:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">. 0110.1000        6.5000
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">  0110.1000        6.5000
 x 0100.0000        4.0000
 00011010.00000000 26.0000
 </code></pre></div><p>If we take the eight middle bits, we get 1010.0000, which is -6. Our Q4.4 representation can&rsquo;t hold 26.
 For a Q4.4 product, if any of the first four bits contain <code>1</code>, then we&rsquo;ve overflowed. You can also check for a loss of precision by looking for any 1s in the four least significant bits.</p>
 <p>Overflow can also happen with addition:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">. 0110.1010        6.6250
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">  0110.1010        6.6250
 + 0100.0001     +  4.0625
 = 1010.1011     = -5.3125 ?!
 </code></pre></div><p>And if our result is less than -8 it will overflow in the negative direction:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">. 1010.0000       -6.0000
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">  1010.0000       -6.0000
 + 1010.0000     + -6.0000
 = 0100.0000     =  4.0000 ?!
 </code></pre></div><p>Thankfully it&rsquo;s not too hard to detect this. If both our operands are positive and the result is negative, then overflow must have occurred. Similarly, if both our operands are negative and the result is positive, then it has overflowed too.</p>
