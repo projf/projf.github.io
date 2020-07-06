@@ -7,7 +7,7 @@
 <title>Division in Verilog | Project F</title>
 
 <meta property='og:title' content='Division in Verilog - Project F'>
-<meta property='og:description' content='Division is a fundamental arithmetic operation, but unlike addition, subtraction, and multiplication, you need to implement yourself. In this FPGA recipe, we&rsquo;re going to look at a simple division method that takes one cycle per bit (32 cycles for 32-bit numbers). This algorithm is for unsigned values only.
+<meta property='og:description' content='Division is a fundamental arithmetic operation; one we take for granted in most contexts. FPGAs are different; Verilog can&rsquo;t synthesize division: we need to do it ourselves. In this FPGA recipe, we&rsquo;re going to look at a simple division algorithm for positive integers and fixed-point numbers. This method takes one cycle per bit: 32 cycles for 32-bit numbers.
 Revised 2020-07-06. Feedback to @WillFlux is most welcome.
 Division Defined Before we get to the design, we need to be familiar with some terminology.'>
 <meta property='og:url' content='https://projectf.io/posts/division-in-verilog/'>
@@ -111,7 +111,7 @@ Division Defined Before we get to the design, we need to be familiar with some t
     <h1 class="title">Division in Verilog</h1>
     
     <div class="content">
-      <p>Division is a fundamental arithmetic operation, but unlike addition, subtraction, and multiplication, you need to implement yourself. In this FPGA recipe, we&rsquo;re going to look at a simple division method that takes one cycle per bit (32 cycles for 32-bit numbers). This algorithm is for unsigned values only.</p>
+      <p>Division is a fundamental arithmetic operation; one we take for granted in most contexts. FPGAs are different; Verilog can&rsquo;t synthesize division: we need to do it ourselves. In this FPGA recipe, we&rsquo;re going to look at a simple division algorithm for positive integers and fixed-point numbers. This method takes one cycle per bit: 32 cycles for 32-bit numbers.</p>
 <p><em>Revised 2020-07-06. Feedback to <a href="https://twitter.com/WillFlux">@WillFlux</a> is most welcome.</em></p>
 <h2 id="division-defined">Division Defined</h2>
 <p>Before we get to the design, we need to be familiar with some terminology.</p>
@@ -119,6 +119,10 @@ Division Defined Before we get to the design, we need to be familiar with some t
 <p>Consider a trivial example: you have seven slices of apple pie to divide equally amongst three people. Each person gets two slices of pie, and there is one slice left over, or less tastily:</p>
 <p>Given <code>X=7</code> and <code>Y=3</code> then <code>Q=2</code> and <code>R=1</code> because <code>7 = 3*2 + 1</code></p>
 <p>Or more generally: <code>X = Y*Q + R</code>.</p>
+<blockquote>
+<p><strong>Quick Aside: Divide is typically much slower than multiplication</strong><br>
+Even high-end CPUs take their time with division. Intel Skylake has a latency of 42-95 cycles for signed 64-bit integer division, but only 3 cycles for multiplication. Source: <a href="https://www.agner.org/optimize/instruction_tables.pdf">agner.org</a>.</p>
+</blockquote>
 <h2 id="long-division">Long Division</h2>
 <p>The traditional way of division with pen and paper is <a href="https://en.wikipedia.org/wiki/Long_division">long division</a>. We move from left to right, trying to divide the shortest sequence of digits by the divisor.</p>
 <p>For example, if we want to divide <code>512</code> by <code>12</code>: we find that <code>12</code> is larger <code>5</code>, so we next consider <code>51</code>, which <code>12</code> divides <code>4</code> times, with <code>3</code> left over. So, the first digit of our answer is 4.</p>
@@ -153,7 +157,7 @@ Division Defined Before we get to the design, we need to be familiar with some t
 <p>We&rsquo;ll take our example from above: <code>X=1110</code> and <code>Y=0011</code>. We also need a register to accumulate (store) the intermediate calculations, and a register to record the quotient: we name them <code>A</code> and <code>Q</code> respectively.</p>
 <p>There are four digits, so we need four steps. For each step, we shift the left-most digit of the dividend <code>X</code> into <code>A</code>, then compare it with the divisor <code>Y</code>. If <code>A</code> is greater or equal to <code>Y</code>, then we subtract <code>Y</code> from <code>A</code> and add 1 to the quotient <code>Q</code>.</p>
 <p>This is easiest to see by working through the example:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">Y=0011
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">Inputs: X=1110  Y=0011
 
 Step    A       X       Q       Description
 ——————————————————————————————————————————————————————————————————
@@ -168,8 +172,9 @@ Step    A       X       Q       Description
 4       0010    0000    0100    Left shift X into A. Left shift Q.
                                 Is A≥Y? No. Done.
 ——————————————————————————————————————————————————————————————————
-</code></pre></div><p>At the end of the process, our quotient <code>Q=100</code> and our remainder is left in the accumulator <code>A</code>.</p>
-<p>We never use the same digit in <code>X</code> and <code>Q</code> at the same time, so it&rsquo;s possible to combine those registers together. As a digit of the dividend is shifted out, a digit of the quotient is shifted in. We&rsquo;ll do this in our Verilog module.</p>
+
+Outputs: Q=0100  R=010
+</code></pre></div><p>We never use the same digit in <code>X</code> and <code>Q</code> at the same time, so it&rsquo;s possible to combine those registers together. As a digit of the dividend is shifted out, a digit of the quotient is shifted in. We&rsquo;ll do this in our Verilog module.</p>
 <h2 id="verilog-module">Verilog Module</h2>
 <p>Our Verilog design uses the above algorithm, but adds a check for divide by zero and allows the width of the numbers to be configured.</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#75715e">// Project F: Division
@@ -231,10 +236,6 @@ Step    A       X       Q       Description
 </code></pre></div><p><em>ProTip: I&rsquo;ve used SystemVerilog, but you can easily adapt <code>logic</code>, <code>$clog2</code>, and always* to Verilog.</em></p>
 <p>To use the module, set <code>WIDTH</code> to the correct number of bits and the inputs <code>x</code> and <code>y</code> to dividend and divisor respectively. To begin the calculation set <code>start</code> high for one clock. The <code>done</code> signal indicates when the calculation is complete, then you can read the result out of <code>q</code> and <code>r</code>. If you divide by zero, then <code>q</code> and <code>r</code> will be zero, and the <code>dbz</code> flag signal will be high.</p>
 <p>The Verilog itself is straightforward. The algorithm is in the <code>always_comb</code> block, though we start with the initial shift already in place. The <code>always_ff</code> block tests for division by zero, sets up the initial values, then runs the algorithm for the same number of steps as the width of the numbers.</p>
-<blockquote>
-<p><strong>Quick Aside: Divide is typically much slower than multiplication</strong><br>
-Even high-end CPUs take their time with division. Intel Skylake has a latency of 42-95 cycles for signed 64-bit integer division, but only 3 cycles for multiplication. Source: <a href="https://www.agner.org/optimize/instruction_tables.pdf">agner.org</a>.</p>
-</blockquote>
 <h3 id="testing">Testing</h3>
 <p>The following test bench exercises the module, including dividing by zero.</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#75715e">// Project F: Division Test Bench
@@ -419,7 +420,7 @@ Even high-end CPUs take their time with division. Intel Skylake has a latency of
 <p>Time permitting there are two additional things I&rsquo;d like to add in future:</p>
 <ol>
 <li>Formal Verification</li>
-<li>Signed Integers</li>
+<li>Signed Numbers</li>
 </ol>
 <p>This page will be updated if and when these features are complete.</p>
 
