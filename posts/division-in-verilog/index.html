@@ -116,46 +116,49 @@ Division Defined Before we get to the design, we need to be familiar with some t
 <h2 id="division-defined">Division Defined</h2>
 <p>Before we get to the design, we need to be familiar with some terminology.</p>
 <p>When you divide <strong>dividend</strong> <code>X</code> by <strong>divisor</strong> <code>Y</code> you get <strong>quotient</strong> <code>Q</code> and <strong>remainder</strong> <code>R</code>:</p>
-<p>Consider a trivial example: you have seven slices of apple pie to divide equally amongst three people. Each person gets two slices of pie, and there is one slice left over, or less tastily:</p>
-<p>Given <code>X=7</code> and <code>Y=3</code> then <code>Q=2</code> and <code>R=1</code> because <code>7 = 3*2 + 1</code></p>
-<p>Or more generally: <code>X = Y*Q + R</code>.</p>
+<p><code>X = Y*Q + R</code></p>
+<p>Consider a trivial example: you have seven slices of apple pie to divide equally amongst three people. Each person gets two slices of pie, and there is one slice left over.</p>
+<p>Less deliciously: given <code>X=7</code> and <code>Y=3</code>, then <code>Q=2</code> and <code>R=1</code> because <code>7 = 3*2 + 1</code>.</p>
+<h2 id="long-division">Long Division</h2>
+<p>The traditional way to divide numbers with pen and paper is <a href="https://en.wikipedia.org/wiki/Long_division">long division</a>. We move from left to right, trying to divide the shortest sequence of digits in the dividend by the divisor.</p>
+<p>For example, if we want to divide <code>512</code> by <code>12</code>: we find that <code>12</code> is larger <code>5</code>, so we next consider <code>51</code>, which <code>12</code> divides <code>4</code> times, with <code>3</code> left over. So, the first digit of our answer is 4.</p>
+<p>Next, we take the leftover <code>3</code>, and bring down the <code>2</code> from <code>512</code>, to make <code>32</code>. <code>12</code> fits into <code>32</code> twice, so the second digit of our answer is <code>2</code> with <code>8</code> left over. We&rsquo;ve considered all the digits of the dividend, so the quotient is <code>42</code> and the remainder is <code>8</code>.</p>
+<p>This is easier to see when laid out as a calculation in columns:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">    X=512  Y=12
+
+         42    Quotient
+       ————
+    12 )512
+        48     51: 12x4=48 + 3
+        ——
+         32    Bring 2 down from 512 and add to leftover 3
+         24    32: 12x2=24 + 8
+         ——
+          8    Remainder
+</code></pre></div><p>If this doesn&rsquo;t seem clear, check out the Wikipedia page on <a href="https://en.wikipedia.org/wiki/Long_division">long division</a> and try doing a few calculations yourself. Nothing beats practical experience when it comes to maths.</p>
+<h3 id="in-binary">In Binary</h3>
+<p>For binary, we can follow the same long division process. For example, let&rsquo;s divide <code>1110</code> by <code>11</code> (that&rsquo;s 14 divided by 3 in decimal).</p>
+<p>Our divisor <code>11</code> is two digits long, so we can start by considering the first two digits of the dividend, which is also <code>11</code>: we record a <code>1</code> for the first digit of the quotient and move on.</p>
+<p>The remaining digits are <code>10</code>, which is smaller than <code>11</code>, so we stop. We have a quotient of <code>100</code> and a remainder of <code>10</code>. This is easier to see when laid out in columns:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">    X=1110  Y=11
+
+         100    Quotient
+        ————
+    11 )1110
+        11      11x1=11 + 0
+        ——
+         010    Bring third 1 down from 1110
+         000    11 doesn&#39;t divide 10, so it&#39;s the remainder
+         ———
+          10    Remainder
+</code></pre></div><p>Doing binary division by hand is painful: each step is simple, but even moderately-sized numbers have a large number of digits, all of which are 1 and 0, so it&rsquo;s easy to make a mistake. However, the very simplicity of the approach makes it straightforward to implement in Verilog.</p>
 <blockquote>
 <p><strong>Quick Aside: Divide is typically much slower than Multiply</strong><br>
 Even high-end CPUs take their time with division. Intel Skylake has a latency of 42-95 cycles for signed 64-bit integer division, but only 3 cycles for multiplication. Source: <a href="https://www.agner.org/optimize/instruction_tables.pdf">agner.org</a>.</p>
 </blockquote>
-<h2 id="long-division">Long Division</h2>
-<p>The traditional way of division with pen and paper is <a href="https://en.wikipedia.org/wiki/Long_division">long division</a>. We move from left to right, trying to divide the shortest sequence of digits by the divisor.</p>
-<p>For example, if we want to divide <code>512</code> by <code>12</code>: we find that <code>12</code> is larger <code>5</code>, so we next consider <code>51</code>, which <code>12</code> divides <code>4</code> times, with <code>3</code> left over. So, the first digit of our answer is 4.</p>
-<p>Next, we take the leftover <code>3</code>, and bring down the <code>2</code> from <code>512</code>, to make <code>32</code>. <code>12</code> fits into <code>32</code> twice, so the second digit of our answer is <code>2</code> with <code>8</code> left over. We&rsquo;ve considered all the digits of the dividend, so the quotient is <code>42</code> and the remainder is <code>8</code>.</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">        42
-      ————
-    12)512
-       48       51: 12x4=48 + 3
-       ——
-        32      Bring 2 down and add to leftover 3
-        24      32: 12x2=24 + 8
-        ——
-         8
-
-    Q=42 R=8.
-</code></pre></div><p>For binary, we can do the same thing.  For example, if we want to divide 14 by 3, in binary, this is dividing <code>1110</code> by <code>11</code>.</p>
-<p>Comparing the first digit of the dividend with the divisor <code>11</code>, we find the divisor is larger, so we need to consider the first two digits of the dividend <code>11</code>, which is the same as the divisor; so we record a <code>1</code> for the first quotient digit and move on.</p>
-<p>The remaining digits are <code>10</code>, which is smaller than <code>11</code>, so we stop. We have a quotient of <code>100</code> and a remainder of <code>10</code>.</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">        100
-       ————
-    11)1110
-       11
-       ——
-        000
-        010
-        ———
-         10
-
-    Q=100 R=10.
-</code></pre></div><p>Doing binary long division by hand is painful: it&rsquo;s simple, but there are so many digits, it&rsquo;s easy to make a mistake. However, its simplicity makes it straightforward to transfer into Verilog.</p>
 <h2 id="algorithm-implementation">Algorithm Implementation</h2>
 <p>We&rsquo;ll take our example from above: <code>X=1110</code> and <code>Y=0011</code>. We also need a register to accumulate (store) the intermediate calculations, and a register to record the quotient: we name them <code>A</code> and <code>Q</code> respectively.</p>
-<p>There are four digits, so we need four steps. For each step, we shift the left-most digit of the dividend <code>X</code> into <code>A</code>, then compare it with the divisor <code>Y</code>. If <code>A</code> is greater or equal to <code>Y</code>, then we subtract <code>Y</code> from <code>A</code> and add 1 to the quotient <code>Q</code>.</p>
+<p>There are four digits in the inputs, so we need four steps. For each step, we shift the left-most digit of the dividend <code>X</code> into <code>A</code>, then compare it with the divisor <code>Y</code>. If <code>A</code> is greater or equal to <code>Y</code>, then we subtract <code>Y</code> from <code>A</code> and add 1 to the quotient <code>Q</code>.</p>
 <p>This is easiest to see by working through the example:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">Inputs: X=1110  Y=0011
 
@@ -174,7 +177,8 @@ Step    A       X       Q       Description
 ——————————————————————————————————————————————————————————————————
 
 Outputs: Q=0100  R=010
-</code></pre></div><p>We never use the same digit in <code>X</code> and <code>Q</code> at the same time, so it&rsquo;s possible to combine those registers together. As a digit of the dividend is shifted out, a digit of the quotient is shifted in. We&rsquo;ll do this in our Verilog module.</p>
+</code></pre></div><p>With this algorithm, the divisor <code>Y</code> can only ever fit into the accumulator <code>A</code> once at most, which is why we can simply subtract <code>Y</code> from <code>A</code> when <code>A≥Y</code>.</p>
+<p>We never use the same digit in <code>X</code> and <code>Q</code> at the same time, so it&rsquo;s possible to combine those registers together. As a digit of the dividend is shifted out, a digit of the quotient is shifted in. We&rsquo;ll do this in our Verilog module.</p>
 <h2 id="verilog-module">Verilog Module</h2>
 <p>Our Verilog design uses the above algorithm, but adds a check for divide by zero and allows the width of the numbers to be configured.</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#75715e">// Project F: Division
