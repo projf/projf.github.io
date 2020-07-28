@@ -8,8 +8,8 @@
 
 <meta property='og:title' content='Division in Verilog - Project F'>
 <meta property='og:description' content='Division is a fundamental arithmetic operation; one we take for granted in most contexts. FPGAs are different; Verilog can&rsquo;t synthesize division: we need to do it ourselves. In this FPGA recipe, we&rsquo;re going to look at a simple division algorithm for positive integers and fixed-point numbers. This method takes one cycle per bit: 32 cycles for 32-bit numbers.
-Revised 2020-07-06. Feedback to @WillFlux is most welcome.
-Division Defined Before we get to the design, we need to be familiar with some terminology.'>
+Revised 2020-07-28. Feedback to @WillFlux is most welcome.
+Division Defined Before we get to the design, it helps be familiar with some terminology.'>
 <meta property='og:url' content='https://projectf.io/posts/division-in-verilog/'>
 <meta property='og:site_name' content='Project F'>
 <meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/division-in-verilog/social-card.png'><meta property='article:published_time' content='2020-07-01T00:00:00Z'/><meta property='article:modified_time' content='2020-07-01T00:00:00Z'/><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
@@ -112,16 +112,16 @@ Division Defined Before we get to the design, we need to be familiar with some t
     
     <div class="content">
       <p>Division is a fundamental arithmetic operation; one we take for granted in most contexts. FPGAs are different; Verilog can&rsquo;t synthesize division: we need to do it ourselves. In this FPGA recipe, we&rsquo;re going to look at a simple division algorithm for positive integers and fixed-point numbers. This method takes one cycle per bit: 32 cycles for 32-bit numbers.</p>
-<p><em>Revised 2020-07-06. Feedback to <a href="https://twitter.com/WillFlux">@WillFlux</a> is most welcome.</em></p>
+<p><em>Revised 2020-07-28. Feedback to <a href="https://twitter.com/WillFlux">@WillFlux</a> is most welcome.</em></p>
 <h2 id="division-defined">Division Defined</h2>
-<p>Before we get to the design, we need to be familiar with some terminology.</p>
+<p>Before we get to the design, it helps be familiar with some terminology.</p>
 <p>When you divide <strong>dividend</strong> <code>X</code> by <strong>divisor</strong> <code>Y</code> you get <strong>quotient</strong> <code>Q</code> and <strong>remainder</strong> <code>R</code>:</p>
 <p><code>X = Y*Q + R</code></p>
 <p>Consider a trivial example: you have seven slices of apple pie to divide equally amongst three people. Each person gets two slices of pie, and there is one slice left over.</p>
 <p>Less deliciously: given <code>X=7</code> and <code>Y=3</code>, then <code>Q=2</code> and <code>R=1</code> because <code>7 = 3*2 + 1</code>.</p>
 <h2 id="long-division">Long Division</h2>
 <p>The traditional way to divide numbers with pen and paper is <a href="https://en.wikipedia.org/wiki/Long_division">long division</a>. We move from left to right, trying to divide the shortest sequence of digits in the dividend by the divisor.</p>
-<p>For example, if we want to divide <code>512</code> by <code>12</code>: we find that <code>12</code> is larger <code>5</code>, so we next consider <code>51</code>, which <code>12</code> divides <code>4</code> times, with <code>3</code> left over. So, the first digit of our answer is 4.</p>
+<p>For example, let&rsquo;s divide <code>512</code> by <code>12</code>. We find that <code>12</code> is larger <code>5</code> (the first digit of the dividend), so we next consider <code>51</code>, which <code>12</code> divides <code>4</code> times, with <code>3</code> left over. So, the first digit of our answer is 4.</p>
 <p>Next, we take the leftover <code>3</code>, and bring down the <code>2</code> from <code>512</code>, to make <code>32</code>. <code>12</code> fits into <code>32</code> twice, so the second digit of our answer is <code>2</code> with <code>8</code> left over. We&rsquo;ve considered all the digits of the dividend, so the quotient is <code>42</code> and the remainder is <code>8</code>.</p>
 <p>This is easier to see when laid out as a calculation in columns:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">    X=512  Y=12
@@ -135,7 +135,7 @@ Division Defined Before we get to the design, we need to be familiar with some t
          24    32: 12x2=24 + 8
          ——
           8    Remainder
-</code></pre></div><p>If this doesn&rsquo;t seem clear, check out the Wikipedia page on <a href="https://en.wikipedia.org/wiki/Long_division">long division</a> and try doing a few calculations yourself. Nothing beats practical experience when it comes to maths.</p>
+</code></pre></div><p>If this doesn&rsquo;t seem clear, check out the Wikipedia page on <a href="https://en.wikipedia.org/wiki/Long_division">long division</a> and try doing a few calculations yourself. Nothing beats doing hands-on examples when it comes to maths.</p>
 <h3 id="in-binary">In Binary</h3>
 <p>For binary, we can follow the same long division process. For example, let&rsquo;s divide <code>1110</code> by <code>11</code> (that&rsquo;s 14 divided by 3 in decimal).</p>
 <p>Our divisor <code>11</code> is two digits long, so we can start by considering the first two digits of the dividend, which is also <code>11</code>: we record a <code>1</code> for the first digit of the quotient and move on.</p>
@@ -420,13 +420,15 @@ Outputs: Q=0100  R=010
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
 </code></pre></div><p>Updating the test bench to support fixed point is left as an exercise for the reader. Don&rsquo;t forget to add a definition of the overflow flag <code>ovf</code> to your test bench.</p>
-<h2 id="future-features">Future Features</h2>
-<p>Time permitting there are two additional things I&rsquo;d like to add in future:</p>
+<p>Note that the fixed-point version still produces an integer answer and remainder, for example:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">6.500000 / 0.562500 = 11.000000 (r = 0.312500)
+</code></pre></div><h2 id="future-features">Future Features</h2>
+<p>The following features may be added in future, time permitting:</p>
 <ol>
-<li>Formal Verification</li>
-<li>Signed Numbers</li>
+<li>Non-integer results for fixed-point numbers</li>
+<li>Signed numbers</li>
+<li>Formal verification</li>
 </ol>
-<p>This page will be updated if and when these features are complete.</p>
 
       
       <div class="related">
