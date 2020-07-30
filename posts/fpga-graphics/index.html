@@ -9,8 +9,7 @@
 <meta property='og:title' content='Exploring FPGA Graphics - Project F'>
 <meta property='og:description' content='In all beginnings dwells a magic force
 Herman Hesse, Stages from The Glass Bead Game
- Welcome to Exploring FPGA Graphics with Project F. In this series, we&rsquo;ll be experimenting with FPGA graphics of all kinds, from a static square, through Pong and the Mandelbrot set, to bitmaps, text scrollers, and even 3D modelling. There&rsquo;s no microcontroller in any of these designs: they&rsquo;re simple logic described in SystemVerilog.
-This post is a quick introduction to generating graphics with FPGAs: you&rsquo;ll learn about display signals and simple colour graphics.'>
+ Welcome to Exploring FPGA Graphics with Project F. In this series, we&rsquo;ll be experimenting with FPGA graphics of all kinds, from a simple square, through Pong, sprites, and the Mandelbrot set, to 2D drawing, and even simple 3D modelling. There&rsquo;s no microcontroller in any of these designs: they&rsquo;re simple logic described in SystemVerilog. This series is a work in progress: I&rsquo;ll be revising and improving posts during 2020.'>
 <meta property='og:url' content='https://projectf.io/posts/fpga-graphics/'>
 <meta property='og:site_name' content='Project F'>
 <meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/fpga-graphics/social-card.png'><meta property='article:published_time' content='2020-05-20T00:00:00Z'/><meta property='article:modified_time' content='2020-05-20T00:00:00Z'/><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
@@ -108,7 +107,7 @@ This post is a quick introduction to generating graphics with FPGAs: you&rsquo;l
 
       
     </div>
-    <h2 class="subtitle is-6">May 20, 2020</h2>
+    <h2 class="subtitle is-6">20 May 2020</h2>
     <h1 class="title">Exploring FPGA Graphics</h1>
     
     <div class="content">
@@ -116,18 +115,23 @@ This post is a quick introduction to generating graphics with FPGAs: you&rsquo;l
 <p>In all beginnings dwells a magic force<br>
 <em>Herman Hesse, Stages from <a href="https://en.wikipedia.org/wiki/The_Glass_Bead_Game">The Glass Bead Game</a></em></p>
 </blockquote>
-<p>Welcome to Exploring FPGA Graphics with Project F. In this series, we&rsquo;ll be experimenting with FPGA graphics of all kinds, from a static square, through Pong and the Mandelbrot set, to bitmaps, text scrollers, and even 3D modelling. There&rsquo;s no microcontroller in any of these designs: they&rsquo;re simple logic described in SystemVerilog.</p>
-<p>This post is a quick introduction to generating graphics with FPGAs: you&rsquo;ll learn about display signals and simple colour graphics. In the next part, we race the beam to create an animated starfield and greet the world in <a href="/posts/fpga-ad-astra/">FPGA Ad Astra</a>.</p>
-<p><em>Revised 2020-06-26. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
-<h3 id="requirements">Requirements</h3>
-<p>For this series, you need an FPGA board with video output. We&rsquo;ll be working at 640x480, so pretty much any video output will work. You should also be comfortable with programming your FPGA board and reasonably familiar with Verilog. We&rsquo;ll demo the projects with these boards:</p>
+<p>Welcome to <em>Exploring FPGA Graphics</em> with Project F. In this series, we&rsquo;ll be experimenting with FPGA graphics of all kinds, from a simple square, through Pong, sprites, and the Mandelbrot set, to 2D drawing, and even simple 3D modelling. There&rsquo;s no microcontroller in any of these designs: they&rsquo;re simple logic described in SystemVerilog. This series is a work in progress: I&rsquo;ll be revising and improving posts during 2020.</p>
+<p>This post is a introduction to generating graphics with FPGAs: you&rsquo;ll learn about display signals and simple colour graphics. Once you&rsquo;ve completed this part, try these posts:</p>
 <ul>
-<li><strong><a href="https://github.com/icebreaker-fpga/icebreaker">iCEBreaker</a></strong> with <strong><a href="https://github.com/icebreaker-fpga/icebreaker">12-Bit DVI Pmod</a></strong> or <strong><a href="https://reference.digilentinc.com/reference/pmod/pmodvga/reference-manual">Pmod VGA</a></strong></li>
-<li><strong><a href="https://reference.digilentinc.com/reference/programmable-logic/arty-a7/reference-manual">Digilent Arty A7-35T</a></strong> with <strong><a href="https://reference.digilentinc.com/reference/pmod/pmodvga/reference-manual">Pmod VGA</a></strong></li>
+<li><strong><a href="/posts/fpga-pong/">FPGA Pong</a></strong> - create the arcade classic and play against your FPGA</li>
+<li><strong><a href="/posts/fpga-ad-astra/">FPGA Ad Astra</a></strong> - learn about hardware sprites and generate an animated starfield</li>
 </ul>
-<p>Follow the <a href="https://github.com/projf/projf-explore/tree/master/fpga-graphics">README</a> instructions to build a design for either of these boards.</p>
+<p><em>Revised 2020-07-28. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<h3 id="requirements">Requirements</h3>
+<p>For this series, you need an FPGA board with video output. We&rsquo;ll be working at 640x480, so pretty much any video output will work. You should be comfortable with programming your FPGA board and reasonably familiar with Verilog. If you&rsquo;re new to FPGAs and have a Xilinx board, try <a href="/posts/hello-arty-1">Hello Arty</a>.</p>
+<p>We&rsquo;ll be demoing with these boards (FPGA type):</p>
+<ul>
+<li><strong><a href="https://github.com/icebreaker-fpga/icebreaker">iCEBreaker</a></strong> (Lattice iCE40) with <strong><a href="https://github.com/icebreaker-fpga/icebreaker">12-Bit DVI Pmod</a></strong> or <strong><a href="https://reference.digilentinc.com/reference/pmod/pmodvga/reference-manual">Pmod VGA</a></strong></li>
+<li><strong><a href="https://reference.digilentinc.com/reference/programmable-logic/arty-a7/reference-manual">Digilent Arty A7-35T</a></strong> (Xilinx XC7) with <strong><a href="https://reference.digilentinc.com/reference/pmod/pmodvga/reference-manual">Pmod VGA</a></strong></li>
+</ul>
+<p>Follow the source <a href="https://github.com/projf/projf-explore/tree/master/fpga-graphics">README</a> to build a design for either of these boards.</p>
 <h3 id="source">Source</h3>
-<p>All the Verilog designs featured in this series are available on <a href="https://github.com/projf/projf-explore/">GitHub</a>: look out for <strong>[src]</strong> links as your read. The designs are open source under the permissive MIT licence, but this blog post is subject to normal copyright restrictions.</p>
+<p>All the Verilog designs featured in this series are available in the <a href="https://github.com/projf/projf-explore/">Exploring FPGAs repo</a> and source links are included throughout the blog. The designs are open source under the permissive MIT licence, but this blog is subject to normal copyright restrictions.</p>
 <blockquote>
 <p><strong>Quick Aside: SystemVerilog?!</strong><br>
 We&rsquo;re using a few choice features from SystemVerilog to make Verilog a little more pleasant (no laughing at the back). If you&rsquo;re familiar with Verilog, you&rsquo;ll have no trouble.</p>
@@ -141,29 +145,28 @@ We&rsquo;re using a few choice features from SystemVerilog to make Verilog a lit
 <h2 id="display-timings">Display Timings</h2>
 <p>In this series, we&rsquo;re going to use <strong>640x480</strong> as our display resolution. Almost all displays support 640x480, and its low resource requirements make it possible to work with even small FPGAs. All the same principles apply at higher resolutions, such as 1280x720 or 4K.</p>
 <p>We&rsquo;ll use traditional timings, based on the original VGA display:</p>
-<pre><code>640x480 Timings      HOR    VER
--------------------------------
-Active Pixels        640    480
-Front Porch           16     10
-Sync Width            96      2
-Back Porch            48     33
-Blanking Total       160     45
-Total Pixels         800    525
-Sync Polarity        neg    neg
-</code></pre>
-<p><em>Learn more from <a href="/posts/video-timings-vga-720p-1080p/">Video Timings: VGA, SVGA, 720p, 1080p</a>.</em></p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">    640x480 Timings      HOR    VER
+    -------------------------------
+    Active Pixels        640    480
+    Front Porch           16     10
+    Sync Width            96      2
+    Back Porch            48     33
+    Blanking Total       160     45
+    Total Pixels         800    525
+    Sync Polarity        neg    neg
+</code></pre></div><p><em>Learn more about <a href="/posts/video-timings-vga-720p-1080p/">Video Timings: VGA, SVGA, 720p, 1080p</a>.</em></p>
 <p>Taking blanking into account, we have a total of 800x525 pixels. A typical LCD refreshes 60 times a second, so the number of pixels per second is: <code>800 x 525 x 60 = 25,200,000</code>, which equates to a <strong>pixel clock</strong> of 25.2 MHz.</p>
 <blockquote>
 <p><strong>CAUTION: CRT Monitors</strong><br>
 Any modern display, including <a href="https://en.wikipedia.org/wiki/Multisync_monitor">multisync CRTs</a>, should be fine with a 25.2 or 25 MHz pixel clock. Fixed-frequency CRTs, such as the original IBM 85xx series, could be damaged by an out-of-spec signal. Use these designs at your own risk.</p>
 </blockquote>
 <h2 id="running-to-time">Running to Time</h2>
-<p>We&rsquo;ve decided we need a pixel clock of 25.2 MHz pixel clock, but neither of our demo boards have such a clock. To reach the required frequency, we&rsquo;re going to use a <a href="https://en.wikipedia.org/wiki/Phase-locked_loop">phase-locked loop</a> (PLL). Almost all FPGAs include one or more PLLs, but there isn&rsquo;t a standard way to configure them in Verilog, so we have to use vendor-specific designs.</p>
+<p>We&rsquo;ve decided we need a pixel clock of 25.2 MHz pixel clock, but neither of our demo boards have such a clock. To reach the required frequency, we&rsquo;re going to use a <strong><a href="https://en.wikipedia.org/wiki/Phase-locked_loop">phase-locked loop</a></strong> (PLL). Almost all FPGAs include one or more PLLs, but there isn&rsquo;t a standard way to configure them in Verilog, so we have to use vendor-specific designs.</p>
 <p>We have provided implementations for Xilinx 7 Series (XC7) and Lattice iCE40; for other FPGAs, you&rsquo;ll need to consult your vendor documentation. If you can&rsquo;t reach 25.2 MHz exactly, then 25 MHz or thereabouts should be fine (but see note about CRTs, above). The iCE40 can&rsquo;t generate 25.2 MHz using the oscillators on iCEBreaker but works fine at 25.125 MHz.</p>
 <h3 id="clock-generator-modules">Clock Generator Modules</h3>
 <ul>
 <li>Xilinx 7 Series: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/xc7/clock_gen.sv">xc7/clock_gen.sv</a></strong></li>
-<li>iCE40: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/ice40/clock_gen.sv">ice40/clock_gen.sv</a></strong></li>
+<li>Lattice iCE40: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/ice40/clock_gen.sv">ice40/clock_gen.sv</a></strong></li>
 </ul>
 <h2 id="display-timings-module">Display Timings Module</h2>
 <p>Using our ~25 MHz pixel clock, we can generate timings for our 640x480 display. Creating display timings is straightforward: there&rsquo;s one counter for horizontal position and one for vertical position. We use these counters to decide on the correct time for sync signals.</p>
@@ -211,7 +214,8 @@ Any modern display, including <a href="https://en.wikipedia.org/wiki/Multisync_m
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
 </code></pre></div><p><em>ProTip: The last assignment wins, so the reset overrides the existing <code>sx</code> and <code>sy</code>.</em></p>
-<p><strong>sx</strong> and <strong>sy</strong> store the horizontal and vertical position; their maximum values are 800 and 525 respectively, so we need 10 bits to hold them. <strong>de</strong> is data enable, which is low during the blanking interval: we use it to decide when to draw pixels. Display modes vary in the polarity of their sync signals; for traditional 640x480 the polarity is negative for both <strong>hsync</strong> and <strong>vsync</strong>.</p>
+<p><strong>sx</strong> and <strong>sy</strong> store the horizontal and vertical position; their maximum values are 800 and 525 respectively, so we need 10 bits to hold them. <strong>de</strong> is data enable, which is low during the blanking interval: we use it to decide when to draw pixels.</p>
+<p>Display modes vary in the polarity of their sync signals; for traditional 640x480 the polarity is negative for both <strong>hsync</strong> and <strong>vsync</strong>.</p>
 <h2 id="test-benches">Test Benches</h2>
 <p>You can exercise the designs with the included test benches (currently Xilinx only):</p>
 <ul>
@@ -230,10 +234,10 @@ Any modern display, including <a href="https://en.wikipedia.org/wiki/Multisync_m
 <p>Now we have our display signals we&rsquo;re ready to start drawing. To begin we&rsquo;re going to keep it simple and draw a coloured square. There are three versions of this top module:</p>
 <ul>
 <li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/xc7/top_square.sv">xc7/top_square.sv</a></strong></li>
-<li>iCE40 DVI: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/ice40/top_square.sv">ice40/top_square.sv</a></strong></li>
-<li>iCE40 VGA: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/ice40/top_square_vga.sv">ice40/top_square_vga.sv</a></strong></li>
+<li>Lattice iCE40 DVI: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/ice40/top_square.sv">ice40/top_square.sv</a></strong></li>
+<li>Lattice iCE40 VGA: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/ice40/top_square_vga.sv">ice40/top_square_vga.sv</a></strong></li>
 </ul>
-<p>Shown below is the Xilinx version:</p>
+<p>Shown below is the version for XC7:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_square (
     <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_100m,     <span style="color:#75715e">// 100 MHz clock
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_rst,      <span style="color:#75715e">// reset button (active low)
@@ -286,18 +290,18 @@ Any modern display, including <a href="https://en.wikipedia.org/wiki/Multisync_m
 <li>iCEBreaker DVI Constraints: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/ice40/icebreaker.pcf">icebreaker.pcf</a></strong></li>
 <li>iCEBreaker VGA Constraints: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/ice40/icebreaker_vga.pcf">icebreaker_vga.pcf</a></strong></li>
 </ul>
-<p>There are instructions on building the designs for Arty and iCEBreaker in the <a href="https://github.com/projf/projf-explore/tree/master/fpga-graphics">README</a>.</p>
+<p>You can find build instructions and complete versions of all files in the source <a href="https://github.com/projf/projf-explore/tree/master/fpga-graphics">README</a>.</p>
 <p>You should see something like (the colours are #0088FF and #FF8800):</p>
 <p><img src="/img/posts/fpga-graphics/vga-square.png" alt="A Square" title="Hip to be Square"></p>
 <h2 id="animation">Animation</h2>
-<p>A static square is a change from test cards, but underwhelming. Let&rsquo;s make it move before calling it a day. To create a simple animation, we need to update the position of the square every frame. If we updated the position of the square during active drawing, we risk tearing, so we create an <code>animate</code> signal that happens at the start of the blanking period.</p>
-<p>We&rsquo;re going to replicate the behaviour of the video display itself, scanning across then down the screen. The square &ldquo;beam&rdquo; disappears off the edge of the screen, like the signal in the blanking interval. Try rebuilding the design with <code>top_beam</code>.</p>
+<p>To create a simple animation, we need to update the position of the square every frame. If we updated the position of the square during active drawing, we risk <strong><a href="https://en.wikipedia.org/wiki/Screen_tearing">screen tearing</a></strong>, so we create an <code>animate</code> signal that happens at the start of the blanking period.</p>
+<p>We&rsquo;re going to replicate the behaviour of the video display itself, scanning across then down the screen. The square &ldquo;beam&rdquo; disappears off the edge of the screen, like the signal in the blanking interval. Try rebuilding the design with <code>top_beam</code>:</p>
 <ul>
 <li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/xc7/top_beam.sv">xc7/top_beam.sv</a></strong></li>
-<li>iCE40 DVI: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/ice40/top_beam.sv">ice40/top_beam.sv</a></strong></li>
-<li>iCE40 VGA: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/ice40/top_beam_vga.sv">ice40/top_beam_vga.sv</a></strong></li>
+<li>Lattice iCE40 DVI: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/ice40/top_beam.sv">ice40/top_beam.sv</a></strong></li>
+<li>Lattice iCE40 VGA: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/ice40/top_beam_vga.sv">ice40/top_beam_vga.sv</a></strong></li>
 </ul>
-<p>Shown below is the iCE40 DVI version:</p>
+<p>Shown below is the version for iCE40 with DVI Pmod:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_beam (
     <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_12m,      <span style="color:#75715e">// 12 MHz clock
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_rst,      <span style="color:#75715e">// reset button (active high)
@@ -374,9 +378,54 @@ Any modern display, including <a href="https://en.wikipedia.org/wiki/Multisync_m
         dvi_b <span style="color:#f92672">=</span> <span style="color:#f92672">!</span>de <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h0</span> <span style="color:#f92672">:</span> (q_draw <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h0</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;hF</span>);
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
-</code></pre></div><h2 id="next-time">Next Time</h2>
-<p>That&rsquo;s all for this quick introduction to FPGA graphics. If you&rsquo;d like experiment some more, try creating different coloured squares that bounce off the edge of the screen.</p>
-<p>Ready to create something more exciting? In the next part, we race the beam to create an animated starfield and greet the world in <a href="/posts/fpga-ad-astra/">FPGA Ad Astra</a>.</p>
+</code></pre></div><h2 id="bounce">Bounce!</h2>
+<p>Now we can animate, we can start to create some interesting effects. By adding collision detection, we can bounce squares around the screen. If we create three squares: red, green, and blue we have a simple demo. While simple, it&rsquo;s satisfying to watch the squares combine colours as they move around the screen.</p>
+<p>Try rebuilding the design with <code>top_bounce</code>:</p>
+<ul>
+<li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/xc7/top_bounce.sv">xc7/top_bounce.sv</a></strong></li>
+<li>Lattice iCE40 DVI: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/ice40/top_bounce.sv">ice40/top_bounce.sv</a></strong></li>
+<li>Lattice iCE40 VGA: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/ice40/top_bounce_vga.sv">ice40/top_bounce_vga.sv</a></strong></li>
+</ul>
+<p><img src="/img/posts/fpga-graphics/bounce.jpg" alt="Bouncing Squares" title="Bounce!"></p>
+<h3 id="collision-detection">Collision Detection</h3>
+<p>Collision detection is one of those things that seems trivial, but has a number of subtleties. In our bounce module, each square checks for collisions in both horizontal and vertical directions. This section is entirely optional; feel free to skip onto <a href="#explore">experimenting</a> with your own designs if you prefer.</p>
+<p>Horizontal collision detection example from <code>top_bounce</code>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">if</span> (q1x <span style="color:#f92672">&gt;=</span> H_RES <span style="color:#f92672">-</span> (Q1_SIZE <span style="color:#f92672">+</span> q1s)) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// right edge
+</span><span style="color:#75715e"></span>        q1dx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+        q1x <span style="color:#f92672">&lt;=</span> q1x <span style="color:#f92672">-</span> q1s;
+    <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (q1x <span style="color:#f92672">&lt;</span> q1s) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// left edge
+</span><span style="color:#75715e"></span>        q1dx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+        q1x <span style="color:#f92672">&lt;=</span> q1x <span style="color:#f92672">+</span> q1s;
+    <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> q1x <span style="color:#f92672">&lt;=</span> (q1dx) <span style="color:#f92672">?</span> q1x <span style="color:#f92672">-</span> q1s <span style="color:#f92672">:</span> q1x <span style="color:#f92672">+</span> q1s;
+</code></pre></div><ul>
+<li><code>H_RES</code> - horizontal screen resolution</li>
+<li><code>Q1_SIZE</code> - size of square 1</li>
+<li><code>q1x</code> - horizontal position of square 1</li>
+<li><code>q1dx</code> - horizontal direction of square 1</li>
+<li><code>q1s</code> - horizontal speed of square 1</li>
+</ul>
+<p>A couple of questions to consider:</p>
+<ol>
+<li>What needs to change to make the left and right edge collision tests symmetrical?</li>
+<li>Why do we need to account for the speed of the square?</li>
+</ol>
+<p>At first blush it seems we can simplify this to the following, with a single position update for all situations:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">if</span> (q1x <span style="color:#f92672">&gt;=</span> H_RES <span style="color:#f92672">-</span> (Q1_SIZE <span style="color:#f92672">+</span> q1s)) q1dx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+    <span style="color:#66d9ef">if</span> (q1x <span style="color:#f92672">&lt;</span> q1s) q1dx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+    q1x <span style="color:#f92672">&lt;=</span> (q1dx) <span style="color:#f92672">?</span> q1x <span style="color:#f92672">-</span> q1s <span style="color:#f92672">:</span> q1x <span style="color:#f92672">+</span> q1s;
+</code></pre></div><p>What&rsquo;s the problem with this approach? Hint: logic in an <code>always_ff</code> block operates in parallel.</p>
+<p>Can you suggest a change to the comparisons to make this simpler approach work?</p>
+<h2 id="explore">Explore</h2>
+<p>I hope you enjoyed the first instalment of <em>Exploring FPGA Graphics</em>. Nothing beats creating your own designs; here are a few suggestions to get you started:</p>
+<ul>
+<li>Try different colours and speeds for the squares</li>
+<li>Animate the size of the squares so they grow and shrink</li>
+<li>Add collision detection between squares</li>
+<li>Create a separate square module to reduce code duplication</li>
+</ul>
+<h2 id="next-time">Next Time</h2>
+<p>That&rsquo;s all for this quick introduction to FPGA graphics.<br>
+In the next part, we&rsquo;ll build the classic game: <a href="/posts/fpga-pong/">Pong</a>.</p>
 
       
       <div class="related">
