@@ -11,7 +11,7 @@
 In this series we explore graphics at the hardware level and get a feel for the power of FPGAs. We start by learning how displays work, before racing the beam with Pong, drawing starfields and sprites, simulating life with bitmaps, drawing lines and triangles, and finally creating simple 3D models.'>
 <meta property='og:url' content='https://projectf.io/posts/fpga-pong/'>
 <meta property='og:site_name' content='Project F - FPGA Development'>
-<meta property='og:type' content='article'><meta property='article:section' content='Posts'><meta property='article:tag' content='explore'><meta property='article:published_time' content='2020-07-30T00:00:00Z'/><meta property='article:modified_time' content='2020-07-30T00:00:00Z'/><meta name='twitter:card' content='summary'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
+<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/fpga-pong/social-card.jpg'><meta property='article:published_time' content='2020-07-30T00:00:00Z'/><meta property='article:modified_time' content='2020-07-30T00:00:00Z'/><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
 
 
 <link href="https://projectf.io/index.xml" rel="alternate" type="application/rss+xml" title="Project F - FPGA Development" />
@@ -107,6 +107,10 @@ In this series we explore graphics at the hardware level and get a feel for the 
 
 
 
+  
+  | <a class="subtitle is-6" href="/tags/graphics/">#graphics</a>
+  
+
 
       
     </div>
@@ -116,10 +120,10 @@ In this series we explore graphics at the hardware level and get a feel for the 
     <div class="content">
       <p>Welcome back to <em>Exploring FPGA Graphics</em>. In the previous part we got an <a href="/posts/fpga-graphics/">introduction to FPGA graphics</a>; now we&rsquo;re ready to put our graphical skills to work recreating the arcade classic: Pong.</p>
 <p>In this series we explore graphics at the hardware level and get a feel for the power of FPGAs. We start by learning how displays work, before racing the beam with Pong, drawing starfields and sprites, simulating life with bitmaps, drawing lines and triangles, and finally creating simple 3D models. I&rsquo;ll be writing and revising this series throughout 2020. New to the series? Start with <a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a>.</p>
-<p><em>Revised 2020-08-17. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><em>Revised 2020-08-18. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <h3 id="series-outline">Series Outline</h3>
 <ul>
-<li><a href="/posts/fpga-graphics">Exploring FPGA Graphics</a> - how displays work and simple animated colour graphics</li>
+<li><a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a> - how displays work and simple animated colour graphics</li>
 <li>FPGA Pong (this post) - race the beam to create the arcade classic</li>
 <li><a href="/posts/fpga-ad-astra/">FPGA Ad Astra</a> - animated starfields, hardware sprites, and bitmap fonts</li>
 <li>Life on Screen - bitmaps and Conway&rsquo;s Game of Life (being written)</li>
@@ -131,11 +135,7 @@ In this series we explore graphics at the hardware level and get a feel for the 
 <p>We&rsquo;ll be demoing with these boards (FPGA type):</p>
 <ul>
 <li><strong><a href="https://github.com/icebreaker-fpga/icebreaker">iCEBreaker</a></strong> (Lattice iCE40) with <strong><a href="https://github.com/icebreaker-fpga/icebreaker">12-Bit DVI Pmod</a></strong></li>
-<li><strong><a href="https://reference.digilentinc.com/reference/programmable-logic/arty-a7/reference-manual">Digilent Arty A7-35T</a></strong> (Xilinx XC7) with <strong><a href="https://reference.digilentinc.com/reference/pmod/pmodvga/reference-manual">Pmod VGA</a></strong>
-<ul>
-<li>The Arty version of Pong is still being tested and will be released soon</li>
-</ul>
-</li>
+<li><strong><a href="https://reference.digilentinc.com/reference/programmable-logic/arty-a7/reference-manual">Digilent Arty A7-35T</a></strong> (Xilinx XC7) with <strong><a href="https://reference.digilentinc.com/reference/pmod/pmodvga/reference-manual">Pmod VGA</a></strong></li>
 </ul>
 <p>Follow the source <a href="https://github.com/projf/projf-explore/tree/master/fpga-pong">README</a> to quickly build a project for either of these boards.</p>
 <blockquote>
@@ -151,11 +151,13 @@ The first part of this series included VGA designs for iCEBreaker. Maintaining t
 <p><em>ProTip: If you&rsquo;re unfamiliar with Pong gameplay, check out this <a href="https://www.youtube.com/watch?v=it0sf4CMDeM">Pong video</a> on YouTube.</em></p>
 <h2 id="ball--paddles">Ball &amp; Paddles</h2>
 <p>In the <a href="/posts/fpga-graphics/">previous part</a> of this series, we learnt how to draw animated squares and perform collision detection. This gives us all we need to implement a square Pong ball:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">localparam</span> B_SIZE <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span>;          <span style="color:#75715e">// size in pixels
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// ball
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> B_SIZE <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span>;          <span style="color:#75715e">// size in pixels
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] bx, by;       <span style="color:#75715e">// position
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> dx, dy;                   <span style="color:#75715e">// direction: 0 is right/down
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] spx <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span><span style="color:#ae81ff">&#39;d1</span>;  <span style="color:#75715e">// horizontal speed
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] spy <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span><span style="color:#ae81ff">&#39;d1</span>;  <span style="color:#75715e">// vertical speed
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> b_draw;                   <span style="color:#75715e">// draw ball?
 </span><span style="color:#75715e"></span>
     <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">if</span> (animate) <span style="color:#66d9ef">begin</span>
@@ -177,17 +179,18 @@ The first part of this series included VGA designs for iCEBreaker. Maintaining t
         <span style="color:#66d9ef">end</span>
     <span style="color:#66d9ef">end</span>
 
-    <span style="color:#66d9ef">logic</span> b_draw;
     <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
         b_draw <span style="color:#f92672">=</span> (sx <span style="color:#f92672">&gt;=</span> bx) <span style="color:#f92672">&amp;&amp;</span> (sx <span style="color:#f92672">&lt;</span> bx <span style="color:#f92672">+</span> B_SIZE)
               <span style="color:#f92672">&amp;&amp;</span> (sy <span style="color:#f92672">&gt;=</span> by) <span style="color:#f92672">&amp;&amp;</span> (sy <span style="color:#f92672">&lt;</span> by <span style="color:#f92672">+</span> B_SIZE);
     <span style="color:#66d9ef">end</span>
 </code></pre></div><p>Next, we need to add some paddles. The paddles are simple rectangles that move vertically on the left and right sides of the screen. These paddles have a crude AI that compares their vertical position to the ball and moves them in the direction of the ball. We check if the paddles have reached the screen edge, but not whether they&rsquo;ve have collided with the ball.</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">localparam</span> P_HEIGHT <span style="color:#f92672">=</span> <span style="color:#ae81ff">40</span>;       <span style="color:#75715e">// height in pixels
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// paddles
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> P_HEIGHT <span style="color:#f92672">=</span> <span style="color:#ae81ff">40</span>;       <span style="color:#75715e">// height in pixels
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> P_WIDTH  <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>;       <span style="color:#75715e">// width in pixels
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> P_SPEED  <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;        <span style="color:#75715e">// speed
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> P_OFFSET <span style="color:#f92672">=</span> <span style="color:#ae81ff">32</span>;       <span style="color:#75715e">// offset from screen edge
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] p1y, p2y;     <span style="color:#75715e">// vertical position of paddles 1 and 2
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> p1_draw, p2_draw;         <span style="color:#75715e">// draw paddles?
 </span><span style="color:#75715e"></span>
     <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">if</span> (animate) <span style="color:#66d9ef">begin</span>
@@ -209,7 +212,6 @@ The first part of this series included VGA designs for iCEBreaker. Maintaining t
         <span style="color:#66d9ef">end</span>
     <span style="color:#66d9ef">end</span>
 
-    <span style="color:#66d9ef">logic</span> p1_draw, p2_draw;
     <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
         p1_draw <span style="color:#f92672">=</span> (sx <span style="color:#f92672">&gt;=</span> P_OFFSET) <span style="color:#f92672">&amp;&amp;</span> (sx <span style="color:#f92672">&lt;</span> P_OFFSET <span style="color:#f92672">+</span> P_WIDTH)
                <span style="color:#f92672">&amp;&amp;</span> (sy <span style="color:#f92672">&gt;=</span> p1y) <span style="color:#f92672">&amp;&amp;</span> (sy <span style="color:#f92672">&lt;</span> p1y <span style="color:#f92672">+</span> P_HEIGHT);
@@ -218,28 +220,33 @@ The first part of this series included VGA designs for iCEBreaker. Maintaining t
     <span style="color:#66d9ef">end</span>
 </code></pre></div><p>We compare paddle positions with the top or bottom of the ball to prevent them being too twitchy.</p>
 <h3 id="pong-v1">Pong v1</h3>
-<p>We can use the ball and paddle logic to create a first version of the top module for Pong:</p>
+<p>We can use the ball and paddle logic to create a first version of the top module for Pong. Our top module is based on that from <a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a>, with the same clock generator and display timings.</p>
 <ul>
-<li>Xilinx XC7: <em>coming soon</em></li>
+<li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-pong/xc7/top_pong_v1.sv">xc7/top_pong_v1.sv</a></strong></li>
 <li>Lattice iCE40: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-pong/ice40/top_pong_v1.sv">ice40/top_pong_v1.sv</a></strong></li>
 </ul>
-<p>To build this example, you&rsquo;ll also need the display timings, clock generation, and constraints, that we created in the first part of the series. All these files are available in the <a href="https://github.com/projf/projf-explore/tree/master/fpga-pong">FPGA Pong repo</a> together with a makefile for iCEBreaker, and Vivado project for Arty.</p>
+<p>All the files you need to build this design are available in the <a href="https://github.com/projf/projf-explore/tree/master/fpga-pong">FPGA Pong repo</a>. There is a makefile for iCEBreaker and a Vivado project for Arty.</p>
+<p><img src="/img/posts/fpga-pong/icebreaker-pong.jpg" alt="Pong on the iCEBreaker" title="iCEBreaker Pong"></p>
+<p><em>Pong on the iCEBreaker board. You can easily change the colours of the background and ball/paddles.</em></p>
 <h2 id="collision">Collision</h2>
 <p>It&rsquo;s briefly fun to watch the ball crawl around the screen with the paddles, but this isn&rsquo;t exactly a game, even a demo of one: the ball shows a blatant disregard for the paddles.</p>
 <p>To test for paddle collision, we take advantage of the drawing signals: if we&rsquo;re drawing the ball and a paddle at the same time, then there&rsquo;s a collision. The collision occurs during the drawing process, so we need to store it and use it when we next animate.</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">logic</span> p1_col, p2_col;
-<span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
-    <span style="color:#66d9ef">if</span> (animate) <span style="color:#66d9ef">begin</span>
-        p1_col <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-        p2_col <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-    <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (b_draw) <span style="color:#66d9ef">begin</span>
-        <span style="color:#66d9ef">if</span> (p1_draw) p1_col <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-        <span style="color:#66d9ef">if</span> (p2_draw) p2_col <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">logic</span> p1_col, p2_col;  <span style="color:#75715e">// paddle collision?
+</span><span style="color:#75715e"></span>
+    <span style="color:#75715e">// paddle collision detection
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">if</span> (animate) <span style="color:#66d9ef">begin</span>
+            p1_col <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            p2_col <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (b_draw) <span style="color:#66d9ef">begin</span>
+            <span style="color:#66d9ef">if</span> (p1_draw) p1_col <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+            <span style="color:#66d9ef">if</span> (p2_draw) p2_col <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+        <span style="color:#66d9ef">end</span>
     <span style="color:#66d9ef">end</span>
-<span style="color:#66d9ef">end</span>
 </code></pre></div><p>We reset the collision detection when we receive the <code>animate</code> signal. However, the value of <code>col_p1</code> and <code>col_p2</code> is available until the next clock tick, so the ball animation can always use it.</p>
 <p>Update the horizontal ball animation to check for paddle collisions:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// ball animation
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">if</span> (animate) <span style="color:#66d9ef">begin</span>
             <span style="color:#66d9ef">if</span> (p1_col) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// left paddle collision
 </span><span style="color:#75715e"></span>                dx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
@@ -262,7 +269,7 @@ The first part of this series included VGA designs for iCEBreaker. Maintaining t
 </code></pre></div><h3 id="pong-v2">Pong v2</h3>
 <p>Build and test the updated version with paddle collisions:</p>
 <ul>
-<li>Xilinx XC7: <em>coming soon</em></li>
+<li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-pong/xc7/top_pong_v2.sv">xc7/top_pong_v2.sv</a></strong></li>
 <li>Lattice iCE40: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-pong/ice40/top_pong_v2.sv">ice40/top_pong_v2.sv</a></strong></li>
 </ul>
 <h2 id="controls">Controls</h2>
@@ -273,8 +280,20 @@ The first part of this series included VGA designs for iCEBreaker. Maintaining t
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_dn,       <span style="color:#75715e">// down button
 </span></code></pre></div><p>We need to map these buttons to FPGA pins in the constraints file. You&rsquo;ll be happy to hear I&rsquo;ve already done this for you:</p>
 <ul>
-<li>Xilinx XC7: <em>coming soon</em></li>
+<li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-pong/xc7/arty.xdc">arty.xdc</a></strong></li>
 <li>Lattice iCE40: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-pong/ice40/icebreaker.pcf">ice40/icebreaker.pcf</a></strong></li>
+</ul>
+<p>On the iCEBreaker the buttons map as follows:</p>
+<ul>
+<li>Button 1 - down</li>
+<li>Button 2 - control</li>
+<li>Button 3 - up</li>
+</ul>
+<p>And on the Arty:</p>
+<ul>
+<li>BTN0 - down</li>
+<li>BTN1 - control</li>
+<li>BTN3 - up</li>
 </ul>
 <p>To safely use buttons in our design, we need to debounce them. Debouncing ensures we get a single, clean, transition from button presses. The debounce module looks like this:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> debounce (
@@ -309,7 +328,8 @@ The first part of this series included VGA designs for iCEBreaker. Maintaining t
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
 </code></pre></div><p>We want continuous signals for up and down, but a one-off event for the control button:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">logic</span> sig_ctrl, move_up, move_dn;
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// debounce buttons
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> sig_ctrl, move_up, move_dn;
     debounce deb_btn_ctrl (.clk(clk_pix), .in(btn_ctrl), .out(), .ondn(), .onup(sig_ctrl));
     debounce deb_btn_up (.clk(clk_pix), .in(btn_up), .out(move_up), .ondn(), .onup());
     debounce deb_btn_dn (.clk(clk_pix), .in(btn_dn), .out(move_dn), .ondn(), .onup());
@@ -321,7 +341,8 @@ The first part of this series included VGA designs for iCEBreaker. Maintaining t
 </ul>
 <p>Pressing the control button switches between these states, while the up and down buttons are used to control the paddle.</p>
 <p>We define the state using an enum and a simple finite state machine. This is overkill for two states but makes it easy to expand our game to include other concepts, such as the end of a point.</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">enum</span> {IDLE, PLAY} state, state_next;
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// game state
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">enum</span> {IDLE, PLAY} state, state_next;
     <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
         state_next <span style="color:#f92672">=</span> IDLE;
         <span style="color:#66d9ef">case</span>(state)
@@ -334,7 +355,8 @@ The first part of this series included VGA designs for iCEBreaker. Maintaining t
         state <span style="color:#f92672">&lt;=</span> state_next;
     <span style="color:#66d9ef">end</span>
 </code></pre></div><p>The first paddle control logic meeds updating to reflect the state of play:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// paddle animation
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">if</span> (animate) <span style="color:#66d9ef">begin</span>
             <span style="color:#66d9ef">if</span> (state <span style="color:#f92672">==</span> PLAY) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// human paddle 1
 </span><span style="color:#75715e"></span>                <span style="color:#66d9ef">if</span> (move_up) <span style="color:#66d9ef">begin</span>
@@ -364,14 +386,15 @@ The first part of this series included VGA designs for iCEBreaker. Maintaining t
 </code></pre></div><h3 id="pong-v3">Pong v3</h3>
 <p>Build and test the updated version with controls:</p>
 <ul>
-<li>Xilinx XC7: <em>coming soon</em></li>
+<li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-pong/xc7/top_pong_v3.sv">xc7/top_pong_v3.sv</a></strong></li>
 <li>Lattice iCE40: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-pong/ice40/top_pong_v3.sv">ice40/top_pong_v3.sv</a></strong></li>
 </ul>
 <p>Press the control (middle) button to take over the left-hand paddle. How do you get on? Is the ball too fast or slow? You can adjust the speed of the ball, changing the values of <code>spx</code> and <code>spy</code>.</p>
 <h2 id="wheres-the-skill">Where&rsquo;s the Skill?</h2>
 <p>We still don&rsquo;t have a game: the ball doesn&rsquo;t go out of play. Let&rsquo;s fix this.</p>
 <p>First off, we&rsquo;ll add additional states to the game:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">enum</span> {INIT, IDLE, START, PLAY, POINT_END} state, state_next;
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// game state
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">enum</span> {INIT, IDLE, START, PLAY, POINT_END} state, state_next;
     <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
         state_next <span style="color:#f92672">=</span> INIT;
         <span style="color:#66d9ef">case</span>(state)
@@ -400,7 +423,8 @@ The first part of this series included VGA designs for iCEBreaker. Maintaining t
     <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> bx <span style="color:#f92672">&lt;=</span> (dx) <span style="color:#f92672">?</span> bx <span style="color:#f92672">-</span> spx <span style="color:#f92672">:</span> bx <span style="color:#f92672">+</span> spx;
 </code></pre></div><blockquote>
 <p><strong>Quick Aside:</strong> If you&rsquo;re not sure what goes where, check out the finished versions.<br>
-Lattice iCE40: <a href="https://github.com/projf/projf-explore/blob/master/fpga-pong/ice40/top_pong_v4.sv">ice40/top_pong_v4.sv</a> or Xilinx XC7: <em>coming soon</em>.</p>
+Lattice iCE40: <a href="https://github.com/projf/projf-explore/blob/master/fpga-pong/ice40/top_pong_v4.sv">ice40/top_pong_v4.sv</a> or Xilinx XC7: <a href="https://github.com/projf/projf-explore/blob/master/fpga-pong/xc7/top_pong_v4.sv">xc7/top_pong_v4.sv</a>.
+.</p>
 </blockquote>
 <p>We then add support for the INIT and START states to paddle and ball animation:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// paddle animation
@@ -459,7 +483,7 @@ Lattice iCE40: <a href="https://github.com/projf/projf-explore/blob/master/fpga-
 <h3 id="pong-v4">Pong v4</h3>
 <p>Our fourth version is ready to play. With the default speeds it is possible to win a point against the AI:</p>
 <ul>
-<li>Xilinx XC7: <em>coming soon</em></li>
+<li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-pong/xc7/top_pong_v4.sv">xc7/top_pong_v4.sv</a></strong></li>
 <li>Lattice iCE40: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-pong/ice40/top_pong_v4.sv">ice40/top_pong_v4.sv</a></strong></li>
 </ul>
 <h2 id="scoring">Scoring</h2>
@@ -467,6 +491,7 @@ Lattice iCE40: <a href="https://github.com/projf/projf-explore/blob/master/fpga-
 <h2 id="explore">Explore</h2>
 <p>I hope you enjoyed this instalment of <em>Exploring FPGA Graphics</em>, but nothing beats creating your own designs. Here are a few suggestions to improve FPGA Pong:</p>
 <ul>
+<li>Change the colours of the ball and paddles</li>
 <li>Add a net down the middle of the screen</li>
 <li>Increase the ball speed over time until a point is lost</li>
 <li>Improve AI, so it positions the paddle to direct the ball away from the player</li>
@@ -483,6 +508,8 @@ Lattice iCE40: <a href="https://github.com/projf/projf-explore/blob/master/fpga-
 	<li><a href="/posts/fpga-ad-astra/">FPGA Ad Astra</a></li>
 	
 	<li><a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a></li>
+	
+	<li><a href="/posts/video-timings-vga-720p-1080p/">Video Timings: VGA, SVGA, 720p, 1080p</a></li>
 	
 	<li><a href="/posts/hello-arty-2/">Hello Arty - Part 2</a></li>
 	
