@@ -125,15 +125,15 @@ Herman Hesse, Stages from The Glass Bead Game
 </blockquote>
 <p>Welcome to <em>Exploring FPGA Graphics</em>. In this series we explore graphics at the hardware level and get a feel for the power of FPGAs. We start by learning how displays work, before racing the beam with Pong, drawing starfields and sprites, simulating life with bitmaps, drawing lines and triangles, and finally creating simple 3D models. I&rsquo;ll be writing and revising this series throughout 2020.</p>
 <p>In this first post we learn how computer displays work and animate simple colour graphics.</p>
-<p><em>Revised 2020-08-19. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><em>Updated 2020-08-27. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <h3 id="series-outline">Series Outline</h3>
 <ul>
 <li>Exploring FPGA Graphics (this post) - how displays work and simple animated colour graphics</li>
 <li><a href="/posts/fpga-pong/">FPGA Pong</a> - race the beam to create the arcade classic</li>
 <li><a href="/posts/fpga-ad-astra/">FPGA Ad Astra</a> - animated starfields, hardware sprites, and bitmap fonts</li>
 <li>Life on Screen - bitmaps and Conway&rsquo;s Game of Life (being written)</li>
-<li>Hard Lines - drawing lines and screen coordinates (planned Sep 2020)</li>
-<li>More 2D &amp; 3D to follow (details TBC)</li>
+<li>Hard Lines - drawing lines (planned)</li>
+<li><em>More to follow</em></li>
 </ul>
 <h3 id="requirements">Requirements</h3>
 <p>For this series, you need an FPGA board with video output. We&rsquo;ll be working at 640x480, so pretty much any video output will work. You should be comfortable with programming your FPGA board and reasonably familiar with Verilog. If you&rsquo;re new to FPGAs and have a Xilinx board, try <a href="/posts/hello-arty-1">Hello Arty</a>.</p>
@@ -226,9 +226,9 @@ Any modern display, including <a href="https://en.wikipedia.org/wiki/Multisync_m
         <span style="color:#66d9ef">end</span>
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
-</code></pre></div><p><em>ProTip: The last assignment wins, so the reset overrides the existing <code>sx</code> and <code>sy</code>.</em></p>
-<p><strong>sx</strong> and <strong>sy</strong> store the horizontal and vertical position; their maximum values are 800 and 525 respectively, so we need 10 bits to hold them. <strong>de</strong> is data enable, which is low during the blanking interval: we use it to decide when to draw pixels.</p>
-<p>Display modes vary in the polarity of their sync signals; for traditional 640x480 the polarity is negative for both <strong>hsync</strong> and <strong>vsync</strong>.</p>
+</code></pre></div><p><em>ProTip: The last assignment wins in Verilog, so the reset overrides the existing <code>sx</code> and <code>sy</code>.</em></p>
+<p><strong>sx</strong> and <strong>sy</strong> store the horizontal and vertical position; their maximum values are 800 and 525 respectively, so we need 10 bits to hold them (2<sup>10</sup> = 1024). <strong>de</strong> is <em>data enable</em>, which is low during the blanking interval: we use it to decide when to draw pixels.</p>
+<p>Display modes vary in the polarity of their sync signals; for traditional 640x480 the polarity is negative for both <strong>hsync</strong> and <strong>vsync</strong>. Negative polarity means the sync voltage is normally high, but low for a horizontal or vertical sync signal.</p>
 <h2 id="test-benches">Test Benches</h2>
 <p>You can exercise the designs with the included test benches (currently Xilinx only):</p>
 <ul>
@@ -244,7 +244,8 @@ Any modern display, including <a href="https://en.wikipedia.org/wiki/Multisync_m
 <li>What is the maximum values of <code>sx</code> and <code>sy</code> when <code>de</code> is low?</li>
 </ul>
 <h2 id="bringing-it-together">Bringing it Together</h2>
-<p>Now we have our display signals we&rsquo;re ready to start drawing. To begin we&rsquo;re going to keep it simple and draw a coloured square. There are three versions of this top module:</p>
+<p>Now we have our display signals we&rsquo;re ready to start drawing. To begin we&rsquo;re going to keep it simple and draw a coloured square. When the screen x and y coordinates are both less than 32 we draw in orange, otherwise we use blue. Because our colour output has 4 bits per channel, we can use a single hex digit from 0-F to represent the intensity of red, green, and blue.</p>
+<p>There are three versions of this top module:</p>
 <ul>
 <li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/xc7/top_square.sv">xc7/top_square.sv</a></strong></li>
 <li>Lattice iCE40 DVI: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/ice40/top_square.sv">ice40/top_square.sv</a></strong></li>
@@ -296,19 +297,40 @@ Any modern display, including <a href="https://en.wikipedia.org/wiki/Multisync_m
         vga_b <span style="color:#f92672">=</span> <span style="color:#f92672">!</span>de <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h0</span> <span style="color:#f92672">:</span> (q_draw <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h0</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;hF</span>);
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
+</code></pre></div><p>Take a look at the VGA or DVI output section of the top module. For each colour, we check whether we&rsquo;re in the blanking interval (when de is 0). If we are in the blanking interval, we set the colour intensity to zero. Otherwise, we look at the value of <code>q_draw</code>: if true, we set the pixel to orange, if false we set it to blue. The colour intensity must be zero in the blanking interval; otherwise, your display may be garbled or misaligned.</p>
+<p>We could have written the output logic using nested <code>if</code> blocks instead; for example:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// VGA output
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+        <span style="color:#75715e">// default values
+</span><span style="color:#75715e"></span>        vga_r <span style="color:#f92672">=</span> <span style="color:#ae81ff">4&#39;h0</span>;
+        vga_g <span style="color:#f92672">=</span> <span style="color:#ae81ff">4&#39;h0</span>;
+        vga_b <span style="color:#f92672">=</span> <span style="color:#ae81ff">4&#39;h0</span>;
+
+        <span style="color:#66d9ef">if</span> (de) <span style="color:#66d9ef">begin</span>
+            <span style="color:#66d9ef">if</span> (q_draw) <span style="color:#66d9ef">begin</span>
+                vga_r <span style="color:#f92672">=</span> <span style="color:#ae81ff">4&#39;hF</span>;
+                vga_g <span style="color:#f92672">=</span> <span style="color:#ae81ff">4&#39;h8</span>;
+                <span style="color:#75715e">// vga_b is zero, so we don&#39;t override
+</span><span style="color:#75715e"></span>            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
+                <span style="color:#75715e">// vga_r is zero, so we don&#39;t override
+</span><span style="color:#75715e"></span>                vga_g <span style="color:#f92672">=</span> <span style="color:#ae81ff">4&#39;h8</span>;
+                vga_b <span style="color:#f92672">=</span> <span style="color:#ae81ff">4&#39;hF</span>;
+            <span style="color:#66d9ef">end</span>
+        <span style="color:#66d9ef">end</span>
+    <span style="color:#66d9ef">end</span>
 </code></pre></div><h2 id="let-there-be-pixels">Let there be Pixels</h2>
-<p>Combine <code>top_square</code>, <code>display_timings</code>, <code>clock_gen</code> modules with some suitable constraints, and you should be ready to drive a display.</p>
+<p>Combine the <code>top_square</code>, <code>display_timings</code>, and <code>clock_gen</code> modules with suitable constraints and you&rsquo;re ready to drive a display. The constraints map the pins on the FPGA to signals in our design:</p>
 <ul>
 <li>Arty Constraints: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/xc7/arty.xdc">arty.xdc</a></strong></li>
 <li>iCEBreaker DVI Constraints: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/ice40/icebreaker.pcf">icebreaker.pcf</a></strong></li>
 <li>iCEBreaker VGA Constraints: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/ice40/icebreaker_vga.pcf">icebreaker_vga.pcf</a></strong></li>
 </ul>
-<p>You can find build instructions and complete versions of all files in the source <a href="https://github.com/projf/projf-explore/tree/master/fpga-graphics">README</a>.</p>
-<p>You should see something like (the colours are #0088FF and #FF8800):</p>
+<p>You can find build instructions in the source <a href="https://github.com/projf/projf-explore/tree/master/fpga-graphics">README</a>.</p>
+<p>Once you&rsquo;ve programmed your board, you should see something like this (colour #0088FF and #FF8800):</p>
 <p><img src="/img/posts/fpga-graphics/vga-square.png" alt="A Square" title="Hip to be Square"></p>
-<p>Try experimenting with different square sizes, positions, and colours.</p>
+<p>Try experimenting with your own square size, position, and colours.</p>
 <h2 id="animation">Animation</h2>
-<p>To create a simple animation, we need to update the position of the square every frame. If we updated the position of the square during active drawing, we risk <strong><a href="https://en.wikipedia.org/wiki/Screen_tearing">screen tearing</a></strong>, so we create an <code>animate</code> signal that happens at the start of the blanking period.</p>
+<p>To create a simple animation, we can update the position of the square every frame. If we updated the position of the square during active drawing, we risk <strong><a href="https://en.wikipedia.org/wiki/Screen_tearing">screen tearing</a></strong>, so we create an <code>animate</code> signal that happens at the start of the blanking period.</p>
 <p>We&rsquo;re going to replicate the behaviour of the video display itself, scanning across then down the screen. The square &ldquo;beam&rdquo; disappears off the edge of the screen, like the signal in the blanking interval. Try rebuilding the design with <code>top_beam</code>:</p>
 <ul>
 <li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/xc7/top_beam.sv">xc7/top_beam.sv</a></strong></li>
@@ -402,7 +424,7 @@ Any modern display, including <a href="https://en.wikipedia.org/wiki/Multisync_m
 </ul>
 <p><img src="/img/posts/fpga-graphics/bounce.jpg" alt="Bouncing Squares" title="Bounce!"></p>
 <h3 id="collision-detection">Collision Detection</h3>
-<p>Collision detection is one of those things that seems trivial, but has a number of subtleties. In our bounce module, each square checks for collisions in both horizontal and vertical directions. We&rsquo;ll make use of this in the next part of this series, so it&rsquo;s worth understanding.</p>
+<p>Collision detection is one of those things that seems trivial, but has a number of subtleties. In our bounce module, each square checks for collisions in both horizontal and vertical directions. We&rsquo;ll make use of this in the next part of this series on <a href="/posts/fpga-pong/">Pong</a>, so it&rsquo;s worth understanding.</p>
 <p>Horizontal collision detection example from <code>top_bounce</code>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">if</span> (q1x <span style="color:#f92672">&gt;=</span> H_RES <span style="color:#f92672">-</span> (Q1_SIZE <span style="color:#f92672">+</span> q1s)) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// right edge
 </span><span style="color:#75715e"></span>        q1dx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
@@ -418,7 +440,7 @@ Any modern display, including <a href="https://en.wikipedia.org/wiki/Multisync_m
 <li><code>q1dx</code> - horizontal direction of square 1</li>
 <li><code>q1s</code> - horizontal speed of square 1</li>
 </ul>
-<p>A couple of questions to consider:</p>
+<p>A couple of things to consider:</p>
 <ol>
 <li>What needs to change to make the left and right edge collision tests symmetrical?</li>
 <li>Why do we need to account for the speed of the square?</li>
@@ -432,9 +454,9 @@ Any modern display, including <a href="https://en.wikipedia.org/wiki/Multisync_m
 <h2 id="explore">Explore</h2>
 <p>I hope you enjoyed the first instalment of <em>Exploring FPGA Graphics</em>. Nothing beats creating your own designs; here are a few suggestions to get you started:</p>
 <ul>
-<li>Try different colours and speeds for the squares</li>
+<li>Try drawing some <a href="https://en.wikipedia.org/wiki/Gallery_of_sovereign_state_flags">country flags</a>, many of which are composed of rectangular shapes</li>
 <li>Animate the size of the squares so they grow and shrink</li>
-<li>Add collision detection between squares</li>
+<li>Add collision detection between animated squares so they bounce off each other</li>
 <li>Create a separate square module to reduce code duplication</li>
 </ul>
 <h2 id="next-time">Next Time</h2>
