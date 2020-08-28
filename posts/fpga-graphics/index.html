@@ -125,14 +125,14 @@ Herman Hesse, Stages from The Glass Bead Game
 </blockquote>
 <p>Welcome to <em>Exploring FPGA Graphics</em>. In this series we explore graphics at the hardware level and get a feel for the power of FPGAs. We start by learning how displays work, before racing the beam with Pong, drawing starfields and sprites, simulating life with bitmaps, drawing lines and triangles, and finally creating simple 3D models. I&rsquo;ll be writing and revising this series throughout 2020.</p>
 <p>In this first post we learn how computer displays work and animate simple colour graphics.</p>
-<p><em>Updated 2020-08-27. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><em>Updated 2020-08-28. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <h3 id="series-outline">Series Outline</h3>
 <ul>
 <li>Exploring FPGA Graphics (this post) - how displays work and simple animated colour graphics</li>
 <li><a href="/posts/fpga-pong/">FPGA Pong</a> - race the beam to create the arcade classic</li>
 <li><a href="/posts/fpga-ad-astra/">FPGA Ad Astra</a> - animated starfields, hardware sprites, and bitmap fonts</li>
 <li>Life on Screen - bitmaps and Conway&rsquo;s Game of Life (being written)</li>
-<li>Hard Lines - drawing lines (planned)</li>
+<li>Hard Lines - 2D drawing (planned)</li>
 <li><em>More to follow</em></li>
 </ul>
 <h3 id="requirements">Requirements</h3>
@@ -157,7 +157,7 @@ We&rsquo;re using a few choice features from SystemVerilog to make Verilog a lit
 <p><img src="/img/posts/fpga-graphics/display-timings.png" alt="Display Timings" title="Display Timings"></p>
 <h2 id="display-timings">Display Timings</h2>
 <p>In this series, we&rsquo;re going to use <strong>640x480</strong> as our display resolution. Almost all displays support 640x480, and its low resource requirements make it possible to work with even small FPGAs. All the same principles apply at higher resolutions, such as 1280x720 or 4K.</p>
-<p>We&rsquo;ll use traditional timings, based on the original VGA display:</p>
+<p>We&rsquo;ll use traditional horizontal and vertical timings, based on the original VGA display:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">    640x480 Timings      HOR    VER
     -------------------------------
     Active Pixels        640    480
@@ -167,7 +167,7 @@ We&rsquo;re using a few choice features from SystemVerilog to make Verilog a lit
     Blanking Total       160     45
     Total Pixels         800    525
     Sync Polarity        neg    neg
-</code></pre></div><p><em>Learn more about <a href="/posts/video-timings-vga-720p-1080p/">Video Timings: VGA, SVGA, 720p, 1080p</a>.</em></p>
+</code></pre></div><p><em>Learn more from <a href="/posts/video-timings-vga-720p-1080p/">Video Timings: VGA, SVGA, 720p, 1080p</a>.</em></p>
 <p>Taking blanking into account, we have a total of 800x525 pixels. A typical LCD refreshes 60 times a second, so the number of pixels per second is: <code>800 x 525 x 60 = 25,200,000</code>, which equates to a <strong>pixel clock</strong> of 25.2 MHz.</p>
 <blockquote>
 <p><strong>CAUTION: CRT Monitors</strong><br>
@@ -182,7 +182,7 @@ Any modern display, including <a href="https://en.wikipedia.org/wiki/Multisync_m
 <li>Lattice iCE40: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/ice40/clock_gen.sv">ice40/clock_gen.sv</a></strong></li>
 </ul>
 <h2 id="display-timings-module">Display Timings Module</h2>
-<p>Using our ~25 MHz pixel clock, we can generate timings for our 640x480 display. Creating display timings is straightforward: there&rsquo;s one counter for horizontal position and one for vertical position. We use these counters to decide on the correct time for sync signals.</p>
+<p>Using our circa 25 MHz pixel clock, we can generate timings for our 640x480 display. Creating display timings is straightforward: there&rsquo;s one counter for horizontal position and one for vertical position. We use these counters to decide on the correct time for sync signals.</p>
 <p>640x480 display timing generator <strong>[<a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/display_timings.sv">src</a>]</strong>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> display_timings (
     <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_pix,          <span style="color:#75715e">// pixel clock
@@ -203,7 +203,7 @@ Any modern display, including <a href="https://en.wikipedia.org/wiki/Multisync_m
     <span style="color:#75715e">// vertical timings
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> VA_END <span style="color:#f92672">=</span> <span style="color:#ae81ff">479</span>;             <span style="color:#75715e">// end of active pixels
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> VS_STA <span style="color:#f92672">=</span> VA_END <span style="color:#f92672">+</span> <span style="color:#ae81ff">10</span>;     <span style="color:#75715e">// sync starts after front porch
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> VS_END <span style="color:#f92672">=</span> HS_STA <span style="color:#f92672">+</span> <span style="color:#ae81ff">2</span>;      <span style="color:#75715e">// sync ends
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> VS_END <span style="color:#f92672">=</span> VS_STA <span style="color:#f92672">+</span> <span style="color:#ae81ff">2</span>;      <span style="color:#75715e">// sync ends
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> SCREEN <span style="color:#f92672">=</span> <span style="color:#ae81ff">524</span>;             <span style="color:#75715e">// last line on screen (after back porch)
 </span><span style="color:#75715e"></span>
     <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
@@ -228,7 +228,9 @@ Any modern display, including <a href="https://en.wikipedia.org/wiki/Multisync_m
 <span style="color:#66d9ef">endmodule</span>
 </code></pre></div><p><em>ProTip: The last assignment wins in Verilog, so the reset overrides the existing <code>sx</code> and <code>sy</code>.</em></p>
 <p><strong>sx</strong> and <strong>sy</strong> store the horizontal and vertical position; their maximum values are 800 and 525 respectively, so we need 10 bits to hold them (2<sup>10</sup> = 1024). <strong>de</strong> is <em>data enable</em>, which is low during the blanking interval: we use it to decide when to draw pixels.</p>
-<p>Display modes vary in the polarity of their sync signals; for traditional 640x480 the polarity is negative for both <strong>hsync</strong> and <strong>vsync</strong>. Negative polarity means the sync voltage is normally high, but low for a horizontal or vertical sync signal.</p>
+<p>Display modes vary in the polarity of their sync signals; for traditional 640x480 the polarity is negative for both <strong>hsync</strong> and <strong>vsync</strong>. Negative polarity means the  voltage is normally high; low indicates a sync signal.</p>
+<p>The following simulation shows the vertical sync occurring after 490 lines (counting starts at zero):</p>
+<p><img src="/img/posts/fpga-graphics/hsync-vsync-vga.png" alt="Sync Signal Simulation" title="Simulating VGA horizontal &amp; vertical sync signals"></p>
 <h2 id="test-benches">Test Benches</h2>
 <p>You can exercise the designs with the included test benches (currently Xilinx only):</p>
 <ul>
@@ -326,7 +328,7 @@ Any modern display, including <a href="https://en.wikipedia.org/wiki/Multisync_m
 <li>iCEBreaker VGA Constraints: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/ice40/icebreaker_vga.pcf">icebreaker_vga.pcf</a></strong></li>
 </ul>
 <p>You can find build instructions in the source <a href="https://github.com/projf/projf-explore/tree/master/fpga-graphics">README</a>.</p>
-<p>Once you&rsquo;ve programmed your board, you should see something like this (colour #0088FF and #FF8800):</p>
+<p>Once you&rsquo;ve programmed your board, you should see something like this (colours #0088FF and #FF8800):</p>
 <p><img src="/img/posts/fpga-graphics/vga-square.png" alt="A Square" title="Hip to be Square"></p>
 <p>Try experimenting with your own square size, position, and colours.</p>
 <h2 id="animation">Animation</h2>
@@ -457,7 +459,7 @@ Any modern display, including <a href="https://en.wikipedia.org/wiki/Multisync_m
 <li>Try drawing some <a href="https://en.wikipedia.org/wiki/Gallery_of_sovereign_state_flags">country flags</a>, many of which are composed of rectangular shapes</li>
 <li>Animate the size of the squares so they grow and shrink</li>
 <li>Add collision detection between animated squares so they bounce off each other</li>
-<li>Create a separate square module to reduce code duplication</li>
+<li>Create a separate square module to avoid code duplication</li>
 </ul>
 <h2 id="next-time">Next Time</h2>
 <p>That&rsquo;s all for this quick introduction to FPGA graphics.<br>
