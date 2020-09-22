@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"  lang="en-gb">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+<title>Life on Screen | Project F - FPGA Development</title>
+
+<meta property='og:title' content='Life on Screen - Project F - FPGA Development'>
+<meta property='og:description' content='He is Archimedes, Mick Jagger, Salvador Dalí, and Richard Feynman, all rolled into one.
+The Guardian, John Horton Conway: the world&rsquo;s most charismatic mathematician (2015)
+ Welcome back to Exploring FPGA Graphics. In previous posts, we raced the beam: every frame the entire screen was generated from scratch. In this fourth part, we&rsquo;re going to draw on a bitmap and drive the display from that. Bitmaps allow for more complex graphics, but require memory and increase latency.'>
+<meta property='og:url' content='https://projectf.io/posts/life-on-screen/'>
+<meta property='og:site_name' content='Project F - FPGA Development'>
+<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/life-on-screen/social-card.jpg'><meta property='article:published_time' content='2020-09-22T00:00:00Z'/><meta property='article:modified_time' content='2020-09-22T00:00:00Z'/><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
+
+
+<link href="https://projectf.io/index.xml" rel="alternate" type="application/rss+xml" title="Project F - FPGA Development" />
+
+<link rel="stylesheet" href="/css/style.css"/><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+<link rel="canonical" href="https://projectf.io/posts/life-on-screen/">
+<meta name="msapplication-TileColor" content="#da532c">
+<meta name="theme-color" content="#ffffff">
+<meta name="referrer" content="no-referrer, same-origin">
+</head>
+<body>
+<section class="section">
+  <div class="container">
+    <nav id="nav-main" class="nav">
+      <div id="nav-name" class="nav-left">
+        <a id="nav-anchor" class="nav-item" href="https://projectf.io">
+          <h1 id="nav-heading" class="title is-4">Project F - FPGA Development</h1>
+        </a>
+      </div>
+      <div class="nav-right">
+        <nav id="nav-items" class="nav-item level is-mobile"><a class="level-item" aria-label="github" href='https://github.com/projf'
+            target='_blank' rel='noopener'>
+            <span class="icon">
+              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
+    
+    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
+    
+  </svg></i>
+            </span>
+          </a><a class="level-item" aria-label="twitter" href='https://twitter.com/WillFlux'
+            target='_blank' rel='noopener'>
+            <span class="icon">
+              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
+    
+    <path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"/>
+    
+  </svg></i>
+            </span>
+          </a><a class="level-item" aria-label="youtube" href='https://youtube.com/channel/UCaT0lvfWo1GStbp0neg8weg'
+            target='_blank' rel='noopener'>
+            <span class="icon">
+              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
+    
+    <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/>
+    <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/>
+    
+  </svg></i>
+            </span>
+          </a><a class="level-item" aria-label="rss" href='/index.xml'
+            target='_blank' rel='noopener'>
+            <span class="icon">
+              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
+    
+    <path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle>
+    
+  </svg></i>
+            </span>
+          </a></nav>
+      </div>
+    </nav>
+
+    <nav class="nav">
+      
+      <div class="nav-left"><a class="nav-item" href="/about">
+          <h2 class="title is-5">About</h2>
+        </a><a class="nav-item" href="/sitemap">
+          <h2 class="title is-5">Sitemap</h2>
+        </a><a class="nav-item" href="/tags/cookbook">
+          <h2 class="title is-5">Cookbook</h2>
+        </a><a class="nav-item" href="/tags/explore">
+          <h2 class="title is-5">Explore</h2>
+        </a><a class="nav-item" href="/tags/tools">
+          <h2 class="title is-5">Tools</h2>
+        </a></div>
+      
+
+      
+    </nav>
+
+  </div>
+  <script src="/js/navicon-shift.js"></script>
+</section>
+<section class="section">
+  <div class="container">
+    <div class="subtitle tags is-6 is-pulled-right">
+      
+      
+<a class="subtitle is-6" href="/tags/explore/">#explore</a>
+
+
+
+  
+  | <a class="subtitle is-6" href="/tags/graphics/">#graphics</a>
+  
+
+
+      
+    </div>
+    <h2 class="subtitle is-6">22 September 2020</h2>
+    <h1 class="title">Life on Screen</h1>
+    
+    <div class="content">
+      <blockquote>
+<p>He is Archimedes, Mick Jagger, Salvador Dalí, and Richard Feynman, all rolled into one.<br>
+<em>The Guardian, <a href="https://www.theguardian.com/science/2015/jul/23/john-horton-conway-the-most-charismatic-mathematician-in-the-world">John Horton Conway: the world&rsquo;s most charismatic mathematician</a> (2015)</em></p>
+</blockquote>
+<p>Welcome back to <em>Exploring FPGA Graphics</em>. In previous posts, we raced the beam: every frame the entire screen was generated from scratch. In this fourth part, we&rsquo;re going to draw on a bitmap and drive the display from that. Bitmaps allow for more complex graphics, but require memory and increase latency.</p>
+<p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We start by learning how displays work, before racing the beam with Pong, drawing starfields and sprites, simulating life with bitmaps, drawing lines and triangles, and finally creating simple 3D models. I&rsquo;ll be writing and revising this series throughout 2020. New to the series? Start with <a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a>.</p>
+<p><strong>NB. This post is a draft: designs for iCEBreaker are still being worked on.</strong></p>
+<p><em>Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<h3 id="series-outline">Series Outline</h3>
+<ul>
+<li><a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a> - how displays work and simple animated colour graphics</li>
+<li><a href="/posts/fpga-pong/">FPGA Pong</a> - race the beam to create the arcade classic</li>
+<li><a href="/posts/fpga-ad-astra/">FPGA Ad Astra</a> - animated starfields, hardware sprites, and bitmap fonts</li>
+<li>Life on Screen (this post) - bitmaps and Conway&rsquo;s Game of Life</li>
+<li>Hard Lines - 2D drawing (planned)</li>
+<li><em>More to follow</em></li>
+</ul>
+<h3 id="requirements">Requirements</h3>
+<p>For this series, you need an FPGA board with video output. We&rsquo;ll be working at 640x480, so pretty much any video output will do. You should be comfortable with programming your FPGA board and reasonably familiar with Verilog.</p>
+<p>We&rsquo;ll be demoing with these boards (FPGA type):</p>
+<ul>
+<li><strong><a href="https://github.com/icebreaker-fpga/icebreaker">iCEBreaker</a></strong> (Lattice iCE40) with <strong><a href="https://github.com/icebreaker-fpga/icebreaker">12-Bit DVI Pmod</a></strong>
+(designs available soon)</li>
+<li><strong><a href="https://reference.digilentinc.com/reference/programmable-logic/arty-a7/reference-manual">Digilent Arty A7-35T</a></strong> (Xilinx XC7) with <strong><a href="https://reference.digilentinc.com/reference/pmod/pmodvga/reference-manual">Pmod VGA</a></strong></li>
+</ul>
+<p>Follow the source <a href="https://github.com/projf/projf-explore/tree/master/life-on-screen">README</a> to quickly build a project for either of these boards.</p>
+<h3 id="source">Source</h3>
+<p>All the Verilog designs featured in this series are available in the <a href="https://github.com/projf/projf-explore/">Exploring FPGAs repo</a>, and source links are included throughout the blog. The designs are open source under the permissive MIT licence, but this blog is subject to normal copyright restrictions.</p>
+<h2 id="an-array-of-bits">An Array of Bits</h2>
+<p>A bitmapped display is backed by a memory array: each pixel corresponds to one or more locations in memory. To draw the display, we read out the value of the current pixel from memory. To set the colour of a pixel, we modify the contents of its associated memory location.</p>
+<p>Bitmaps provide two significant benefits over what we&rsquo;ve done so far: we&rsquo;re free to create sophisticated graphics using whatever technique we like, and the setting of pixel colour is separated from the actual screen drawing process. The flexibility of bitmaps comes at the cost of increased memory storage and latency.</p>
+<p>We start with a small 80x60 monochrome bitmap to simulate life, before increasing resolution and colours to display Earth itself.</p>
+<h2 id="conways-life">Conway&rsquo;s Life</h2>
+<p>John Conway was a remarkable mathematician, active in many fields, who sadly died in 2020. Conway is best known to the public for recreational mathematics with Martin Gardner in Scientific American. I remember playing <a href="https://en.wikipedia.org/wiki/Sprouts_(game)">Sprouts</a> at school and trying to impress people by calculating the day of the week with the <a href="https://en.wikipedia.org/wiki/Doomsday_rule">Doomsday rule</a>. For now, I&rsquo;ll be limiting myself to Game of Life, but I highly recommend learning more of Conway: <a href="https://www.theguardian.com/science/2015/jul/23/john-horton-conway-the-most-charismatic-mathematician-in-the-world">The world&rsquo;s most charismatic mathematician</a> is an excellent place to start.</p>
+<p>Game of Life first appeared in the <em>Mathematical Games</em> column in the October 1970 issue of Scientific American. Anyone can access the article at <a href="https://www.ibiblio.org/lifepatterns/october1970.html">ibiblio.org</a>, or you can see a scan of the original at <a href="https://www.jstor.org/stable/24927642">JSTOR</a> (requires login via academic institution or library).</p>
+<h3 id="the-rules-of-life">The Rules of Life</h3>
+<p>The universe of the Game of Life is an infinite, two-dimensional, grid of cells. A cell is one of two states: dead or alive. Every cell interacts with its eight neighbours (those to the left, right, top, bottom, and the four diagonals).</p>
+<p>The following rules determine the fate of a cell in the next generation:</p>
+<ol>
+<li>Survival: Every cell with two or three neighbours survives.</li>
+<li>Deaths:<br>
+a. Every cell with four or more neighbours dies from overpopulation.<br>
+b. Every cell with zero or one neighbours dies from isolation.</li>
+<li>Births: Every empty cell with exactly three neighbours comes to life.</li>
+</ol>
+<p>To understand this, it helps to see some practical examples. Common patterns within the Life universe have been given names. The diagram below shows two patterns: &ldquo;Beehive&rdquo; and &ldquo;Beacon&rdquo;.</p>
+<p><img src="/img/posts/life-on-screen/life-examples.jpg" alt="Conway&rsquo;s Life Examples" title="Life Examples: Beehive &amp; Beacon"></p>
+<p>Every live cell in the <strong>Beehive</strong> pattern has two or three neighbours: so, no cells die. No dead cells in Beehive have three neighbours: so, no cells come to life. This pattern is categorised as a &ldquo;still life&rdquo;, because it doesn&rsquo;t change from one generation to the next.</p>
+<p>The <strong>Beacon</strong> pattern is a bit more interesting: it oscillates between two states. Two dead cells in the centre of the pattern have three neighbours, so come to life. However, they then have four neighbours, so die the next generation due to overcrowding: this pattern repeats endlessly.</p>
+<p>However, things start to get <em>really</em> interesting with slightly more complex patters. The following photo shows the <strong>Gosper glider gun</strong>, which repeatedly generates small repeating patterns called gliders.</p>
+<p><img src="/img/posts/life-on-screen/gosper-glider-gun.jpg" alt="Gosper Glider Gun" title="The Gosper glider gun repeatedly generates small gliders."></p>
+<p>It&rsquo;s even possible to construct logic gates using gliders, and ultimately a universal Turing machine. As this post is primarily about FPGA graphics, we&rsquo;re not going to dig further into the possibilities of Conway&rsquo;s Life, but check out Wikipedia&rsquo;s article on <a href="https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life">Conway&rsquo;s Game of Life</a>.</p>
+<h3 id="life-in-hardware">Life in Hardware</h3>
+<p>Now we have a basic understanding of Conway&rsquo;s Life we&rsquo;re going to create a hardware implementation in Verilog.</p>
+<p>We start by rearranging the rules to simplify the design:</p>
+<ol>
+<li>If a cell is alive<br>
+a. if it has 2 or 3 neighbours, it&rsquo;s alive next generation<br>
+b. otherwise, it&rsquo;s dead next generation</li>
+<li>If a cell is dead<br>
+a. if it has 3 neighbours, it&rsquo;s alive next generation<br>
+b. otherwise, it&rsquo;s dead next generation</li>
+</ol>
+<p>Handily, a bitmap is a two-dimensional grid as required by Life, but our bitmap won&rsquo;t be infinite! Instead, our bitmap wraps around top and bottom, and between left and right: this is known as <a href="https://en.wikipedia.org/wiki/Torus">toroidal</a> array. Contrast this with a 2D map of Earth: which wraps around at the east and west, but not at the north and south.</p>
+<p>Since a cell&rsquo;s state depends on all those around it, we can&rsquo;t calculate the new state of each cell sequentially. Instead, we have two buffers: one contains the current generation that we use to calculate the next generation. We swap buffers, repeating the process. This <strong>double buffering</strong> also allows us to safely update the display without risking any artefacts or tearing: the display is always being driven from a complete bitmap. Our life module is ignorant of the two buffers, this will be handled in the controlling top module, with reads and writes directed to different offsets.</p>
+<p>Create a life module with the following design - <strong><a href="https://github.com/projf/projf-explore/blob/master/life-on-screen/life.sv">life.sv</a></strong>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> life #(
+    <span style="color:#66d9ef">parameter</span> WORLD_WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">6</span>,
+    <span style="color:#66d9ef">parameter</span> WORLD_HEIGHT<span style="color:#f92672">=</span><span style="color:#ae81ff">6</span>,
+    <span style="color:#66d9ef">parameter</span> ADDRW<span style="color:#f92672">=</span>$clog2(WORLD_WIDTH <span style="color:#f92672">*</span> WORLD_HEIGHT)
+    ) (
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> start,
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> run,
+    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] id,
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> r_status,
+    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> w_status,
+    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> we,
+    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> done
+    );
+
+    <span style="color:#75715e">// simulation parameters
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CELL_COUNT <span style="color:#f92672">=</span> WORLD_WIDTH <span style="color:#f92672">*</span> WORLD_HEIGHT;  <span style="color:#75715e">// total number of cells
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> NEIGHBOURS_COUNT <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span>;  <span style="color:#75715e">// number of neighbours each cell has
+</span><span style="color:#75715e"></span>
+    <span style="color:#75715e">// number of alive neighbours (could be 8!)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(NEIGHBOURS_COUNT<span style="color:#f92672">+</span><span style="color:#ae81ff">1</span>)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] neighbours_alive;
+
+    <span style="color:#75715e">// internal cell and neighbour IDs
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cid, cid_next;
+    <span style="color:#66d9ef">logic</span> [ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] nid;  <span style="color:#75715e">// adding nid_next would improve timing slack
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(NEIGHBOURS_COUNT)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] npos, npos_next;
+
+    <span style="color:#75715e">// simulation state
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">enum</span> {IDLE, NEXT_CELL, NEIGHBOURS, CURRENT_CELL, UPDATE_CELL} state, state_next;
+    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">case</span>(state)
+            IDLE: state_next <span style="color:#f92672">=</span> (start <span style="color:#f92672">&amp;&amp;</span> <span style="color:#f92672">!</span>done) <span style="color:#f92672">?</span> NEXT_CELL <span style="color:#f92672">:</span> IDLE;
+            NEXT_CELL: <span style="color:#66d9ef">begin</span>
+                <span style="color:#66d9ef">if</span> (done) <span style="color:#66d9ef">begin</span>
+                    state_next <span style="color:#f92672">=</span> IDLE;
+                <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (run) <span style="color:#66d9ef">begin</span>
+                    state_next <span style="color:#f92672">=</span> NEIGHBOURS;
+                <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
+                    state_next <span style="color:#f92672">=</span> NEXT_CELL;
+                <span style="color:#66d9ef">end</span>
+            <span style="color:#66d9ef">end</span>
+            NEIGHBOURS: state_next <span style="color:#f92672">=</span> (npos <span style="color:#f92672">==</span> NEIGHBOURS_COUNT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#f92672">?</span> CURRENT_CELL <span style="color:#f92672">:</span> NEIGHBOURS;
+            CURRENT_CELL: state_next <span style="color:#f92672">=</span> UPDATE_CELL;
+            UPDATE_CELL: state_next <span style="color:#f92672">=</span> NEXT_CELL;
+            <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> state_next <span style="color:#f92672">=</span> IDLE;
+        <span style="color:#66d9ef">endcase</span>
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
+        state <span style="color:#f92672">&lt;=</span> state_next;
+        cid <span style="color:#f92672">&lt;=</span> cid_next;
+        npos <span style="color:#f92672">&lt;=</span> npos_next;
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// simulation calculations
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+        we <span style="color:#f92672">=</span> (state <span style="color:#f92672">==</span> UPDATE_CELL) <span style="color:#f92672">?</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// enable writing when updating
+</span><span style="color:#75715e"></span>        id <span style="color:#f92672">=</span> cid;
+        npos_next <span style="color:#f92672">=</span> npos;
+        cid_next <span style="color:#f92672">=</span> cid;
+        w_status <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+
+        <span style="color:#66d9ef">case</span>(state)
+            IDLE: <span style="color:#66d9ef">begin</span>
+                cid_next <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+                nid <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+                npos_next <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+            <span style="color:#66d9ef">end</span>
+            NEIGHBOURS: <span style="color:#66d9ef">begin</span>
+                <span style="color:#75715e">// map neigbour index onto ID
+</span><span style="color:#75715e"></span>                <span style="color:#66d9ef">case</span> (npos)
+                    <span style="color:#ae81ff">3</span><span style="color:#ae81ff">&#39;d0</span><span style="color:#f92672">:</span> nid <span style="color:#f92672">=</span> cid <span style="color:#f92672">-</span> (WORLD_WIDTH <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>);
+                    <span style="color:#ae81ff">3</span><span style="color:#ae81ff">&#39;d1</span><span style="color:#f92672">:</span> nid <span style="color:#f92672">=</span> cid <span style="color:#f92672">-</span> WORLD_WIDTH;
+                    <span style="color:#ae81ff">3</span><span style="color:#ae81ff">&#39;d2</span><span style="color:#f92672">:</span> nid <span style="color:#f92672">=</span> cid <span style="color:#f92672">-</span> (WORLD_WIDTH <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>);
+                    <span style="color:#ae81ff">3</span><span style="color:#ae81ff">&#39;d3</span><span style="color:#f92672">:</span> nid <span style="color:#f92672">=</span> cid <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;
+                    <span style="color:#ae81ff">3</span><span style="color:#ae81ff">&#39;d4</span><span style="color:#f92672">:</span> nid <span style="color:#f92672">=</span> cid <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+                    <span style="color:#ae81ff">3</span><span style="color:#ae81ff">&#39;d5</span><span style="color:#f92672">:</span> nid <span style="color:#f92672">=</span> cid <span style="color:#f92672">+</span> (WORLD_WIDTH <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>);
+                    <span style="color:#ae81ff">3</span><span style="color:#ae81ff">&#39;d6</span><span style="color:#f92672">:</span> nid <span style="color:#f92672">=</span> cid <span style="color:#f92672">+</span> WORLD_WIDTH;
+                    <span style="color:#ae81ff">3</span><span style="color:#ae81ff">&#39;d7</span><span style="color:#f92672">:</span> nid <span style="color:#f92672">=</span> cid <span style="color:#f92672">+</span> (WORLD_WIDTH <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>);
+                <span style="color:#66d9ef">endcase</span>
+
+                <span style="color:#75715e">// because the life universe wraps we need to correct for possible under/overflow
+</span><span style="color:#75715e"></span>                <span style="color:#66d9ef">if</span> (nid <span style="color:#f92672">&gt;=</span> CELL_COUNT) <span style="color:#66d9ef">begin</span>
+                    <span style="color:#66d9ef">if</span> (npos <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">3</span><span style="color:#ae81ff">&#39;d3</span>) <span style="color:#66d9ef">begin</span>
+                        nid <span style="color:#f92672">=</span> CELL_COUNT <span style="color:#f92672">-</span> (<span style="color:#ae81ff">2</span><span style="color:#f92672">**</span>ADDRW <span style="color:#f92672">-</span> nid);
+                    <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
+                        nid <span style="color:#f92672">=</span> nid <span style="color:#f92672">-</span> CELL_COUNT;
+                    <span style="color:#66d9ef">end</span>
+                <span style="color:#66d9ef">end</span>
+
+                npos_next <span style="color:#f92672">=</span> (state <span style="color:#f92672">==</span> NEIGHBOURS) <span style="color:#f92672">?</span> npos <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
+                id <span style="color:#f92672">=</span> nid;
+            <span style="color:#66d9ef">end</span>
+            UPDATE_CELL: <span style="color:#66d9ef">begin</span>
+                <span style="color:#66d9ef">if</span> (r_status <span style="color:#f92672">==</span> <span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// if cell is currently alive
+</span><span style="color:#75715e"></span>                    w_status <span style="color:#f92672">=</span> (neighbours_alive <span style="color:#f92672">==</span> <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d2</span> <span style="color:#f92672">||</span> neighbours_alive <span style="color:#f92672">==</span> <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d3</span>) <span style="color:#f92672">?</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
+                <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// or dead
+</span><span style="color:#75715e"></span>                    w_status <span style="color:#f92672">=</span> (neighbours_alive <span style="color:#f92672">==</span> <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d3</span>) <span style="color:#f92672">?</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
+                <span style="color:#66d9ef">end</span>
+
+                <span style="color:#75715e">// ready for next cell
+</span><span style="color:#75715e"></span>                cid_next <span style="color:#f92672">=</span> (cid <span style="color:#f92672">&lt;</span> CELL_COUNT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#f92672">?</span> cid <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
+            <span style="color:#66d9ef">end</span>
+        <span style="color:#66d9ef">endcase</span>
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">case</span>(state)
+            IDLE: <span style="color:#66d9ef">begin</span>
+                neighbours_alive <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            <span style="color:#66d9ef">end</span>
+            <span style="color:#75715e">// BRAM takes one cycle to read data, so we need to offset by one cycle
+</span><span style="color:#75715e"></span>            NEIGHBOURS: <span style="color:#66d9ef">if</span> (npos <span style="color:#f92672">&gt;=</span> <span style="color:#ae81ff">3</span><span style="color:#ae81ff">&#39;d1</span>) neighbours_alive <span style="color:#f92672">&lt;=</span> neighbours_alive <span style="color:#f92672">+</span> {<span style="color:#ae81ff">3</span><span style="color:#ae81ff">&#39;b0</span>, r_status};
+            CURRENT_CELL: neighbours_alive <span style="color:#f92672">&lt;=</span> neighbours_alive <span style="color:#f92672">+</span> {<span style="color:#ae81ff">3</span><span style="color:#ae81ff">&#39;b0</span>, r_status};
+            UPDATE_CELL: <span style="color:#66d9ef">begin</span>
+                <span style="color:#75715e">// prepare for next cell
+</span><span style="color:#75715e"></span>                <span style="color:#66d9ef">if</span> (cid <span style="color:#f92672">&lt;</span> CELL_COUNT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
+                    neighbours_alive <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
+                    done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                <span style="color:#66d9ef">end</span>
+            <span style="color:#66d9ef">end</span>
+        <span style="color:#66d9ef">endcase</span>
+    <span style="color:#66d9ef">end</span>
+<span style="color:#66d9ef">endmodule</span>
+</code></pre></div><p>Our module is a simple finite state machine (FSM) that reads all eight neighbours for each cell. This isn&rsquo;t the most efficient design in terms of memory access: you could reuse the previous neighbour reads at the cost of slightly more complex logic. I may improve this module at a future date.</p>
+<p>To exercise this module we have a test bench for Vivado: <strong><a href="https://github.com/projf/projf-explore/tree/master/life-on-screen/xc7/life_tb.sv">life_tb.sv</a></strong>. If you have a Xilinx Vivado installed, try using the test bench with the included test seed files. You can find instructions for running the simulation in the source <a href="https://github.com/projf/projf-explore/tree/master/life-on-screen">README</a>.</p>
+<h3 id="bitmap-ram">Bitmap RAM</h3>
+<p>In <a href="/posts/fpga-ad-astra/">FPGA Ad Astra</a>, we used block ram (BRAM) as a small ROM to store font bitmaps, this time it will handle the whole display.</p>
+<p>Our Life bitmap stores 1 bit for each of 80x60 cells: 4,800 bits (600 bytes) in total. Our 640x480 screen has eight times more horizontal and vertical resolution, making it straightforward to scale this bitmap up to the display.</p>
+<p>We&rsquo;re going to use a simple dual-port BRAM: with the Life simulation and display controller sharing the read port. We could have used true dual-port BRAM to avoid sharing, but iCE40 and most external memories don&rsquo;t have dual read-write ports.</p>
+<p>The simple dual-port BRAM modules:</p>
+<ul>
+<li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/life-on-screen/xc7/bram_sdp.sv">xc7/bram_sdp.sv</a></strong></li>
+<li>iCE40: <em>coming soon</em></li>
+</ul>
+<p>You can learn more about block ram in <a href="/posts/fpga-memory-types/">FPGA Memory Types</a>.</p>
+<h3 id="scaling-bitmaps">Scaling Bitmaps</h3>
+<p>In the previous section, I said scaling our bitmap for display was straightforward, because it is eight smaller than our screen. However, practical scaling isn&rsquo;t quite as simple as it first appears.</p>
+<p>For example, given our display coordinates <code>sx</code> and <code>sy</code> you <em>could</em> calculate the Life bitmap address with the following (80 is the line length):</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">always_comb</span> bitmap_addr <span style="color:#f92672">=</span> sx <span style="color:#f92672">/</span> <span style="color:#ae81ff">8</span> <span style="color:#f92672">+</span> (sy <span style="color:#f92672">/</span> <span style="color:#ae81ff">8</span>) <span style="color:#f92672">*</span> <span style="color:#ae81ff">80</span>;  <span style="color:#75715e">// ?!
+</span></code></pre></div><p>This has at least three problems:</p>
+<ol>
+<li>It doesn&rsquo;t take account of memory latency: it takes one or more cycles to read BRAM</li>
+<li>It wastes memory bandwidth: every value is read 64 times per frame!</li>
+<li>It uses multiplication, which takes up valuable (probably DSP) logic</li>
+</ol>
+<p>Using a <strong>line buffer</strong> allows us to avoid all three of these problems. The line buffer uses three simple dual-port BRAMs, one for each colour channel (red, green, blue). As a module, it&rsquo;s almost trivial; the interesting part is the efficient reading of bitmap data and in how addresses are calculated.</p>
+<p>We <em>write</em> a single 80-bit line of the bitmap into the line buffer, then we can <em>read</em> this out for eight display lines before going back to bitmap memory for the next 80 bits of data. By making efficient use of memory bandwidth, we can better share memory with other data.</p>
+<p>Add a linebuffer module - <strong><a href="https://github.com/projf/projf-explore/blob/master/life-on-screen/linebuffer.sv">linebuffer.sv</a></strong>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> linebuffer #(
+    <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,              <span style="color:#75715e">// data width
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> DEPTH<span style="color:#f92672">=</span><span style="color:#ae81ff">2048</span>,           <span style="color:#75715e">// length of line
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> ADDRW<span style="color:#f92672">=</span>$clog2(DEPTH)   <span style="color:#75715e">// address width
+</span><span style="color:#75715e"></span>    ) (
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_write,
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_read, 
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">2</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] we,
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] addr_write,
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] addr_read,
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] data_in_0, data_in_1, data_in_2,
+    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] data_out_0, data_out_1, data_out_2
+    );
+
+    <span style="color:#75715e">// channel 0
+</span><span style="color:#75715e"></span>    bram_sdp #(.WIDTH(WIDTH), .DEPTH(DEPTH)) ch0 (
+        .clk_write,
+        .clk_read,
+        .we(we[<span style="color:#ae81ff">0</span>]),
+        .addr_write,
+        .addr_read,
+        .data_in(data_in_0),
+        .data_out(data_out_0)
+    );
+
+    <span style="color:#75715e">// channel 1
+</span><span style="color:#75715e"></span>    bram_sdp #(.WIDTH(WIDTH), .DEPTH(DEPTH)) ch1 (
+        .clk_write,
+        .clk_read,
+        .we(we[<span style="color:#ae81ff">1</span>]),
+        .addr_write,
+        .addr_read,
+        .data_in(data_in_1),
+        .data_out(data_out_1)
+    );
+
+    <span style="color:#75715e">// channel 2
+</span><span style="color:#75715e"></span>    bram_sdp #(.WIDTH(WIDTH), .DEPTH(DEPTH)) ch2 (
+        .clk_write,
+        .clk_read,
+        .we(we[<span style="color:#ae81ff">2</span>]),
+        .addr_write,
+        .addr_read,
+        .data_in(data_in_2),
+        .data_out(data_out_2)
+    );
+<span style="color:#66d9ef">endmodule</span>
+</code></pre></div><p>We use three separate BRAM instances because colours are output separately to display and 4 or 8-bit-wide buffers are a better fit with BRAM hardware than a single 12 or 24-bit buffer. A future post will cover display scaling more fully, but we have enough to efficiently display bitmaps for now.</p>
+<blockquote>
+<p><strong>Clock Domain Crossing</strong><br>
+The line buffer module has another significant benefit: it allows the pixel clock to be different from the rest of the design. For example, you could run your Life simulation at 100 MHz (line buffer write port) and display it on a 720p60 screen with a 74.25 MHz pixel clock (line buffer read port). CDC is usually achieved with a FIFO, but the line buffer does it <em>while</em> providing efficient scaling.</p>
+</blockquote>
+<h3 id="top-module">Top Module</h3>
+<p>We can tie the design together with a top module, which includes the address calculations for the bitmap and line buffer.</p>
+<ul>
+<li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/life-on-screen/xc7/top_life.sv">xc7/top_life.sv</a></strong></li>
+<li>iCE40: <em>coming soon</em></li>
+</ul>
+<p>The Xilinx version is shown below:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_life (
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_100m,     <span style="color:#75715e">// 100 MHz clock
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_rst,      <span style="color:#75715e">// reset button (active low)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> vga_hsync,    <span style="color:#75715e">// horizontal sync
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> vga_vsync,    <span style="color:#75715e">// vertical sync
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vga_r,  <span style="color:#75715e">// 4-bit VGA red
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vga_g,  <span style="color:#75715e">// 4-bit VGA green
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vga_b   <span style="color:#75715e">// 4-bit VGA blue
+</span><span style="color:#75715e"></span>    );
+
+    <span style="color:#66d9ef">parameter</span> GEN_FRAMES <span style="color:#f92672">=</span> <span style="color:#ae81ff">15</span>;  <span style="color:#75715e">// each generation lasts this many frames
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> SEED_FILE <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;simple_life.mem&#34;</span>;  <span style="color:#75715e">// seed to initiate universe with
+</span><span style="color:#75715e"></span>
+    <span style="color:#75715e">// generate pixel clock
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> clk_pix;
+    <span style="color:#66d9ef">logic</span> clk_locked;
+    clock_gen clock_640x480 (
+       .clk(clk_100m),
+       .rst(<span style="color:#f92672">!</span>btn_rst),  <span style="color:#75715e">// reset button is active low
+</span><span style="color:#75715e"></span>       .clk_pix,
+       .clk_locked
+    );
+
+    <span style="color:#75715e">// display timings
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>;  <span style="color:#75715e">// screen coordinate width in bits
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx, sy;
+    <span style="color:#66d9ef">logic</span> de;
+    display_timings timings_640x480 (
+        .clk_pix,
+        .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for clock lock
+</span><span style="color:#75715e"></span>        .sx,
+        .sy,
+        .hsync(vga_hsync),
+        .vsync(vga_vsync),
+        .de
+    );
+
+    <span style="color:#66d9ef">logic</span> frame_end;   <span style="color:#75715e">// high for one clycle at the end of a frame
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> line_start;  <span style="color:#75715e">// high for one cycle at line start (drawing lines only)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+        frame_end <span style="color:#f92672">=</span> (sy <span style="color:#f92672">==</span> <span style="color:#ae81ff">524</span> <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">==</span> <span style="color:#ae81ff">799</span>);
+        line_start <span style="color:#f92672">=</span> (sy <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">480</span> <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>);
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// life bitmap
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> BMP_COUNT  <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span>;  <span style="color:#75715e">// double buffered
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> BMP_WIDTH  <span style="color:#f92672">=</span> <span style="color:#ae81ff">80</span>;
+    <span style="color:#66d9ef">localparam</span> BMP_HEIGHT <span style="color:#f92672">=</span> <span style="color:#ae81ff">60</span>;
+    <span style="color:#66d9ef">localparam</span> BMP_PIXELS <span style="color:#f92672">=</span> BMP_WIDTH <span style="color:#f92672">*</span> BMP_HEIGHT;
+    <span style="color:#66d9ef">localparam</span> BMP_DEPTH  <span style="color:#f92672">=</span> BMP_COUNT <span style="color:#f92672">*</span> BMP_PIXELS;
+    <span style="color:#66d9ef">localparam</span> BMP_ADDRW  <span style="color:#f92672">=</span> $clog2(BMP_DEPTH);
+    <span style="color:#66d9ef">localparam</span> BMP_DATAW  <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
+
+    <span style="color:#66d9ef">logic</span> bmp_we;
+    <span style="color:#66d9ef">logic</span> [BMP_ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] bmp_addr_read, bmp_addr_write;
+    <span style="color:#66d9ef">logic</span> [BMP_DATAW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] bmp_data_in, bmp_data_out;
+
+    bram_sdp #(
+        .WIDTH(BMP_DATAW),
+        .DEPTH(BMP_DEPTH),
+        .INIT_F(SEED_FILE)
+    ) bmp_life (
+        .clk_read(clk_pix),
+        .clk_write(clk_pix),
+        .we(bmp_we),
+        .addr_write(bmp_addr_write),
+        .addr_read(bmp_addr_read),
+        .data_in(bmp_data_in),
+        .data_out(bmp_data_out)
+    );
+
+    <span style="color:#75715e">// update frame counter
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> life_start;  <span style="color:#75715e">// trigger next calculation
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> life_done;   <span style="color:#75715e">// signals complete calculation
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> front_buffer;  <span style="color:#75715e">// which buffer to draw the display from
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(GEN_FRAMES)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_frames;
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">if</span> (frame_end) cnt_frames <span style="color:#f92672">&lt;=</span> cnt_frames <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+        <span style="color:#66d9ef">if</span> (cnt_frames <span style="color:#f92672">==</span> GEN_FRAMES <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
+            front_buffer <span style="color:#f92672">&lt;=</span> <span style="color:#f92672">~</span>front_buffer;
+            cnt_frames <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            life_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> life_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#66d9ef">logic</span> life_run;
+    <span style="color:#66d9ef">logic</span> [BMP_ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cell_id;
+    life #(
+        .WORLD_WIDTH(BMP_WIDTH),
+        .WORLD_HEIGHT(BMP_HEIGHT),
+        .ADDRW(BMP_ADDRW)
+    ) life_sim (
+        .clk(clk_pix),
+        .start(life_start),
+        .run(life_run),
+        .id(cell_id),
+        .r_status(bmp_data_out),
+        .w_status(bmp_data_in),
+        .we(bmp_we),
+        .done(life_done)
+    );
+
+    <span style="color:#75715e">// line buffer
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_SCALE_V <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span>;                <span style="color:#75715e">// factor to scale vertical drawing
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_SCALE_H <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span>;                <span style="color:#75715e">// factor to scale horizontal drawing
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_LINE  <span style="color:#f92672">=</span> <span style="color:#ae81ff">640</span> <span style="color:#f92672">/</span> LB_SCALE_H;   <span style="color:#75715e">// line length
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_ADDRW <span style="color:#f92672">=</span> $clog2(LB_LINE);    <span style="color:#75715e">// line address width
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_WIDTH <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;                  <span style="color:#75715e">// 4-bits per colour channel
+</span><span style="color:#75715e"></span>
+    <span style="color:#75715e">// line buffer read port (pixel clock)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [LB_ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lb_addr_read_pix;
+    <span style="color:#66d9ef">logic</span> [LB_WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lb0_out_pix, lb1_out_pix, lb2_out_pix;
+
+    <span style="color:#75715e">// line buffer write port (system clock - latency corrected)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> lb_re;  <span style="color:#75715e">// signals when the line buffer needs to read data from bitmap
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">2</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lb_we, lb_we_l1;
+    <span style="color:#66d9ef">logic</span> [LB_ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lb_addr_write, lb_addr_write_l1;
+    <span style="color:#66d9ef">logic</span> [LB_WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lb0_in, lb1_in, lb2_in;
+
+    <span style="color:#75715e">// latency correction
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        lb_we_l1 <span style="color:#f92672">&lt;=</span> lb_we;
+        lb_addr_write_l1 <span style="color:#f92672">&lt;=</span> lb_addr_write;
+    <span style="color:#66d9ef">end</span>
+
+    linebuffer #(
+        .WIDTH(LB_WIDTH),
+        .DEPTH(LB_LINE)
+        ) lb (
+        .clk_write(clk_pix),
+        .clk_read(clk_pix),
+        .we(lb_we_l1),                  <span style="color:#75715e">// use lb_we_l1 to correct for latency
+</span><span style="color:#75715e"></span>        .addr_write(lb_addr_write_l1),  <span style="color:#75715e">// use lb_addr_write_l1 to correct for latency
+</span><span style="color:#75715e"></span>        .addr_read(lb_addr_read_pix),
+        .data_in_0(lb0_in),
+        .data_in_1(lb1_in),
+        .data_in_2(lb2_in),
+        .data_out_0(lb0_out_pix),
+        .data_out_1(lb1_out_pix),
+        .data_out_2(lb2_out_pix)
+    );
+
+    <span style="color:#75715e">// address for lb to read from bitmap
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [BMP_ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lb_bmp_addr_read;
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">if</span> (frame_end) <span style="color:#66d9ef">begin</span>
+            lb_bmp_addr_read <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (lb_re) <span style="color:#66d9ef">begin</span>
+            lb_bmp_addr_read <span style="color:#f92672">&lt;=</span> lb_bmp_addr_read <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+        <span style="color:#66d9ef">end</span>
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// calculate linebuffer system address
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(LB_SCALE_V)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lb_repeat;  <span style="color:#75715e">// repeat line based on scale
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">if</span> (line_start) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// start new line
+</span><span style="color:#75715e"></span>            <span style="color:#66d9ef">if</span> (lb_repeat <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// time to read a fresh line of data?
+</span><span style="color:#75715e"></span>                lb_re <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                lb_we <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">3</span><span style="color:#ae81ff">&#39;b111</span>;
+                lb_addr_write <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            <span style="color:#66d9ef">end</span>
+            lb_repeat <span style="color:#f92672">&lt;=</span> (lb_repeat <span style="color:#f92672">==</span> LB_SCALE_V<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#f92672">?</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">:</span> lb_repeat <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
+            <span style="color:#66d9ef">if</span> (lb_addr_write <span style="color:#f92672">&lt;</span> LB_LINE<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// next pixel
+</span><span style="color:#75715e"></span>                lb_addr_write <span style="color:#f92672">&lt;=</span> lb_addr_write <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// disable drawing at end of line
+</span><span style="color:#75715e"></span>                lb_re <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                lb_we <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            <span style="color:#66d9ef">end</span>
+        <span style="color:#66d9ef">end</span>
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// sim can run when linebuffer is not requesting data (leave one line empty)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> life_run <span style="color:#f92672">=</span> (lb_repeat <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">&amp;&amp;</span> lb_repeat <span style="color:#f92672">&lt;</span> LB_SCALE_V<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>);
+
+    <span style="color:#75715e">// calculate linebuffer pixel address
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(LB_SCALE_H)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] scale_pix_cnt;
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">if</span> (sx <span style="color:#f92672">==</span> <span style="color:#ae81ff">798</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// address 0 when sx=799, so we need to set when sx=798 (latency=1)
+</span><span style="color:#75715e"></span>            lb_addr_read_pix <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            scale_pix_cnt <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (lb_addr_read_pix <span style="color:#f92672">&lt;</span> LB_LINE<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
+            scale_pix_cnt <span style="color:#f92672">&lt;=</span> (scale_pix_cnt <span style="color:#f92672">&lt;</span> LB_SCALE_H<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#f92672">?</span> scale_pix_cnt <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
+            <span style="color:#66d9ef">if</span> (scale_pix_cnt <span style="color:#f92672">==</span> LB_SCALE_H<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) lb_addr_read_pix <span style="color:#f92672">&lt;=</span> lb_addr_read_pix <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+        <span style="color:#66d9ef">end</span>
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// read into line buffer
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+        bmp_addr_read <span style="color:#f92672">=</span> (lb_re) <span style="color:#f92672">?</span> lb_bmp_addr_read <span style="color:#f92672">:</span> cell_id;
+        <span style="color:#66d9ef">if</span> (front_buffer <span style="color:#f92672">==</span> <span style="color:#ae81ff">1</span>) bmp_addr_read <span style="color:#f92672">=</span> bmp_addr_read <span style="color:#f92672">+</span> BMP_PIXELS;
+        bmp_addr_write <span style="color:#f92672">=</span> (front_buffer <span style="color:#f92672">==</span> <span style="color:#ae81ff">1</span>) <span style="color:#f92672">?</span> cell_id <span style="color:#f92672">:</span> cell_id <span style="color:#f92672">+</span> BMP_PIXELS;
+        lb0_in <span style="color:#f92672">=</span> (bmp_data_out) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h9</span>;
+        lb1_in <span style="color:#f92672">=</span> (bmp_data_out) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
+        lb2_in <span style="color:#f92672">=</span> (bmp_data_out) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// VGA output
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+        vga_r <span style="color:#f92672">=</span> de <span style="color:#f92672">?</span> lb2_out_pix <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
+        vga_g <span style="color:#f92672">=</span> de <span style="color:#f92672">?</span> lb1_out_pix <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
+        vga_b <span style="color:#f92672">=</span> de <span style="color:#f92672">?</span> lb0_out_pix <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
+    <span style="color:#66d9ef">end</span>
+<span style="color:#66d9ef">endmodule</span>
+</code></pre></div><p><em>NB. I will explain the latency correction in more detail in a later post on display scaling.</em></p>
+<p>And we need a constraints file for our design:</p>
+<ul>
+<li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/life-on-screen/xc7/arty.xdc">arty.xdc</a></strong></li>
+<li>Lattice iCE40: <em>coming soon</em></li>
+</ul>
+<p>You should be able to build this design and see the simple example with a beehive, blinker, toad, and beacon patterns. See <a href="https://github.com/projf/projf-explore/tree/master/life-on-screen">README</a> for details on how to build the project.</p>
+<p>If that works, try the Gosper glider gun by changing the seed file in <code>top_life.sv</code>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">parameter</span> SEED_FILE <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;gosper_glider.mem&#34;</span>;  <span style="color:#75715e">// seed to initiate universe with
+</span></code></pre></div><p>The Gosper pattern repeatedly generates small gliders that move down the screen. Our glider gun doesn&rsquo;t continue indefinitely because our universe wraps around: the gliders interfere with the gun pattern, and the universe eventually breaks down, before settling into a pattern of simple oscillators and still lifes. It&rsquo;s straightforward to update the life module not to wrap around: imagine a world bordered by dead cells.</p>
+<p>You can also change how fast the simulation runs by changing the value of <code>GEN_FRAMES</code> (a value of 60 makes each generation last 1 second):</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">parameter</span> GEN_FRAMES  <span style="color:#f92672">=</span> <span style="color:#ae81ff">60</span>;  <span style="color:#75715e">// each generation lasts this many frames
+</span></code></pre></div><h2 id="the-blue-planet">The Blue Planet</h2>
+<p><em>This next section is for the Arty (XC7) only, sorry. The iCEBreaker doesn&rsquo;t have enough BRAM for these designs. If there&rsquo;s interest, I&rsquo;ll consider creating a version for iCEBreaker using SPRAM.</em></p>
+<p>Our Life simulation featured tiny cells, at the other end of the scale, we can look back at Earth: the only place in the Universe known to support life.</p>
+<p><a href="https://www.nasa.gov/multimedia/imagegallery/image_feature_1249.html">Earthrise</a> was taken by Bill Anders aboard Apollo 8 on December 24, 1968 (two years before Conway&rsquo;s Life appeared in Scientific American), while in orbit around the Moon. Every person, animal, city, book&hellip; they&rsquo;re all there on that little blue sphere.</p>
+<p><img src="/img/posts/life-on-screen/earthrise.png" alt="Earthrise" title="Earthrise"></p>
+<h3 id="memory-requirements">Memory Requirements</h3>
+<p>To do the photo any justice we&rsquo;re going to need a somewhat bigger and deeper bitmap than the one we used to simulate Life. Using 4 bits per pixel allows 16 colours, and if we want half-decent quality, then 320x240 is a good starting point. Going with 320x240x4-bit requires 300 Kb BRAM, which doesn&rsquo;t tax the Arty&rsquo;s resources too much.</p>
+<h3 id="so-few-colours">So Few Colours?</h3>
+<p>16 colours might bring back memories of garish early computer displays, but we&rsquo;re not using any old 16 colours. Instead of each 4-bit pixel value representing a fixed colour, it can represent a custom colour a palette optimised for this image. The palette is held in a colour lookup table (CLUT). If a particular pixel has the value <code>1010</code> (ten), then we consult the tenth entry in the CLUT, which contains the 12-bit colour to display.</p>
+<p>While we&rsquo;re still limited to a total of 16 colours, they can now be any 16 from the 4,096 colours the Arty&rsquo;s VGA output is capable of producing. For example, a picture of a forest might have many greens, while one of a city would use more greys. This design was common in older computers, for example, the <a href="https://en.wikipedia.org/wiki/Original_Chip_Set">original Amiga chipset</a> supported 32 colours from a possible 4,096: very similar to our design! The GIF and PNG formats still make use of this approach to squeeze the best quality out of 256-colour images.</p>
+<p>If you&rsquo;re interested in learning more about different colour palettes, there&rsquo;s an excellent <em><a href="https://en.wikipedia.org/wiki/List_of_color_palettes">List of color palettes</a></em> page on Wikipedia. That&rsquo;s enough colour theory, let&rsquo;s get on with loading our image onto the FPGA.</p>
+<h3 id="preparing-an-image-for-fpga-memory">Preparing an Image for FPGA Memory</h3>
+<p>To display our image, we need a mechanism to load it and its palette into our design. Verilog supports a method called <a href="/posts/initialize-memory-in-verilog/">$readmemh</a> that can load values into memory from a text file of hex values. I&rsquo;ve created a handy Python script, <a href="https://github.com/projf/fpgatools">img2fmem</a>, that generates suitable files for images and their palettes. I&rsquo;ve used the script to convert a 320x240 version of Earthrise into hex values that can be loaded into block ram.</p>
+<p>You can see the hexadecimal data files for the bitmap and palette in the project source:</p>
+<ul>
+<li>Earthrise Image: <strong><a href="https://github.com/projf/projf-explore/blob/master/life-on-screen/res/earthrise/earthrise_320x240.mem">earthrise.mem</a></strong></li>
+<li>Earthrise Palette: <strong><a href="https://github.com/projf/projf-explore/blob/master/life-on-screen/res/earthrise/earthrise_320x240_palette.mem">earthrise_palette.mem</a></strong></li>
+</ul>
+<h4 id="creating-your-own-images">Creating Your Own Images</h4>
+<p>You can easily create your own images using the <code>img2fmem</code> script. The script is written in Python and uses the Pillow image library to perform the conversion. You can find it in the Project F <a href="https://github.com/projf/fpgatools">FPGA Tools</a> repo. Make sure your images are precisely 320x240 if you want to use them with design in this tutorial.</p>
+<h3 id="displaying-the-photo">Displaying the Photo</h3>
+<p>The actual display of the photo is more straightforward than with Life, as there&rsquo;s no updating, just reading of data values - <strong><a href="https://github.com/projf/projf-explore/blob/master/life-on-screen/xc7/top_earth.sv">top_earth.sv</a></strong>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_earth (
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_100m,     <span style="color:#75715e">// 100 MHz clock
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_rst,      <span style="color:#75715e">// reset button (active low)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> vga_hsync,    <span style="color:#75715e">// horizontal sync
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> vga_vsync,    <span style="color:#75715e">// vertical sync
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vga_r,  <span style="color:#75715e">// 4-bit VGA red
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vga_g,  <span style="color:#75715e">// 4-bit VGA green
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vga_b   <span style="color:#75715e">// 4-bit VGA blue
+</span><span style="color:#75715e"></span>    );
+
+    <span style="color:#75715e">// generate pixel clock
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> clk_pix;
+    <span style="color:#66d9ef">logic</span> clk_locked;
+    clock_gen clock_640x480 (
+       .clk(clk_100m),
+       .rst(<span style="color:#f92672">!</span>btn_rst),  <span style="color:#75715e">// reset button is active low
+</span><span style="color:#75715e"></span>       .clk_pix,
+       .clk_locked
+    );
+
+    <span style="color:#75715e">// display timings
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>;  <span style="color:#75715e">// screen coordinate width in bits
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx, sy;
+    <span style="color:#66d9ef">logic</span> de;
+    display_timings timings_640x480 (
+        .clk_pix,
+        .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for clock lock
+</span><span style="color:#75715e"></span>        .sx,
+        .sy,
+        .hsync(vga_hsync),
+        .vsync(vga_vsync),
+        .de
+    );
+
+    <span style="color:#66d9ef">logic</span> frame_end;   <span style="color:#75715e">// high for one clycle at the end of a frame
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> line_start;  <span style="color:#75715e">// high for one cycle at line start (drawing lines only)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+        frame_end <span style="color:#f92672">=</span> (sy <span style="color:#f92672">==</span> <span style="color:#ae81ff">524</span> <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">==</span> <span style="color:#ae81ff">799</span>);
+        line_start <span style="color:#f92672">=</span> (sy <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">480</span> <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>);
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// bitmap buffer
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> BMP_WIDTH  <span style="color:#f92672">=</span> <span style="color:#ae81ff">320</span>;
+    <span style="color:#66d9ef">localparam</span> BMP_HEIGHT <span style="color:#f92672">=</span> <span style="color:#ae81ff">240</span>;
+    <span style="color:#66d9ef">localparam</span> BMP_PIXELS <span style="color:#f92672">=</span> BMP_WIDTH <span style="color:#f92672">*</span> BMP_HEIGHT; 
+    <span style="color:#66d9ef">localparam</span> BMP_ADDRW <span style="color:#f92672">=</span> $clog2(BMP_PIXELS);
+    <span style="color:#66d9ef">localparam</span> BMP_DATAW <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;  <span style="color:#75715e">// colour bits per pixel
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> BMP_IMAGE <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;earthrise_320x240.mem&#34;</span>;
+    <span style="color:#66d9ef">localparam</span> BMP_PALETTE <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;earthrise_320x240_palette.mem&#34;</span>;
+
+    <span style="color:#66d9ef">logic</span> [BMP_ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] bmp_addr_read;
+    <span style="color:#66d9ef">logic</span> [BMP_DATAW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] colr_idx;
+
+    bram_sdp #(
+        .WIDTH(BMP_DATAW),
+        .DEPTH(BMP_PIXELS),
+        .INIT_F(BMP_IMAGE)
+    ) bram_bmp ( 
+        .clk_read(clk_pix),
+        .clk_write(clk_pix),
+        .we(<span style="color:#ae81ff">0</span>),
+        .addr_write(),
+        .addr_read(bmp_addr_read),
+        .data_in(),
+        .data_out(colr_idx)
+    );
+
+    <span style="color:#75715e">// Vivado makes this a LUT ROM
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] palette [<span style="color:#ae81ff">0</span><span style="color:#f92672">:</span><span style="color:#ae81ff">15</span>];  <span style="color:#75715e">// 16 x 12-bit colour palette entries
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] colr;
+    <span style="color:#66d9ef">initial</span> <span style="color:#66d9ef">begin</span>
+        $display(<span style="color:#e6db74">&#34;Loading palette.&#34;</span>);
+        $readmemh(BMP_PALETTE, palette);  <span style="color:#75715e">// bitmap palette to load
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// line buffer
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_SCALE_V <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span>;                <span style="color:#75715e">// factor to scale vertical drawing
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_SCALE_H <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span>;                <span style="color:#75715e">// factor to scale horizontal drawing
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_LINE  <span style="color:#f92672">=</span> <span style="color:#ae81ff">640</span> <span style="color:#f92672">/</span> LB_SCALE_H;   <span style="color:#75715e">// line length
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_ADDRW <span style="color:#f92672">=</span> $clog2(LB_LINE);    <span style="color:#75715e">// line address width
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_WIDTH <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;                  <span style="color:#75715e">// 4-bits per colour channel
+</span><span style="color:#75715e"></span>
+    <span style="color:#75715e">// line buffer read port (pixel clock)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [LB_ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lb_addr_read_pix;
+    <span style="color:#66d9ef">logic</span> [LB_WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lb0_out_pix, lb1_out_pix, lb2_out_pix;
+
+    <span style="color:#75715e">// line buffer write port (system clock - latency corrected)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> lb_re;  <span style="color:#75715e">// signals when the line buffer needs to read data from bitmap
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">2</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lb_we, lb_we_l1;
+    <span style="color:#66d9ef">logic</span> [LB_ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lb_addr_write, lb_addr_write_l1;
+    <span style="color:#66d9ef">logic</span> [LB_WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lb0_in, lb1_in, lb2_in;
+
+    <span style="color:#75715e">// latency correction
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        lb_we_l1 <span style="color:#f92672">&lt;=</span> lb_we;
+        lb_addr_write_l1 <span style="color:#f92672">&lt;=</span> lb_addr_write;
+    <span style="color:#66d9ef">end</span>
+
+    linebuffer #(
+        .WIDTH(LB_WIDTH),
+        .DEPTH(LB_LINE)
+        ) lb (
+        .clk_write(clk_pix),
+        .clk_read(clk_pix),
+        .we(lb_we_l1),                  <span style="color:#75715e">// use lb_we_l1 to correct for latency
+</span><span style="color:#75715e"></span>        .addr_write(lb_addr_write_l1),  <span style="color:#75715e">// use lb_addr_write_l1 to correct for latency
+</span><span style="color:#75715e"></span>        .addr_read(lb_addr_read_pix),
+        .data_in_0(lb0_in),
+        .data_in_1(lb1_in),
+        .data_in_2(lb2_in),
+        .data_out_0(lb0_out_pix),
+        .data_out_1(lb1_out_pix),
+        .data_out_2(lb2_out_pix)
+    );
+
+    <span style="color:#75715e">// address for lb to read from bitmap
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [BMP_ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lb_bmp_addr_read;
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">if</span> (frame_end) <span style="color:#66d9ef">begin</span>
+            lb_bmp_addr_read <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (lb_re) <span style="color:#66d9ef">begin</span>
+            lb_bmp_addr_read <span style="color:#f92672">&lt;=</span> lb_bmp_addr_read <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+        <span style="color:#66d9ef">end</span>
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// calculate linebuffer system address
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(LB_SCALE_V)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lb_repeat;  <span style="color:#75715e">// repeat line based on scale
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">if</span> (line_start) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// start new line
+</span><span style="color:#75715e"></span>            <span style="color:#66d9ef">if</span> (lb_repeat <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// time to read a fresh line of data?
+</span><span style="color:#75715e"></span>                lb_re <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                lb_we <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">3</span><span style="color:#ae81ff">&#39;b111</span>;
+                lb_addr_write <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            <span style="color:#66d9ef">end</span>
+            lb_repeat <span style="color:#f92672">&lt;=</span> (lb_repeat <span style="color:#f92672">==</span> LB_SCALE_V<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#f92672">?</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">:</span> lb_repeat <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
+            <span style="color:#66d9ef">if</span> (lb_addr_write <span style="color:#f92672">&lt;</span> LB_LINE<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// next pixel
+</span><span style="color:#75715e"></span>                lb_addr_write <span style="color:#f92672">&lt;=</span> lb_addr_write <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// disable drawing at end of line
+</span><span style="color:#75715e"></span>                lb_re <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                lb_we <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            <span style="color:#66d9ef">end</span>
+        <span style="color:#66d9ef">end</span>
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// calculate linebuffer pixel address
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(LB_SCALE_H)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] scale_pix_cnt;
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">if</span> (sx <span style="color:#f92672">==</span> <span style="color:#ae81ff">798</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// address 0 when sx=799, so we need to set when sx=798 (latency=1)
+</span><span style="color:#75715e"></span>            lb_addr_read_pix <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            scale_pix_cnt <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (lb_addr_read_pix <span style="color:#f92672">&lt;</span> LB_LINE<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
+            scale_pix_cnt <span style="color:#f92672">&lt;=</span> (scale_pix_cnt <span style="color:#f92672">&lt;</span> LB_SCALE_H<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#f92672">?</span> scale_pix_cnt <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
+            <span style="color:#66d9ef">if</span> (scale_pix_cnt <span style="color:#f92672">==</span> LB_SCALE_H<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) lb_addr_read_pix <span style="color:#f92672">&lt;=</span> lb_addr_read_pix <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+        <span style="color:#66d9ef">end</span>
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// read into line buffer
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+        bmp_addr_read <span style="color:#f92672">=</span> lb_bmp_addr_read;
+        lb0_in <span style="color:#f92672">=</span> colr[<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>];
+        lb1_in <span style="color:#f92672">=</span> colr[<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">4</span>];
+        lb2_in <span style="color:#f92672">=</span> colr[<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">8</span>];
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// lookup colour in CLUT
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        colr <span style="color:#f92672">&lt;=</span> palette[colr_idx];
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// VGA output
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+        vga_r <span style="color:#f92672">=</span> de <span style="color:#f92672">?</span> lb2_out_pix <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
+        vga_g <span style="color:#f92672">=</span> de <span style="color:#f92672">?</span> lb1_out_pix <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
+        vga_b <span style="color:#f92672">=</span> de <span style="color:#f92672">?</span> lb0_out_pix <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
+    <span style="color:#66d9ef">end</span>
+<span style="color:#66d9ef">endmodule</span>
+</code></pre></div><p>The same constraints file can be used as before: <strong><a href="https://github.com/projf/projf-explore/blob/master/life-on-screen/xc7/arty.xdc">arty.xdc</a></strong>.</p>
+<h2 id="fizzle-out">Fizzle Out</h2>
+<p>In the third part of our series, <a href="/posts/fpga-ad-astra/">FPGA Ad Astra</a>, we made use of linear feedback shift registers (LFSRs) to create animated starfields. LFSRs have another use: creating random dissolve effects, as used in Wolfenstein 3D and described by Fabien Sanglard in his excellent <a href="https://fabiensanglard.net/fizzlefade/">Fizzlefade</a> blog post. We can use this effect to dissolve our photograph to an empty background using a separate bitmap mask.</p>
+<p><strong>The fizzlefade design is still being worked on. Check back soon.</strong></p>
+<h2 id="explore">Explore</h2>
+<p>I hope you enjoyed this instalment of <em>Exploring FPGA Graphics</em>, but nothing beats creating your own designs. Here are a few suggestions to get you started:</p>
+<ul>
+<li>Experiment with your own Game of Life seed files</li>
+<li>Display your own photos as bitmaps</li>
+<li>Transition between two bitmaps using fizzlefade</li>
+<li>Implement a Universal Turing Machine using Life: take a look at <a href="http://www.rendell-attic.org/gol/tm.htm">Paul Rendell&rsquo;s Attic</a> to get started</li>
+</ul>
+<h2 id="next-time">Next Time</h2>
+<p>In the next part, we&rsquo;ll learn about drawing lines: the basis of most 2D and 3D graphics. The next part will be available later in 2020. Follow <a href="https://twitter.com/WillFlux">@WillFlux</a> for updates.</p>
+
+      
+      <div class="related">
+
+<h3>Similar articles:</h3>
+<ul>
+	
+	<li><a href="/posts/fpga-pong/">FPGA Pong</a></li>
+	
+	<li><a href="/posts/fpga-ad-astra/">FPGA Ad Astra</a></li>
+	
+	<li><a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a></li>
+	
+	<li><a href="/posts/video-timings-vga-720p-1080p/">Video Timings: VGA, SVGA, 720p, 1080p</a></li>
+	
+	<li><a href="/posts/hello-arty-2/">Hello Arty - Part 2</a></li>
+	
+</ul>
+</div>
+      
+    </div>
+    
+  </div>
+</section>
+
+    <script src="/js/copycode.js"></script>
+
+
+
+<section class="section">
+  <div class="container has-text-centered">
+    <p>©2020 Will Green, Project F</p>
+    
+  </div>
+</section>
+
+
+<script src="https://narwhal.projectf.io/script.js" site="EVCGKVDN" defer></script>
+</body>
+</html>
+
