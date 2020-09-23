@@ -7,9 +7,8 @@
 <title>Life on Screen | Project F - FPGA Development</title>
 
 <meta property='og:title' content='Life on Screen - Project F - FPGA Development'>
-<meta property='og:description' content='He is Archimedes, Mick Jagger, Salvador Dalí, and Richard Feynman, all rolled into one.
-The Guardian, John Horton Conway: the world&rsquo;s most charismatic mathematician (2015)
- Welcome back to Exploring FPGA Graphics. In previous posts, we raced the beam: every frame the entire screen was generated from scratch. In this fourth part, we&rsquo;re going to draw on a bitmap and drive the display from that. Bitmaps allow for more complex graphics, but require memory and increase latency.'>
+<meta property='og:description' content='Welcome back to Exploring FPGA Graphics. In previous posts, we raced the beam: every frame the entire screen was generated from scratch. In this fourth part, we&rsquo;re going to draw on a bitmap and drive the display from that. Bitmaps allow for more complex graphics, but require memory and increase latency.
+In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We start by learning how displays work, before racing the beam with Pong, drawing starfields and sprites, simulating life with bitmaps, drawing lines and triangles, and finally creating simple 3D models.'>
 <meta property='og:url' content='https://projectf.io/posts/life-on-screen/'>
 <meta property='og:site_name' content='Project F - FPGA Development'>
 <meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/life-on-screen/social-card.jpg'><meta property='article:published_time' content='2020-09-22T00:00:00Z'/><meta property='article:modified_time' content='2020-09-22T00:00:00Z'/><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
@@ -119,14 +118,14 @@ The Guardian, John Horton Conway: the world&rsquo;s most charismatic mathematici
     <h1 class="title">Life on Screen</h1>
     
     <div class="content">
-      <blockquote>
+      <p>Welcome back to <em>Exploring FPGA Graphics</em>. In previous posts, we raced the beam: every frame the entire screen was generated from scratch. In this fourth part, we&rsquo;re going to draw on a bitmap and drive the display from that. Bitmaps allow for more complex graphics, but require memory and increase latency.</p>
+<p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We start by learning how displays work, before racing the beam with Pong, drawing starfields and sprites, simulating life with bitmaps, drawing lines and triangles, and finally creating simple 3D models. I&rsquo;ll be writing and revising this series throughout 2020. New to the series? Start with <a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a>.</p>
+<p><strong>NB. This post is a draft: designs for iCEBreaker and other improvements are coming.</strong></p>
+<p><em>Updated 2020-09-23. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<blockquote>
 <p>He is Archimedes, Mick Jagger, Salvador Dalí, and Richard Feynman, all rolled into one.<br>
 <em>The Guardian, <a href="https://www.theguardian.com/science/2015/jul/23/john-horton-conway-the-most-charismatic-mathematician-in-the-world">John Horton Conway: the world&rsquo;s most charismatic mathematician</a> (2015)</em></p>
 </blockquote>
-<p>Welcome back to <em>Exploring FPGA Graphics</em>. In previous posts, we raced the beam: every frame the entire screen was generated from scratch. In this fourth part, we&rsquo;re going to draw on a bitmap and drive the display from that. Bitmaps allow for more complex graphics, but require memory and increase latency.</p>
-<p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We start by learning how displays work, before racing the beam with Pong, drawing starfields and sprites, simulating life with bitmaps, drawing lines and triangles, and finally creating simple 3D models. I&rsquo;ll be writing and revising this series throughout 2020. New to the series? Start with <a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a>.</p>
-<p><strong>NB. This post is a draft: designs for iCEBreaker and other improvements are coming.</strong></p>
-<p><em>Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <h3 id="series-outline">Series Outline</h3>
 <ul>
 <li><a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a> - how displays work and simple animated colour graphics</li>
@@ -325,12 +324,12 @@ b. otherwise, it&rsquo;s dead next generation</li>
 </ul>
 <p>You can learn more about block ram in <a href="/posts/fpga-memory-types/">FPGA Memory Types</a>.</p>
 <h3 id="scaling-bitmaps">Scaling Bitmaps</h3>
-<p>In the previous section, I said scaling our bitmap for display was straightforward, because it is eight smaller than our screen. However, practical scaling isn&rsquo;t quite as simple as it first appears.</p>
-<p>For example, given our display coordinates <code>sx</code> and <code>sy</code> you <em>could</em> calculate the Life bitmap address with the following (80 is the line length):</p>
+<p>In the previous section, I said scaling our bitmap for display was straightforward, because it&rsquo;s eight times smaller than our screen resolution. However, practical scaling isn&rsquo;t quite as simple as it first appears.</p>
+<p>For example, given our display coordinates <code>sx</code> and <code>sy</code> you <em>could</em> calculate the 80x60 pixel bitmap address with:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">always_comb</span> bitmap_addr <span style="color:#f92672">=</span> sx <span style="color:#f92672">/</span> <span style="color:#ae81ff">8</span> <span style="color:#f92672">+</span> (sy <span style="color:#f92672">/</span> <span style="color:#ae81ff">8</span>) <span style="color:#f92672">*</span> <span style="color:#ae81ff">80</span>;  <span style="color:#75715e">// ?!
 </span></code></pre></div><p>This has at least three problems:</p>
 <ol>
-<li>It doesn&rsquo;t take account of memory latency: it takes one or more cycles to read BRAM</li>
+<li>It doesn&rsquo;t account for memory latency: it takes one or more cycles to read BRAM</li>
 <li>It wastes memory bandwidth: every value is read 64 times per frame!</li>
 <li>It uses multiplication, which takes up valuable (probably DSP) logic</li>
 </ol>
@@ -384,7 +383,7 @@ b. otherwise, it&rsquo;s dead next generation</li>
         .data_out(data_out_2)
     );
 <span style="color:#66d9ef">endmodule</span>
-</code></pre></div><p>We use three separate BRAM instances because colours are output separately to display and 4 or 8-bit-wide buffers are a better fit with BRAM hardware than a single 12 or 24-bit buffer. A future post will cover display scaling more fully, but we have enough to efficiently display bitmaps for now.</p>
+</code></pre></div><p>We use three separate BRAM instances because colours are output separately to the display and 4-bit-wide buffers are a better fit for BRAM hardware than a single 12-wide buffer. A future post will cover display scaling more fully, but we have enough to efficiently display bitmaps for now.</p>
 <blockquote>
 <p><strong>Clock Domain Crossing</strong><br>
 The line buffer module has another significant benefit: it allows the pixel clock to be different from the rest of the design. For example, you could run your Life simulation at 100 MHz (line buffer write port) and display it on a 720p60 screen with a 74.25 MHz pixel clock (line buffer read port). CDC is usually achieved with a FIFO, but the line buffer does it <em>while</em> providing efficient scaling.</p>
