@@ -145,10 +145,10 @@ In this series, we explore graphics at the hardware level and get a feel for the
 <h2 id="what-is-a-sprite">What is a Sprite?</h2>
 <p>A sprite is a graphics object that can be moved and animated independently of the background and other sprites. Hardware sprites use dedicated logic for drawing, and until the mid-90s they were an essential part of computer graphics. Hardware sprites are a good fit for an FPGA as they&rsquo;re easy to control, and we can scale them to fit our game design: whether we want hundreds of tiny sprites or a few huge ones. Hardware sprites are also useful for cursors or pointers in professional applications, providing a responsive UI without complex screen redrawing.</p>
 <h2 id="a-simple-sprite">A Simple Sprite</h2>
-<p>We&rsquo;re going to start with a small 8x8 pixel sprite supporting just two colours.</p>
+<p>We&rsquo;re going to start with a small 8x8 pixel sprite with just two colours.</p>
 <p>We&rsquo;ll load the sprite into FPGA memory using a simple text format. Each line is simply composed of eight 1s or 0s separated by spaces. I&rsquo;m going to start with the letter &lsquo;F&rsquo; and a full stop (period) as a sprite. It&rsquo;s a simple, asymmetric, design, making it easier to spot bugs (such as pixels being missed off):</p>
 <p><img src="/img/posts/hardware-sprites/letter-f.png" alt="F." title="F for Project F"></p>
-<p>The text file to initialize the sprite memory looks like this <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-spirtes/res/simple/letter_f.mem">letter_f.mem</a>]</strong>:</p>
+<p>The text file to initialize the sprite memory looks like this <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/res/simple/letter_f.mem">letter_f.mem</a>]</strong>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">1 1 1 1 1 1 0 0
 1 1 0 0 0 0 0 0
 1 1 0 0 0 0 0 0
@@ -168,7 +168,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
 <li>If we&rsquo;re not done, move to the next line, then go to step 2</li>
 <li>Sprite is complete</li>
 </ol>
-<p>This process is well represented by our old friend, the finite state machine (FSM). In fact, our first sprite design is little more than a simple finite state machine and a small memory array <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-spirtes/sprite_v1.sv">sprite_v1.sv</a>]</strong>:</p>
+<p>This process is well represented by our old friend, the finite state machine (FSM). In fact, our first sprite design is little more than a simple finite state machine and a small memory array <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/sprite_v1.sv">sprite_v1.sv</a>]</strong>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> sprite_v1 #(
     <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,            <span style="color:#75715e">// graphic width in pixels
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> HEIGHT<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,           <span style="color:#75715e">// graphic height in pixels
@@ -365,7 +365,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/hardware-spri
         draw_y_cor <span style="color:#f92672">=</span> (DRAW_Y <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) <span style="color:#f92672">?</span> V_RES_FULL <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> DRAW_Y <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;
         spr_start <span style="color:#f92672">=</span> (sy <span style="color:#f92672">==</span> draw_y_cor <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">==</span> H_RES);
     <span style="color:#66d9ef">end</span>
-</code></pre></div><p>And the AWAIT_POS logic in the sprite module, creating <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-spirtes/sprite_v2.sv">sprite_v2.sv</a>]</strong>:</p>
+</code></pre></div><p>And the AWAIT_POS logic in the sprite module, creating <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/sprite_v2.sv">sprite_v2.sv</a>]</strong>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// create status signals and correct horizontal position
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> last_pixel, last_line;
     <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sprx_cor;
@@ -386,7 +386,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/hardware-spri
 </span></code></pre></div><p>Build the v2 designs, and you should see the F dot sprite at the very top left of the screen.</p>
 <h2 id="scale-up">Scale Up</h2>
 <p>Now we can position our sprite correctly, it&rsquo;s time to make it bigger. We make larger sprites by increasing the size of the design. However, it&rsquo;s also useful to be able to scale our sprites up when drawing them. A scaled-up sprite will be blocky but will use few resources and allows a design to work at different screen resolutions.</p>
-<p>To scale our sprite, we count additional screen pixels and lines when drawing the sprite using <code>cnt_x</code> and <code>cnt_y</code> respectively. The new module is <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-spirtes/sprite_v3.sv">sprite_v3.sv</a>]</strong>:</p>
+<p>To scale our sprite, we count additional screen pixels and lines when drawing the sprite using <code>cnt_x</code> and <code>cnt_y</code> respectively. The new module is <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/sprite_v3.sv">sprite_v3.sv</a>]</strong>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> sprite_v3 #(
     <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,            <span style="color:#75715e">// graphic width in pixels
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> HEIGHT<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,           <span style="color:#75715e">// graphic height in pixels
@@ -512,7 +512,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/hardware-spri
 <h2 id="motion">Motion</h2>
 <p>It&rsquo;s time we got our sprites moving. Now we have our basic sprite working, I&rsquo;m going to use a new design, which I&rsquo;m charitably calling a flying saucer:</p>
 <p><img src="/img/posts/hardware-sprites/saucer.png" alt="Flying Saucer" title="From Area 51"></p>
-<p>The memory initilization file is <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-spirtes/res/simple/saucer.mem">saucer.mem</a>]</strong>:</p>
+<p>The memory initilization file is <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/res/simple/saucer.mem">saucer.mem</a>]</strong>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">0 0 1 1 1 1 0 0
 0 1 1 0 0 1 1 0
 1 1 0 1 1 0 1 1
@@ -522,7 +522,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/hardware-spri
 0 1 1 0 0 1 1 0
 0 0 1 1 1 1 0 0
 </code></pre></div><p>I&rsquo;m sure you can come up with something better: create your own design following the same format as above. You don&rsquo;t have to limit yourself to 8x8 pixels, just be sure to update the width and height in the top module (see below).</p>
-<p>To make it easy to build your own design I&rsquo;ve added an empty sprite with the name <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-spirtes/res/simple/user.mem">user.mem</a>]</strong>. If you replace this file in <code>res/simple/</code> with your own design it will automatically be included in projects and makefiles. See the <a href="https://github.com/projf/projf-explore/tree/master/hardware-sprites">Hardware Sprites</a> section of the git repo for build instructions.</p>
+<p>To make it easy to build your own design I&rsquo;ve added an empty sprite with the name <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/res/simple/user.mem">user.mem</a>]</strong>. If you replace this file in <code>res/simple/</code> with your own design it will automatically be included in projects and makefiles. See the <a href="https://github.com/projf/projf-explore/tree/master/hardware-sprites">Hardware Sprites</a> section of the git repo for build instructions.</p>
 <p>To move our sprite, I&rsquo;ve borrowed the horizontal bouncing logic from our <a href="/posts/fpga-graphics/">first part</a>, yet again, to create:</p>
 <ul>
 <li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/xc7/top_sprite_v3a.sv">xc7/top_sprite_v3a.sv</a></strong></li>
@@ -534,7 +534,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/hardware-spri
 <p><img src="/img/posts/hardware-sprites/hedgehog-enlarged.png" alt="Hedgehog" title="Hedgehog"></p>
 <p>This graphic is 32x20 pixels in size, so has 640 pixels. The original Amiga game uses 32 colours, of which the hedgehog uses ten, plus one transparent colour. To allow for 11 colours we need four bits per pixel.</p>
 <p>The memory requirement for this sprite is: <code>32 x 20 x 4 = 2,560 or 2.5 kilobits</code>.</p>
-<p>The memory file is similar to that for our monochrome sprites, but instead of pixels being <code>0</code> or <code>1</code>, they&rsquo;re <code>0</code> to <code>F</code>. I use a tool called <code>img2fmem</code> to convert a PNG of the image to this text format: <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-spirtes/res/hedgehog/hedgehog.mem">hedgehog.mem</a></strong>. To read this hex text data into memory we use <code>$readmemh</code> (note the &lsquo;h&rsquo; for hex).</p>
+<p>The memory file is similar to that for our monochrome sprites, but instead of pixels being <code>0</code> or <code>1</code>, they&rsquo;re <code>0</code> to <code>F</code>. I use a tool called <code>img2fmem</code> to convert a PNG of the image to this text format: <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/res/hedgehog/hedgehog.mem">hedgehog.mem</a></strong>. To read this hex text data into memory we use <code>$readmemh</code> (note the &lsquo;h&rsquo; for hex).</p>
 <blockquote>
 <p><strong>Quick Aside: Indexed Colour</strong><br>
 This design was common in older computers, for example, the <a href="https://en.wikipedia.org/wiki/Original_Chip_Set">original Amiga chipset</a> supported 32 colours from a possible 4,096: very similar to our design! The GIF and PNG formats still make use of this approach to squeeze the best quality out of 256-colour images.</p>
@@ -567,7 +567,7 @@ This design was common in older computers, for example, the <a href="https://en.
         data <span style="color:#f92672">&lt;=</span> memory[addr];
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
-</code></pre></div><p>While for Lattice, we need to implement write support or the design won&rsquo;t be inferred correctly <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/ice40/bram.sv">ice40/bram.sv</a>]</strong>:</p>
+</code></pre></div><p>While for Lattice, we need to implement write support or the design won&rsquo;t be inferred correctly <strong>ice40/bram.sv</strong>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> bram #(
     <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,
     <span style="color:#66d9ef">parameter</span> DEPTH<span style="color:#f92672">=</span><span style="color:#ae81ff">512</span>,
@@ -595,7 +595,7 @@ This design was common in older computers, for example, the <a href="https://en.
         data <span style="color:#f92672">=</span> memory[addr];
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
-</code></pre></div><p>Once you&rsquo;ve created the appropriate memory module, we can create the final sprite module for this part <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-spirtes/sprite.sv">sprite.sv</a>]</strong>:</p>
+</code></pre></div><p>Once you&rsquo;ve created the appropriate memory module, we can create the final sprite module for this part <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/sprite.sv">sprite.sv</a>]</strong>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> sprite #(
     <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,         <span style="color:#75715e">// graphic width in pixels
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> HEIGHT<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,        <span style="color:#75715e">// graphic height in pixels
@@ -734,7 +734,7 @@ This design was common in older computers, for example, the <a href="https://en.
 </code></pre></div><h4 id="drawing--done">Drawing &amp; Done</h4>
 <p>For better control and reuse of sprite instances, we&rsquo;ve added two new signals: <code>draw</code> is high when the sprite is drawing pixels, and <code>done</code> indicates the sprite is complete.</p>
 <h3 id="a-refined-palette">A Refined Palette</h3>
-<p>Our boards have 12-bit colour output, supporting 4,096 colours. We can map our 16 sprite colours to any of these using a colour lookup table (CLUT). We populate the colour lookup table using a simple text file <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-spirtes/res/hedgehog/hedgehog_palette.mem">hedgehog_palette.mem</a>]</strong>:</p>
+<p>Our boards have 12-bit colour output, supporting 4,096 colours. We can map our 16 sprite colours to any of these using a colour lookup table (CLUT). We populate the colour lookup table using a simple text file <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/res/hedgehog/hedgehog_palette.mem">hedgehog_palette.mem</a>]</strong>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">CCC AAA 888 874 763 651 540 330 111 F0F 000
 </code></pre></div><p><img src="/img/posts/hardware-sprites/hedgehog-palette.png" alt="Hedgehog Palette" title="The colour of the hedge"></p>
 <p>The hedgehog sprite has ten drawing colours, with an additional colour <code>F0F</code> (magenta) used for transparency. These colours are 12-bit in hex format: <code>RGB</code>; the same as a <a href="https://en.wikipedia.org/wiki/Web_colors">web colour hex triplet</a>.</p>
@@ -775,7 +775,7 @@ This design was common in older computers, for example, the <a href="https://en.
 <p><strong>Quick Aside: Your Own Colour Graphics</strong><br>
 You&rsquo;ll learn how to create your own memory files from images using <code>img2fmem</code> <a href="/posts/framebuffers/">later in this series</a>.</p>
 </blockquote>
-<p>The animated sprite graphic has three images stacked vertically, so each image is contiguous in memory <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-spirtes/res/hedgehog/hedgehog_walk.mem">hedgehog_walk.mem</a></strong>:</p>
+<p>The animated sprite graphic has three images stacked vertically, so each image is contiguous in memory <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/res/hedgehog/hedgehog_walk.mem">hedgehog_walk.mem</a></strong>:</p>
 <p><img src="/img/posts/hardware-sprites/hedgehog-frames.png" alt="Hedgehog Frames" title="Walking 1,2,3"></p>
 <p>Every display frame we increment the counter <code>cnt_anim</code>. When the counter hits specific values, we update the sprite base address, <code>spr_base_addr</code>, to select a different image in the sprite graphic.</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// sprite frame selector
