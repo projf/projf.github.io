@@ -121,7 +121,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
       <p>Welcome back to <em>Exploring FPGA Graphics</em>. In this post we&rsquo;re going to use the designs we created in <a href="/posts/framebuffers/">Framebuffers</a> to experiment with Conway&rsquo;s Game of Life.</p>
 <p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We start by learning how displays work, before racing the beam with Pong, starfields and sprites, simulating life with bitmaps, drawing lines and triangles, and finally creating simple 3D models. I&rsquo;ll be writing and revising this series throughout 2020. New to the series? Start with <a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a>.</p>
 <p><strong>Draft post. Additional content and designs for iCEBreaker are coming in November 2020.</strong></p>
-<p><em>Revised 2020-10-31. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><em>Updated 2020-11-02. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <blockquote>
 <p>He is Archimedes, Mick Jagger, Salvador Dalí, and Richard Feynman, all rolled into one.<br>
 <em>The Guardian, <a href="https://www.theguardian.com/science/2015/jul/23/john-horton-conway-the-most-charismatic-mathematician-in-the-world">John Horton Conway: the world&rsquo;s most charismatic mathematician</a> (2015)</em></p>
@@ -144,7 +144,6 @@ In this series, we explore graphics at the hardware level and get a feel for the
 (designs available soon)</li>
 <li><strong><a href="https://reference.digilentinc.com/reference/programmable-logic/arty-a7/reference-manual">Digilent Arty A7-35T</a></strong> (Xilinx Artix-7) with <strong><a href="https://reference.digilentinc.com/reference/pmod/pmodvga/reference-manual">Pmod VGA</a></strong></li>
 </ul>
-<p>Follow the source <a href="https://github.com/projf/projf-explore/tree/master/life-on-screen">README</a> to quickly build a project for either of these boards.</p>
 <h3 id="source">Source</h3>
 <p>The SystemVerilog designs featured in this series are available from the <a href="https://github.com/projf/projf-explore/">projf-explore</a> repo on GitHub. The designs are open source hardware under the permissive MIT licence, but this blog is subject to normal copyright restrictions.</p>
 <h2 id="conways-life">Conway&rsquo;s Life</h2>
@@ -312,8 +311,12 @@ b. otherwise, it&rsquo;s dead next generation</li>
 <p>The cell under consideration is <code>cid</code> (between 0 and 4,799). <code>npos</code> is the position of a neighbour relative to the cell we&rsquo;re dealing with (1 is top left, 2 top middle, 3 top right etc.), while <code>nid</code> is position in the bitmap of the neighbour (again between 0 and 4,799). <em>Further details on the operation of the Life module will be added in later drafts.</em></p>
 <p>To exercise this module we have a test bench for Vivado: <strong><a href="https://github.com/projf/projf-explore/tree/master/life-on-screen/xc7/life_tb.sv">life_tb.sv</a></strong>. If you have a Xilinx Vivado installed, try using the test bench with the included test seed files. You can find instructions for running the simulation in the source <a href="https://github.com/projf/projf-explore/tree/master/life-on-screen">README</a>.</p>
 <h3 id="top-life">Top Life</h3>
-<p>Now we have our simulation design, we&rsquo;re ready to draw it with a framebuffer. We can use the design from the <a href="/posts/framebuffers/">Framebuffers</a> post, with the dimensions set to 80x60 and the depth to 1 bit. However, as already discussed, we need two buffers to run the simulation.</p>
-<p>The linebuffer and life simulation need to share read access to the frontbuffer. We use a simple arbitration technique: the life simulation gets to read the buffer in the vertical blanking interval, when the linebuffer is idle. We need at least three frames to complete a full simulation with this arbitration method, so <code>GEN_FRAMES</code> in <code>top_life</code>, below, must be set to at least 3.</p>
+<p>Now we have our simulation design, we&rsquo;re ready to draw it with a framebuffer. We can use the design from the <a href="/posts/framebuffers/">Framebuffers</a> post, with the dimensions set to 80x60 and the depth to 1 bit. However, as already discussed, we need a double buffer to run the simulation; we&rsquo;ve used one larger buffer and an offset to select the front and back portions. The front buffer is read by the display controller and life simulation, and the back buffer is written to by the simulation.</p>
+<blockquote>
+<p><strong>Quick Aside: iCE40 BRAM Ports</strong><br>
+The iCE40 FPGA has pseudo dual-port BRAM; you can read from one port, and write to the other, but you can&rsquo;t read and write to the same port. This explains our somewhat curious buffer design.</p>
+</blockquote>
+<p>The linebuffer and life simulation need to share read access to the front buffer. We use a simple arbitration technique: the life simulation gets to read the buffer in the vertical blanking interval, when the linebuffer is idle. We need at least three frames to complete a full simulation with this arbitration method, so <code>GEN_FRAMES</code> in <code>top_life</code>, below, must be set to at least 3.</p>
 <ul>
 <li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/life-on-screen/xc7/top_life.sv">xc7/top_life.sv</a></strong></li>
 <li>Lattice iCE40: <em>coming soon</em></li>
