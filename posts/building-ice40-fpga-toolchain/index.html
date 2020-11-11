@@ -120,7 +120,7 @@ This guide is designed for Ubuntu or Pop!_OS 20.04, but should be straightforwar
 <h2 id="checklist">Checklist</h2>
 <p>We&rsquo;ll be installing:</p>
 <ol>
-<li>Build Pre-requisites</li>
+<li><a href="#build-pre-requisites">Build Pre-requisites</a> - what we need before we begin</li>
 <li><a href="#icestorm-tools">IceStorm Tools</a> - create bitstreams file and programs boards</li>
 <li><a href="#nextpnr">nextpnr</a> - portable place and route</li>
 <li><a href="#iverilog">iVerilog</a> - Verilog simulation and synthesis tool (optional)</li>
@@ -147,8 +147,7 @@ git clone https://github.com/cliffordwolf/icestorm.git icestorm
 cd icestorm
 make -j<span style="color:#66d9ef">$(</span>nproc<span style="color:#66d9ef">)</span>
 make install
-</code></pre></div><p>If you want to allow non-root users to program boards with <code>iceprog</code>, then add the following entry to:<br>
-<code>/etc/udev/rules.d/53-lattice-ftdi.rules</code>:</p>
+</code></pre></div><p>If you want to allow non-root users to program boards with <code>iceprog</code>, then add the following entry to: <code>/etc/udev/rules.d/53-lattice-ftdi.rules</code>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">ACTION<span style="color:#f92672">==</span><span style="color:#e6db74">&#34;add&#34;</span>, ATTR<span style="color:#f92672">{</span>idVendor<span style="color:#f92672">}==</span><span style="color:#e6db74">&#34;0403&#34;</span>, ATTR<span style="color:#f92672">{</span>idProduct<span style="color:#f92672">}==</span><span style="color:#e6db74">&#34;6010&#34;</span>, MODE:<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;666&#34;</span>
 </code></pre></div><h2 id="nextpnr">nextpnr</h2>
 <p>nextpnr is a portable FPGA place and route tool that supports iCE40 and ECP5 with Xilinx support in the works. Learn more from <a href="https://github.com/YosysHQ/nextpnr">nextpnr GitHub</a>.</p>
@@ -199,19 +198,27 @@ make -j<span style="color:#66d9ef">$(</span>nproc<span style="color:#66d9ef">)</
 make test  <span style="color:#75715e"># optional</span>
 make install
 </code></pre></div><h2 id="ice40-makefile">iCE40 Makefile</h2>
-<p>The following sample makefile should get you started. You may need to update the configuration:</p>
+<p>The following sample makefile should get you started.</p>
+<p>If you&rsquo;re not using the iCEBreak with iCE40UP5K FPGA, you need to change the following:</p>
+<ul>
+<li><code>FPGA_PKG</code> needs to match your FPGA: <code>sg48</code> is the FPGA package for iCEBreaker</li>
+<li><code>FPGA_TYPE</code> needs to match your FPGA: <code>up5k</code> is the FPGA device for iCEBreaker</li>
+</ul>
+<p>You should also update the following for your design:</p>
 <ul>
 <li><code>icebreaker.pcf</code> is the physical constraints file, which contains pin mappings</li>
-<li><code>FPGA_PKG</code> needs to match your FPGA, <code>sg48</code> is correct for the iCEBreaker iCE40UP5K FPGA</li>
+<li><code>module_1.v</code> and <code>module_2.v</code> are example modules required by <code>top_foo.v</code> and <code>top_bar.v</code></li>
 <li>If using SystemVerilog, change the <code>.v</code> extensions to <code>.sv</code>.</li>
 </ul>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-make" data-lang="make"><span style="color:#75715e"># Example iCEBreaker Makefile from http://projectf.io
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-make" data-lang="make"><span style="color:#75715e"># Example iCEBreaker Makefile
+</span><span style="color:#75715e"># Learn more at https://projectf.io/posts/building-ice40-fpga-toolchain/
 </span><span style="color:#75715e"></span>
 <span style="color:#75715e"># configuration
 </span><span style="color:#75715e"></span>SHELL <span style="color:#f92672">=</span> /bin/sh
 FPGA_PKG <span style="color:#f92672">=</span> sg48
+FPGA_TYPE <span style="color:#f92672">=</span> up5k
 PCF <span style="color:#f92672">=</span> icebreaker.pcf
-ADD_SRC <span style="color:#f92672">=</span> example_1.v ../example_2.v
+ADD_SRC <span style="color:#f92672">=</span> module_1.v module_2.v
 
 <span style="color:#a6e22e">top_foo</span><span style="color:#f92672">:</span> top_foo.rpt top_foo.bin
 <span style="color:#a6e22e">top_bar</span><span style="color:#f92672">:</span> top_bar.rpt top_bar.bin
@@ -220,10 +227,10 @@ ADD_SRC <span style="color:#f92672">=</span> example_1.v ../example_2.v
 	yosys -ql <span style="color:#66d9ef">$(</span>subst .json,,$@<span style="color:#66d9ef">)</span>-yosys.log -p <span style="color:#e6db74">&#39;synth_ice40 -top $(subst .json,,$@) -json $@&#39;</span> $&lt; <span style="color:#66d9ef">$(</span>ADD_SRC<span style="color:#66d9ef">)</span>
 
 <span style="color:#a6e22e">%.asc</span><span style="color:#f92672">:</span> %.json
-	nextpnr-ice40 --up5k --package <span style="color:#e6db74">${</span>FPGA_PKG<span style="color:#e6db74">}</span> --json $&lt; --pcf <span style="color:#e6db74">${</span>PCF<span style="color:#e6db74">}</span> --asc $@
+	nextpnr-ice40 --<span style="color:#e6db74">${</span>FPGA_TYPE<span style="color:#e6db74">}</span> --package <span style="color:#e6db74">${</span>FPGA_PKG<span style="color:#e6db74">}</span> --json $&lt; --pcf <span style="color:#e6db74">${</span>PCF<span style="color:#e6db74">}</span> --asc $@
 
 <span style="color:#a6e22e">%.rpt</span><span style="color:#f92672">:</span> %.asc
-	icetime -d up5k -mtr $@ $&lt;
+	icetime -d <span style="color:#e6db74">${</span>FPGA_TYPE<span style="color:#e6db74">}</span> -mtr $@ $&lt;
 
 <span style="color:#a6e22e">%.bin</span><span style="color:#f92672">:</span> %.asc
 	icepack $&lt; $@
