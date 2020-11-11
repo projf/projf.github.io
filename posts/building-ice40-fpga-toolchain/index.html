@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"  lang="en-gb">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+<title>Building iCE40 FPGA Toolchain on Linux | Project F - FPGA Development</title>
+
+<meta property='og:title' content='Building iCE40 FPGA Toolchain on Linux - Project F - FPGA Development'>
+<meta property='og:description' content='Since I tested FPGA development tools on Ubuntu 20.04, there have been requests for more posts on FPGA tooling. In this post, I provide a quick guide to building an open-source FPGA toolchain for iCE40 boards, such as iCEBreaker. I plan to follow this up with an ECP5 version later.
+This guide is designed for Ubuntu or Pop!_OS 20.04, but should be straightforward to adjust to your own distro. These instructions will work on Windows Subsystem for Linux (WSL), but there&rsquo;s no USB support in WSL, so you can&rsquo;t program boards under WSL.'>
+<meta property='og:url' content='https://projectf.io/posts/building-ice40-fpga-toolchain/'>
+<meta property='og:site_name' content='Project F - FPGA Development'>
+<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/building-ice40-tools-fpga-toolchain/social-card.jpg'><meta property='article:published_time' content='2020-11-11T00:00:00Z'/><meta property='article:modified_time' content='2020-11-11T00:00:00Z'/><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
+
+
+<link href="https://projectf.io/index.xml" rel="alternate" type="application/rss+xml" title="Project F - FPGA Development" />
+
+<link rel="stylesheet" href="/css/style.css"/><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+<link rel="canonical" href="https://projectf.io/posts/building-ice40-fpga-toolchain/">
+<meta name="msapplication-TileColor" content="#da532c">
+<meta name="theme-color" content="#ffffff">
+<meta name="referrer" content="no-referrer, same-origin">
+</head>
+<body>
+<section class="section">
+  <div class="container">
+    <nav id="nav-main" class="nav">
+      <div id="nav-name" class="nav-left">
+        <a id="nav-anchor" class="nav-item" href="https://projectf.io">
+          <h1 id="nav-heading" class="title is-4">Project F - FPGA Development</h1>
+        </a>
+      </div>
+      <div class="nav-right">
+        <nav id="nav-items" class="nav-item level is-mobile"><a class="level-item" aria-label="github" href='https://github.com/projf'
+            target='_blank' rel='noopener'>
+            <span class="icon">
+              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
+    
+    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
+    
+  </svg></i>
+            </span>
+          </a><a class="level-item" aria-label="twitter" href='https://twitter.com/WillFlux'
+            target='_blank' rel='noopener'>
+            <span class="icon">
+              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
+    
+    <path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"/>
+    
+  </svg></i>
+            </span>
+          </a><a class="level-item" aria-label="youtube" href='https://youtube.com/channel/UCaT0lvfWo1GStbp0neg8weg'
+            target='_blank' rel='noopener'>
+            <span class="icon">
+              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
+    
+    <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/>
+    <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/>
+    
+  </svg></i>
+            </span>
+          </a><a class="level-item" aria-label="rss" href='/index.xml'
+            target='_blank' rel='noopener'>
+            <span class="icon">
+              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
+    
+    <path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle>
+    
+  </svg></i>
+            </span>
+          </a></nav>
+      </div>
+    </nav>
+
+    <nav class="nav">
+      
+      <div class="nav-left"><a class="nav-item" href="/about">
+          <h2 class="title is-5">About</h2>
+        </a><a class="nav-item" href="/sitemap">
+          <h2 class="title is-5">Sitemap</h2>
+        </a><a class="nav-item" href="/tags/cookbook">
+          <h2 class="title is-5">Cookbook</h2>
+        </a><a class="nav-item" href="/tags/explore">
+          <h2 class="title is-5">Explore</h2>
+        </a><a class="nav-item" href="/tags/tools">
+          <h2 class="title is-5">Tools</h2>
+        </a></div>
+      
+
+      
+    </nav>
+
+  </div>
+  <script src="/js/navicon-shift.js"></script>
+</section>
+<section class="section">
+  <div class="container">
+    <div class="subtitle tags is-6 is-pulled-right">
+      
+      
+<a class="subtitle is-6" href="/tags/tools/">#tools</a>
+
+
+
+
+      
+    </div>
+    <h2 class="subtitle is-6">11 November 2020</h2>
+    <h1 class="title">Building iCE40 FPGA Toolchain on Linux</h1>
+    
+    <div class="content">
+      <p>Since I <a href="/posts/fpga-dev-ubuntu-20.04/">tested FPGA development tools on Ubuntu 20.04</a>, there have been requests for more posts on FPGA tooling. In this post, I provide a quick guide to building an open-source FPGA toolchain for iCE40 boards, such as <a href="https://docs.icebreaker-fpga.org/hardware/icebreaker/">iCEBreaker</a>. I plan to follow this up with an ECP5 version later.</p>
+<p>This guide is designed for <a href="https://ubuntu.com/desktop">Ubuntu</a> or <a href="https://pop.system76.com/">Pop!_OS 20.04</a>, but should be straightforward to adjust to your own distro. These instructions will work on Windows Subsystem for Linux (WSL), but there&rsquo;s no USB support in WSL, so you can&rsquo;t program boards under WSL.</p>
+<p><em>Feedback to <a href="https://twitter.com/WillFlux">@WillFlux</a> is most welcome.</em></p>
+<h2 id="checklist">Checklist</h2>
+<p>We&rsquo;ll be installing:</p>
+<ol>
+<li>Build Pre-requisites</li>
+<li><a href="#icestorm-tools">IceStorm Tools</a> - create bitstreams file and programs boards</li>
+<li><a href="#nextpnr">nextpnr</a> - portable place and route</li>
+<li><a href="#iverilog">iVerilog</a> - Verilog simulation and synthesis tool (optional)</li>
+<li><a href="#yosys">Yosys</a> - Verilog RTL synthesis</li>
+<li><a href="#verilator">Verilator</a> - Verilog simulation and linting (optional)</li>
+</ol>
+<p>We&rsquo;ll also demonstrate a simple <a href="#ice40-makefile">iCE40 makefile</a> for building a Verilog project with the iCEBreaker board.</p>
+<h2 id="build-pre-requisites">Build Pre-requisites</h2>
+<p>Make sure we&rsquo;ve got git and curl installed to retrieve source code:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">apt install curl git
+</code></pre></div><p>Install build depedencies (covers all six tools):</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">apt install build-essential clang bison flex gperf libfl2 <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>    libfl-dev libreadline-dev gawk tcl-dev libffi-dev <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>    graphviz xdot pkg-config python python3 libftdi-dev <span style="color:#ae81ff">\
+</span><span style="color:#ae81ff"></span>    qt5-default python3-dev libboost-all-dev cmake libeigen3-dev
+</code></pre></div><p>Create a directory for building in; I&rsquo;m going to use <code>~/fpga-toolchain</code>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">mkdir -p ~/fpga-toolchain
+</code></pre></div><h2 id="icestorm-tools">IceStorm Tools</h2>
+<p>IceStorm tools create and analyse bitstream files for iCE40 FPGAs as well as programming boards. Learn more from <a href="http://www.clifford.at/icestorm/">Project IceStorm</a>.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">cd ~/src/fpga-toolchain
+
+git clone https://github.com/cliffordwolf/icestorm.git icestorm
+
+cd icestorm
+make -j<span style="color:#66d9ef">$(</span>nproc<span style="color:#66d9ef">)</span>
+make install
+</code></pre></div><p>If you want to allow non-root users to program boards with <code>iceprog</code>, then add the following entry to:<br>
+<code>/etc/udev/rules.d/53-lattice-ftdi.rules</code>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">ACTION<span style="color:#f92672">==</span><span style="color:#e6db74">&#34;add&#34;</span>, ATTR<span style="color:#f92672">{</span>idVendor<span style="color:#f92672">}==</span><span style="color:#e6db74">&#34;0403&#34;</span>, ATTR<span style="color:#f92672">{</span>idProduct<span style="color:#f92672">}==</span><span style="color:#e6db74">&#34;6010&#34;</span>, MODE:<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;666&#34;</span>
+</code></pre></div><h2 id="nextpnr">nextpnr</h2>
+<p>nextpnr is a portable FPGA place and route tool that supports iCE40 and ECP5 with Xilinx support in the works. Learn more from <a href="https://github.com/YosysHQ/nextpnr">nextpnr GitHub</a>.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">cd ~/src/fpga-toolchain
+
+git clone https://github.com/YosysHQ/nextpnr nextpnr
+
+cd nextpnr
+cmake -DARCH<span style="color:#f92672">=</span>ice40 -DCMAKE_INSTALL_PREFIX<span style="color:#f92672">=</span>/usr/local .
+make -j<span style="color:#66d9ef">$(</span>nproc<span style="color:#66d9ef">)</span>
+make install
+</code></pre></div><p>If you get an error of the form <code>files in icebox are missing: /usr/local/share/icebox/timings_lp384.txt</code> then you need to install IceStorm Tools (see above), before building nextpnr.</p>
+<h2 id="iverilog">iVerilog</h2>
+<p>Icarus Verilog is a Verilog simulation and synthesis tool. The Yosys test suite requires iVerilog, so you need to install it to test Yosys, but it isn&rsquo;t needed to build iCE40 designs. Learn more from the <a href="http://iverilog.icarus.com/">Icarus Verilog site</a>.</p>
+<p>For this tool, we build the latest stable release, rather than cloning from git. If you wish to use the git version, it&rsquo;s available from <code>git://github.com/steveicarus/iverilog.git</code>.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">cd ~/src/fpga-toolchain
+
+curl -O ftp://ftp.icarus.com/pub/eda/verilog/v11/verilog-11.0.tar.gz
+tar xvvf verilog-11.0.tar.gz
+
+cd verilog-11.0
+sh autoconf.sh
+./configure
+make -j<span style="color:#66d9ef">$(</span>nproc<span style="color:#66d9ef">)</span>
+make install
+</code></pre></div><p>For more options see the <a href="https://iverilog.fandom.com/wiki/Installation_Guide">Icarus Verilog Installation Guide</a>.</p>
+<h2 id="yosys">Yosys</h2>
+<p>Yosys does Verilog RTL synthesis. You can run the test suite if you install iVerilog. Learn more from the <a href="http://www.clifford.at/yosys/">Yosys site</a>.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">cd ~/src/fpga-toolchain
+
+git clone https://github.com/YosysHQ/yosys yosys
+
+cd yosys
+make -j<span style="color:#66d9ef">$(</span>nproc<span style="color:#66d9ef">)</span>
+make test  <span style="color:#75715e"># optional (requires iVerilog)</span>
+make install
+</code></pre></div><h2 id="verilator">Verilator</h2>
+<p>Verilator is a fast Verilog simulation tool that includes comprehensive Verilog linting. This tool isn&rsquo;t required to build iCE40 designs, but the linting is a great way to check your Verilog designs before building. Learn more at the <a href="https://www.veripool.org/wiki/verilator">Verilator site</a>.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">cd ~/src/fpga-toolchain
+
+git clone https://github.com/verilator/verilator
+
+cd verilator
+git checkout stable
+autoconf
+./configure
+make -j<span style="color:#66d9ef">$(</span>nproc<span style="color:#66d9ef">)</span>
+make test  <span style="color:#75715e"># optional</span>
+make install
+</code></pre></div><h2 id="ice40-makefile">iCE40 Makefile</h2>
+<p>The following sample makefile should get you started. You may need to update the configuration:</p>
+<ul>
+<li><code>icebreaker.pcf</code> is the physical constraints file, which contains pin mappings</li>
+<li><code>FPGA_PKG</code> needs to match your FPGA, <code>sg48</code> is correct for the iCEBreaker iCE40UP5K FPGA</li>
+<li>If using SystemVerilog, change the <code>.v</code> extensions to <code>.sv</code>.</li>
+</ul>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-make" data-lang="make"><span style="color:#75715e"># Example iCEBreaker Makefile from http://projectf.io
+</span><span style="color:#75715e"></span>
+<span style="color:#75715e"># configuration
+</span><span style="color:#75715e"></span>SHELL <span style="color:#f92672">=</span> /bin/sh
+FPGA_PKG <span style="color:#f92672">=</span> sg48
+PCF <span style="color:#f92672">=</span> icebreaker.pcf
+ADD_SRC <span style="color:#f92672">=</span> example_1.v ../example_2.v
+
+<span style="color:#a6e22e">top_foo</span><span style="color:#f92672">:</span> top_foo.rpt top_foo.bin
+<span style="color:#a6e22e">top_bar</span><span style="color:#f92672">:</span> top_bar.rpt top_bar.bin
+
+<span style="color:#a6e22e">%.json</span><span style="color:#f92672">:</span> %.v
+	yosys -ql <span style="color:#66d9ef">$(</span>subst .json,,$@<span style="color:#66d9ef">)</span>-yosys.log -p <span style="color:#e6db74">&#39;synth_ice40 -top $(subst .json,,$@) -json $@&#39;</span> $&lt; <span style="color:#66d9ef">$(</span>ADD_SRC<span style="color:#66d9ef">)</span>
+
+<span style="color:#a6e22e">%.asc</span><span style="color:#f92672">:</span> %.json
+	nextpnr-ice40 --up5k --package <span style="color:#e6db74">${</span>FPGA_PKG<span style="color:#e6db74">}</span> --json $&lt; --pcf <span style="color:#e6db74">${</span>PCF<span style="color:#e6db74">}</span> --asc $@
+
+<span style="color:#a6e22e">%.rpt</span><span style="color:#f92672">:</span> %.asc
+	icetime -d up5k -mtr $@ $&lt;
+
+<span style="color:#a6e22e">%.bin</span><span style="color:#f92672">:</span> %.asc
+	icepack $&lt; $@
+
+<span style="color:#a6e22e">clean</span><span style="color:#f92672">:</span>
+	rm -f top*.json top*.asc top*.rpt top*.bin top*yosys.log
+
+<span style="color:#a6e22e">all</span><span style="color:#f92672">:</span> top_foo top_bar
+
+<span style="color:#a6e22e">.PHONY</span><span style="color:#f92672">:</span> all clean
+</code></pre></div><p>You can find also find iCEBreaker makefiles in the Project F <a href="https://github.com/projf/projf-explore">Exploring FPGAs repo</a>.</p>
+
+      
+      <div class="related">
+
+<h3>Similar articles:</h3>
+<ul>
+	
+	<li><a href="/posts/fpga-dev-ubuntu-20.04/">FPGA Tooling on Ubuntu 20.04</a></li>
+	
+</ul>
+</div>
+      
+    </div>
+    
+  </div>
+</section>
+
+    <script src="/js/copycode.js"></script>
+
+
+
+<section class="section">
+  <div class="container has-text-centered">
+    <p>©2020 Will Green, Project F</p>
+    
+  </div>
+</section>
+
+
+<script src="https://narwhal.projectf.io/script.js" site="EVCGKVDN" defer></script>
+</body>
+</html>
+
