@@ -119,8 +119,8 @@
     <div class="content">
       <p>Welcome back to <em>Exploring FPGA Graphics</em>. In the previous two parts, we worked with sprites, but as graphics become more complex, a different approach is needed. Instead of drawing directly to the screen, we draw to a framebuffer, which is read by the display controller. This post provides an introduction to framebuffers and how to scale and fade them. In the <a href="/posts/life-on-screen/">next part</a>, we&rsquo;ll use a framebuffer to visualize a simulation of life.</p>
 <p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We start by learning how displays work, before racing the beam with Pong, starfields and sprites, simulating life with bitmaps, drawing lines and triangles, and finally creating simple 3D models. I&rsquo;ll be writing and revising this series throughout 2020. Start with <a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a>.</p>
-<p><strong>Draft post. Designs for iCEBreaker are coming in November 2020.</strong></p>
-<p><em>Updated 2020-11-02. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><strong>Designs for iCEBreaker are coming in November 2020.</strong></p>
+<p><em>Updated 2020-11-20. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <h3 id="series-outline">Series Outline</h3>
 <ul>
 <li><a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a> - learn how displays work and animate simple shapes</li>
@@ -196,11 +196,6 @@
     <span style="color:#66d9ef">localparam</span> H_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">640</span>;
     <span style="color:#66d9ef">localparam</span> V_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">480</span>;
 
-    <span style="color:#66d9ef">logic</span> frame_end;   <span style="color:#75715e">// high for one cycle at the end of a frame
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        frame_end <span style="color:#f92672">=</span> (sy <span style="color:#f92672">==</span> V_RES_FULL<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span> <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">==</span> H_RES_FULL<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>);
-    <span style="color:#66d9ef">end</span>
-
     <span style="color:#75715e">// framebuffer
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> FB_WIDTH  <span style="color:#f92672">=</span> <span style="color:#ae81ff">160</span>;
     <span style="color:#66d9ef">localparam</span> FB_HEIGHT <span style="color:#f92672">=</span> <span style="color:#ae81ff">120</span>;
@@ -229,13 +224,13 @@
     <span style="color:#75715e">// flag when framebuffer is active
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> fb_active;
     <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        fb_active <span style="color:#f92672">=</span> (sy <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">120</span> <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">160</span>);
+        fb_active <span style="color:#f92672">=</span> (sy <span style="color:#f92672">&lt;</span> FB_HEIGHT <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">&lt;</span> FB_WIDTH);
     <span style="color:#66d9ef">end</span>
 
     <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
-        <span style="color:#66d9ef">if</span> (frame_end) <span style="color:#66d9ef">begin</span>
-            fb_addr_read <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (fb_active) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> V_RES_FULL<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span> <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">==</span> H_RES_FULL<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
+            fb_addr_read <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// reset address at end of frame
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (fb_active) <span style="color:#66d9ef">begin</span>
             fb_addr_read <span style="color:#f92672">&lt;=</span> fb_addr_read <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
         <span style="color:#66d9ef">end</span>
     <span style="color:#66d9ef">end</span>
@@ -247,8 +242,7 @@
         vga_b <span style="color:#f92672">=</span> (fb_active <span style="color:#f92672">&amp;&amp;</span> colr) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
-</code></pre></div><p><em>Note how we increment the framebuffer read address when <code>sy &lt; 120</code> and <code>sx &lt; 160</code>.</em></p>
-<p>Build this design and program your board. You should see the dithered image of David looking at you from the top left of your screen.</p>
+</code></pre></div><p>Build this design and program your board. You should see the dithered image of David looking at you from the top left of your screen.</p>
 <blockquote>
 <p><strong>Building the Designs</strong><br>
 In the <a href="https://github.com/projf/projf-explore/tree/master/framebuffers">Framebuffers</a> section of the git repo, you&rsquo;ll find the design files, a makefile for iCEBreaker, a Vivado project for Arty, and instructions for building the designs for both boards.</p>
@@ -285,61 +279,151 @@ Wikipedia has a lovely <em><a href="https://en.wikipedia.org/wiki/List_of_color_
 <li>It uses multiplication, which takes up valuable (probably DSP) logic</li>
 </ol>
 <p>Using a <strong>linebuffer</strong> allows us to avoid all three of these problems. The linebuffer uses three simple dual-port BRAMs, one for each colour channel (red, green, blue). We copy a single 160-pixel line of the framebuffer into the linebuffer, then we read this out for four display lines before going back to the framebuffer for the next line. By making efficient use of memory bandwidth, we can better share memory with other systems, such as a CPU.</p>
-<p><strong>An improved linebuffer design and explanation will be published soon.</strong></p>
 <p>Add a linebuffer module - <strong><a href="https://github.com/projf/projf-explore/blob/master/life-on-screen/linebuffer.sv">linebuffer.sv</a></strong>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> linebuffer #(
-    <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,              <span style="color:#75715e">// data width per channel
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> DEPTH<span style="color:#f92672">=</span><span style="color:#ae81ff">2048</span>,           <span style="color:#75715e">// length of line
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> ADDRW<span style="color:#f92672">=</span>$clog2(DEPTH)   <span style="color:#75715e">// address width
+    <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,   <span style="color:#75715e">// data width of each channel
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> LEN<span style="color:#f92672">=</span><span style="color:#ae81ff">2048</span>,  <span style="color:#75715e">// length of line
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> SCALEW<span style="color:#f92672">=</span><span style="color:#ae81ff">6</span>   <span style="color:#75715e">// horizontal scaling width
 </span><span style="color:#75715e"></span>    ) (
-    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_write,
-    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_read, 
-    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> we,
-    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] addr_write,
-    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] addr_read,
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_in,
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_out,
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> en_in,
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> en_out,
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst_in,
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst_out,
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [SCALEW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] scale,
     <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] data_in_0, data_in_1, data_in_2,
     <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] data_out_0, data_out_1, data_out_2
     );
 
+    <span style="color:#66d9ef">logic</span> [$clog2(LEN)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] addr_in, addr_out;
+    <span style="color:#66d9ef">logic</span> [SCALEW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_scale;
+
+    <span style="color:#75715e">// correct scale: if scale is 0, set to 1
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [SCALEW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] scale_cor;
+    <span style="color:#66d9ef">always_comb</span> scale_cor <span style="color:#f92672">=</span> (scale <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) <span style="color:#f92672">?</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> scale;
+
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_in) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">if</span> (en_in) addr_in <span style="color:#f92672">&lt;=</span> (addr_in <span style="color:#f92672">==</span> LEN<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#f92672">?</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">:</span> addr_in <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+        <span style="color:#66d9ef">if</span> (rst_in) addr_in <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// reset takes precedence
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_out) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">if</span> (en_out) <span style="color:#66d9ef">begin</span>
+            cnt_scale <span style="color:#f92672">&lt;=</span> (cnt_scale <span style="color:#f92672">==</span> scale_cor<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#f92672">?</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">:</span> cnt_scale <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+            <span style="color:#66d9ef">if</span> (cnt_scale <span style="color:#f92672">==</span> scale_cor<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) addr_out <span style="color:#f92672">&lt;=</span> (addr_out <span style="color:#f92672">==</span> LEN<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#f92672">?</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">:</span> addr_out <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+        <span style="color:#66d9ef">end</span>
+        <span style="color:#66d9ef">if</span> (rst_out) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// reset takes precedence
+</span><span style="color:#75715e"></span>            addr_out <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            cnt_scale <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+        <span style="color:#66d9ef">end</span>
+    <span style="color:#66d9ef">end</span>
+
     <span style="color:#75715e">// channel 0
-</span><span style="color:#75715e"></span>    bram_sdp #(.WIDTH(WIDTH), .DEPTH(DEPTH)) ch0 (
-        .clk_write,
-        .clk_read,
-        .we,
-        .addr_write,
-        .addr_read,
+</span><span style="color:#75715e"></span>    bram_sdp #(.WIDTH(WIDTH), .DEPTH(LEN)) ch0 (
+        .clk_write(clk_in),
+        .clk_read(clk_out),
+        .we(en_in),
+        .addr_write(addr_in),
+        .addr_read(addr_out),
         .data_in(data_in_0),
         .data_out(data_out_0)
     );
 
     <span style="color:#75715e">// channel 1
-</span><span style="color:#75715e"></span>    bram_sdp #(.WIDTH(WIDTH), .DEPTH(DEPTH)) ch1 (
-        .clk_write,
-        .clk_read,
-        .we,
-        .addr_write,
-        .addr_read,
+</span><span style="color:#75715e"></span>    bram_sdp #(.WIDTH(WIDTH), .DEPTH(LEN)) ch1 (
+        .clk_write(clk_in),
+        .clk_read(clk_out),
+        .we(en_in),
+        .addr_write(addr_in),
+        .addr_read(addr_out),
         .data_in(data_in_1),
         .data_out(data_out_1)
     );
 
     <span style="color:#75715e">// channel 2
-</span><span style="color:#75715e"></span>    bram_sdp #(.WIDTH(WIDTH), .DEPTH(DEPTH)) ch2 (
-        .clk_write,
-        .clk_read,
-        .we,
-        .addr_write,
-        .addr_read,
+</span><span style="color:#75715e"></span>    bram_sdp #(.WIDTH(WIDTH), .DEPTH(LEN)) ch2 (
+        .clk_write(clk_in),
+        .clk_read(clk_out),
+        .we(en_in),
+        .addr_write(addr_in),
+        .addr_read(addr_out),
         .data_in(data_in_2),
         .data_out(data_out_2)
     );
 <span style="color:#66d9ef">endmodule</span>
-</code></pre></div><p>We use three separate BRAM instances because colours are output separately to the display and 4-bit-wide buffers are a better fit for BRAM hardware than a single 12-wide buffer.</p>
+</code></pre></div><p>The linebuffer module handles horizontal scaling, but not vertical scaling. Vertical scaling requires the repetition of lines; this is dealt with by the top module. We use three separate BRAM instances because colours are output separately to the display and 4-bit-wide buffers are a better fit for BRAM hardware than a single 12-wide buffer.</p>
 <blockquote>
-<p><strong>Clock Domain Crossing</strong><br>
+<p><strong>Quick Aside: Clock Domain Crossing</strong><br>
 The linebuffer module has another significant benefit: it allows the pixel clock to be different from the rest of the design. For example, you could draw on the framebuffer at 100 MHz (linebuffer data_in) and display it on a 720p60 screen with a 74.25 MHz pixel clock (linebuffer data_out). CDC is usually achieved with a FIFO, but the linebuffer does it <em>while</em> providing efficient scaling.</p>
 </blockquote>
-<p>Build the updated top module with scaled David:</p>
+<h3 id="top-scaling">Top Scaling</h3>
+<p>To drive the linebuffer we need to enable and reset its data inputs and outputs at appropriate times. This extract from the top module (source link below listing), shows scaling up by four times:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// linebuffer (LB)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_SCALE_V <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;                <span style="color:#75715e">// factor to scale vertical drawing
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_SCALE_H <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;                <span style="color:#75715e">// factor to scale horizontal drawing
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_LEN  <span style="color:#f92672">=</span> <span style="color:#ae81ff">640</span> <span style="color:#f92672">/</span> LB_SCALE_H;    <span style="color:#75715e">// line length
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_WIDTH <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;                  <span style="color:#75715e">// bits per colour channel
+</span><span style="color:#75715e"></span>
+    <span style="color:#75715e">// LB data in from FB
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> en_in, en_in_l1;  <span style="color:#75715e">// allow for BRAM latency correction
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [LB_WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lb_in_0, lb_in_1, lb_in_2;
+
+    <span style="color:#75715e">// correct vertical scale: if scale is 0, set to 1
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(LB_SCALE_V<span style="color:#f92672">+</span><span style="color:#ae81ff">1</span>)<span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] scale_v_cor;
+    <span style="color:#66d9ef">always_comb</span> scale_v_cor <span style="color:#f92672">=</span> (LB_SCALE_V <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) <span style="color:#f92672">?</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> LB_SCALE_V;
+
+    <span style="color:#75715e">// count screen lines for vertical scaling
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(LB_SCALE_V)<span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_scale_v;
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">if</span> (sx <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) cnt_scale_v <span style="color:#f92672">&lt;=</span> (cnt_scale_v <span style="color:#f92672">==</span> scale_v_cor<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#f92672">?</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">:</span> cnt_scale_v <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+        <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> V_RES_FULL<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) cnt_scale_v <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// reset count in final blanking line
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#66d9ef">logic</span> [$clog2(FB_WIDTH)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_h_cnt;  <span style="color:#75715e">// counter for FB pixels on line
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> V_RES_FULL<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) fb_addr_read <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// reset FB address at end of frame
+</span><span style="color:#75715e"></span>
+        <span style="color:#75715e">// reset the horizontal counter at the start of blanking on reading lines
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (cnt_scale_v <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">==</span> H_RES) <span style="color:#66d9ef">begin</span>
+            <span style="color:#66d9ef">if</span> (fb_addr_read <span style="color:#f92672">&lt;</span> FB_PIXELS<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) fb_h_cnt <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// if we&#39;ve not read all pixels
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">end</span>
+
+        <span style="color:#75715e">// read each pixel on FB line and write to LB
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (fb_h_cnt <span style="color:#f92672">&lt;</span> FB_WIDTH) <span style="color:#66d9ef">begin</span>
+            en_in <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+            fb_h_cnt <span style="color:#f92672">&lt;=</span> fb_h_cnt <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+            fb_addr_read <span style="color:#f92672">&lt;=</span> fb_addr_read <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
+            en_in <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+        <span style="color:#66d9ef">end</span>
+
+        <span style="color:#75715e">// enable LB data in with latency correction
+</span><span style="color:#75715e"></span>        en_in_l1 <span style="color:#f92672">&lt;=</span> en_in;
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// LB data out to display
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [LB_WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lb_out_0, lb_out_1, lb_out_2;
+
+    linebuffer #(
+        .WIDTH(LB_WIDTH),
+        .LEN(LB_LEN)
+        ) lb_inst (
+        .clk_in(clk_pix),
+        .clk_out(clk_pix),
+        .en_in(en_in_l1),  <span style="color:#75715e">// correct for BRAM latency
+</span><span style="color:#75715e"></span>        .en_out(sy <span style="color:#f92672">&lt;</span> V_RES <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">&lt;</span> H_RES),
+        .rst_in(sx <span style="color:#f92672">==</span> H_RES),  <span style="color:#75715e">// reset at start of horizontal blanking
+</span><span style="color:#75715e"></span>        .rst_out(sx <span style="color:#f92672">==</span> H_RES),
+        .scale(LB_SCALE_H),
+        .data_in_0(lb_in_0),
+        .data_in_1(lb_in_1),
+        .data_in_2(lb_in_2),
+        .data_out_0(lb_out_0),
+        .data_out_1(lb_out_1),
+        .data_out_2(lb_out_2)
+    );
+</code></pre></div><p>Build the updated top module with scaled David:</p>
 <ul>
 <li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/framebuffers/xc7/top_david.sv">xc7/top_david.sv</a></strong></li>
 <li>Lattice iCE40: <em>coming soon</em></li>
@@ -376,12 +460,11 @@ You&rsquo;d expect the linebuffer to use 1.5 BRAMs, but because all three colour
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_SCALE_V <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span>;                <span style="color:#75715e">// factor to scale vertical drawing
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_SCALE_H <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span>;                <span style="color:#75715e">// factor to scale horizontal drawing
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_LINE  <span style="color:#f92672">=</span> <span style="color:#ae81ff">640</span> <span style="color:#f92672">/</span> LB_SCALE_H;   <span style="color:#75715e">// line length
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_ADDRW <span style="color:#f92672">=</span> $clog2(LB_LINE);    <span style="color:#75715e">// line address width
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_WIDTH <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;                  <span style="color:#75715e">// bits per colour channel
 </span></code></pre></div><ol start="3">
 <li>And we expand the colour lookup table to 64 entries:</li>
 </ol>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// Colour Lookup Table
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// colour lookup table (CLUT)
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] clut [<span style="color:#ae81ff">64</span>];  <span style="color:#75715e">// 64 x 12-bit colour palette entries
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">initial</span> <span style="color:#66d9ef">begin</span>
         $display(<span style="color:#e6db74">&#34;Loading palette &#39;%s&#39; into CLUT.&#34;</span>, FB_PALETTE);
@@ -443,7 +526,7 @@ You&rsquo;d expect the linebuffer to use 1.5 BRAMs, but because all three colour
     <span style="color:#66d9ef">localparam</span> H_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">640</span>;
     <span style="color:#66d9ef">localparam</span> V_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">480</span>;
 
-    <span style="color:#75715e">// framebuffer
+    <span style="color:#75715e">// framebuffer (FB)
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> FB_WIDTH   <span style="color:#f92672">=</span> <span style="color:#ae81ff">160</span>;
     <span style="color:#66d9ef">localparam</span> FB_HEIGHT  <span style="color:#f92672">=</span> <span style="color:#ae81ff">120</span>;
     <span style="color:#66d9ef">localparam</span> FB_PIXELS  <span style="color:#f92672">=</span> FB_WIDTH <span style="color:#f92672">*</span> FB_HEIGHT;
@@ -459,19 +542,17 @@ You&rsquo;d expect the linebuffer to use 1.5 BRAMs, but because all three colour
         .WIDTH(FB_DATAW),
         .DEPTH(FB_PIXELS),
         .INIT_F(FB_IMAGE)
-    ) framebuffer (
+    ) fb_inst (
         .clk_read(clk_pix),
         .clk_write(clk_pix),
         .we(<span style="color:#ae81ff">0</span>),
-        <span style="color:#75715e">/* verilator lint_off PINCONNECTEMPTY */</span>
         .addr_write(),
         .addr_read(fb_addr_read),
         .data_in(),
-        <span style="color:#75715e">/* verilator lint_on PINCONNECTEMPTY */</span>
         .data_out(colr_idx)
     );
 
-    <span style="color:#75715e">// fizzlebuffer
+    <span style="color:#75715e">// fizzlebuffer (FZ)
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [FB_ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fz_addr_write;
     <span style="color:#66d9ef">logic</span> fz_en_in, fz_en_out;
     <span style="color:#66d9ef">logic</span> fz_we;
@@ -480,7 +561,7 @@ You&rsquo;d expect the linebuffer to use 1.5 BRAMs, but because all three colour
         .WIDTH(<span style="color:#ae81ff">1</span>),
         .DEPTH(FB_PIXELS),
         .INIT_F(<span style="color:#e6db74">&#34;&#34;</span>)
-    ) fizzelbuffer (
+    ) fz_inst (
         .clk_read(clk_pix),
         .clk_write(clk_pix),
         .we(fz_we),
@@ -529,154 +610,91 @@ You&rsquo;d expect the linebuffer to use 1.5 BRAMs, but because all three colour
         <span style="color:#66d9ef">end</span>
     <span style="color:#66d9ef">end</span>
 
-    <span style="color:#75715e">// linebuffer
+    <span style="color:#75715e">// linebuffer (LB)
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_SCALE_V <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;                <span style="color:#75715e">// factor to scale vertical drawing
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_SCALE_H <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;                <span style="color:#75715e">// factor to scale horizontal drawing
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_LINE  <span style="color:#f92672">=</span> <span style="color:#ae81ff">640</span> <span style="color:#f92672">/</span> LB_SCALE_H;   <span style="color:#75715e">// line length
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_ADDRW <span style="color:#f92672">=</span> $clog2(LB_LINE);    <span style="color:#75715e">// line address width
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_LEN  <span style="color:#f92672">=</span> <span style="color:#ae81ff">640</span> <span style="color:#f92672">/</span> LB_SCALE_H;    <span style="color:#75715e">// line length
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_WIDTH <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;                  <span style="color:#75715e">// bits per colour channel
 </span><span style="color:#75715e"></span>
-    <span style="color:#75715e">// linebuffer read port
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [LB_ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lb_addr_read;
-    <span style="color:#66d9ef">logic</span> [LB_WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lb0_out, lb1_out, lb2_out;
+    <span style="color:#75715e">// LB data in from FB
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> en_in, en_in_l1;  <span style="color:#75715e">// allow for BRAM latency correction
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [LB_WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lb_in_0, lb_in_1, lb_in_2;
 
-    <span style="color:#75715e">// linebuffer write port (latency corrected for reading from FB)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> lb_we, lb_we_l1;
-    <span style="color:#66d9ef">logic</span> [LB_ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lb_addr_write, lb_addr_write_l1;
-    <span style="color:#66d9ef">logic</span> [LB_WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lb0_in, lb1_in, lb2_in;
+    <span style="color:#75715e">// correct vertical scale: if scale is 0, set to 1
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(LB_SCALE_V<span style="color:#f92672">+</span><span style="color:#ae81ff">1</span>)<span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] scale_v_cor;
+    <span style="color:#66d9ef">always_comb</span> scale_v_cor <span style="color:#f92672">=</span> (LB_SCALE_V <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) <span style="color:#f92672">?</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> LB_SCALE_V;
 
-    <span style="color:#75715e">// latency correction for reading framebuffer BRAM (1 cycle)
+    <span style="color:#75715e">// count screen lines for vertical scaling
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(LB_SCALE_V)<span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_scale_v;
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">if</span> (sx <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) cnt_scale_v <span style="color:#f92672">&lt;=</span> (cnt_scale_v <span style="color:#f92672">==</span> scale_v_cor<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#f92672">?</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">:</span> cnt_scale_v <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+        <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> V_RES_FULL<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) cnt_scale_v <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// reset count in final blanking line
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#66d9ef">logic</span> [$clog2(FB_WIDTH)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_h_cnt;  <span style="color:#75715e">// counter for FB pixels on line
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
-        lb_we_l1 <span style="color:#f92672">&lt;=</span> lb_we;
-        lb_addr_write_l1 <span style="color:#f92672">&lt;=</span> lb_addr_write;
+        <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> V_RES_FULL<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) fb_addr_read <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// reset FB address at end of frame
+</span><span style="color:#75715e"></span>
+        <span style="color:#75715e">// reset the horizontal counter at the start of blanking on reading lines
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (cnt_scale_v <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">==</span> H_RES) <span style="color:#66d9ef">begin</span>
+            <span style="color:#66d9ef">if</span> (fb_addr_read <span style="color:#f92672">&lt;</span> FB_PIXELS<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) fb_h_cnt <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// if we&#39;ve not read all pixels
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">end</span>
+
+        <span style="color:#75715e">// read each pixel on FB line and write to LB
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (fb_h_cnt <span style="color:#f92672">&lt;</span> FB_WIDTH) <span style="color:#66d9ef">begin</span>
+            en_in <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+            fb_h_cnt <span style="color:#f92672">&lt;=</span> fb_h_cnt <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+            fb_addr_read <span style="color:#f92672">&lt;=</span> fb_addr_read <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
+            en_in <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+        <span style="color:#66d9ef">end</span>
+
+        <span style="color:#75715e">// enable LB data in with latency correction
+</span><span style="color:#75715e"></span>        en_in_l1 <span style="color:#f92672">&lt;=</span> en_in;
     <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// LB data out to display
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [LB_WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lb_out_0, lb_out_1, lb_out_2;
 
     linebuffer #(
         .WIDTH(LB_WIDTH),
-        .DEPTH(LB_LINE)
-        ) lb (
-        .clk_write(clk_pix),
-        .clk_read(clk_pix),
-        .we(lb_we_l1),                  <span style="color:#75715e">// corrects for BRAM latency
-</span><span style="color:#75715e"></span>        .addr_write(lb_addr_write_l1),  <span style="color:#75715e">// corrects for BRAM latency
-</span><span style="color:#75715e"></span>        .addr_read(lb_addr_read),
-        .data_in_0(lb0_in),
-        .data_in_1(lb1_in),
-        .data_in_2(lb2_in),
-        .data_out_0(lb0_out),
-        .data_out_1(lb1_out),
-        .data_out_2(lb2_out)
+        .LEN(LB_LEN)
+        ) lb_inst (
+        .clk_in(clk_pix),
+        .clk_out(clk_pix),
+        .en_in(en_in_l1),  <span style="color:#75715e">// correct for BRAM latency
+</span><span style="color:#75715e"></span>        .en_out(sy <span style="color:#f92672">&lt;</span> V_RES <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">&lt;</span> H_RES),
+        .rst_in(sx <span style="color:#f92672">==</span> H_RES),  <span style="color:#75715e">// reset at start of horizontal blanking
+</span><span style="color:#75715e"></span>        .rst_out(sx <span style="color:#f92672">==</span> H_RES),
+        .scale(LB_SCALE_H),
+        .data_in_0(lb_in_0),
+        .data_in_1(lb_in_1),
+        .data_in_2(lb_in_2),
+        .data_out_0(lb_out_0),
+        .data_out_1(lb_out_1),
+        .data_out_2(lb_out_2)
     );
 
-    <span style="color:#75715e">// linebuffer state machine for reading framebuffer
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(FB_HEIGHT)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>]  fb_line_cnt;  <span style="color:#75715e">// count of framebuffer lines
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(LB_SCALE_V)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lb_line_rpt;  <span style="color:#75715e">// repeat line based on scale
-</span><span style="color:#75715e"></span>
-    <span style="color:#66d9ef">enum</span> {
-        IDLE,       <span style="color:#75715e">// awaiting start signal
-</span><span style="color:#75715e"></span>        START,      <span style="color:#75715e">// prepare for new frame
-</span><span style="color:#75715e"></span>        AWAIT_POS,  <span style="color:#75715e">// await horizontal position
-</span><span style="color:#75715e"></span>        START_LINE, <span style="color:#75715e">// begin a new line
-</span><span style="color:#75715e"></span>        READ_FB,    <span style="color:#75715e">// read fb into lb
-</span><span style="color:#75715e"></span>        IDLE_LINE,  <span style="color:#75715e">// do nothing on this line
-</span><span style="color:#75715e"></span>        LINE_DONE   <span style="color:#75715e">// line read complete
-</span><span style="color:#75715e"></span>    } state, state_next;
-
-    <span style="color:#66d9ef">logic</span> hblank_start;    <span style="color:#75715e">// start of horizontal blanking
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> fb_last_line;    <span style="color:#75715e">// last line of framebuffer
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> fb_last_pixel;   <span style="color:#75715e">// last pixel of framebuffer line
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> start_fb_to_lb;  <span style="color:#75715e">// start copying data from fb to lb
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> fb_read_line;    <span style="color:#75715e">// do we need to read fb on current line?
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        hblank_start    <span style="color:#f92672">=</span> (sx <span style="color:#f92672">==</span> H_RES);
-        fb_last_line    <span style="color:#f92672">=</span> (fb_line_cnt <span style="color:#f92672">==</span> FB_HEIGHT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>);
-        fb_last_pixel   <span style="color:#f92672">=</span> (lb_addr_write <span style="color:#f92672">==</span> FB_WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>);
-        start_fb_to_lb  <span style="color:#f92672">=</span> (sy <span style="color:#f92672">==</span> V_RES_FULL<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>);
-        fb_read_line    <span style="color:#f92672">=</span> (lb_line_rpt <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>);
-    <span style="color:#66d9ef">end</span>
-
-    <span style="color:#75715e">// determine next state
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        <span style="color:#66d9ef">case</span>(state)
-            IDLE:       state_next <span style="color:#f92672">=</span> (start_fb_to_lb) <span style="color:#f92672">?</span> START <span style="color:#f92672">:</span> IDLE;
-            START:      state_next <span style="color:#f92672">=</span> AWAIT_POS;
-            AWAIT_POS:  state_next <span style="color:#f92672">=</span> hblank_start <span style="color:#f92672">?</span> START_LINE <span style="color:#f92672">:</span> AWAIT_POS;
-            START_LINE: state_next <span style="color:#f92672">=</span> fb_read_line <span style="color:#f92672">?</span> READ_FB <span style="color:#f92672">:</span> AWAIT_POS;
-            READ_FB:    state_next <span style="color:#f92672">=</span> <span style="color:#f92672">!</span>fb_last_pixel <span style="color:#f92672">?</span> READ_FB <span style="color:#f92672">:</span> LINE_DONE;
-            LINE_DONE:  state_next <span style="color:#f92672">=</span> <span style="color:#f92672">!</span>fb_last_line <span style="color:#f92672">?</span> AWAIT_POS <span style="color:#f92672">:</span> IDLE;
-            <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span>    state_next <span style="color:#f92672">=</span> IDLE;
-        <span style="color:#66d9ef">endcase</span>
-    <span style="color:#66d9ef">end</span>
-
-    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
-        state <span style="color:#f92672">&lt;=</span> state_next;  <span style="color:#75715e">// advance to next state
-</span><span style="color:#75715e"></span>
-        <span style="color:#75715e">// reset framebuffer position at start of frame
-</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (state <span style="color:#f92672">==</span> START) <span style="color:#66d9ef">begin</span>
-            fb_addr_read <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-            fb_line_cnt <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-            lb_line_rpt <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-        <span style="color:#66d9ef">end</span>
-
-        <span style="color:#75715e">// reset pixel count and linebuffer write address
-</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (state <span style="color:#f92672">==</span> AWAIT_POS) <span style="color:#66d9ef">begin</span>
-            lb_addr_write <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-        <span style="color:#66d9ef">end</span>
-
-        <span style="color:#66d9ef">if</span> (state <span style="color:#f92672">==</span> START_LINE) <span style="color:#66d9ef">begin</span>
-            <span style="color:#75715e">/* verilator lint_off WIDTH */</span>
-            <span style="color:#66d9ef">if</span> (lb_line_rpt <span style="color:#f92672">==</span> LB_SCALE_V<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
-            <span style="color:#75715e">/* verilator lint_on WIDTH */</span>
-                fb_line_cnt <span style="color:#f92672">&lt;=</span> fb_line_cnt <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-                lb_line_rpt <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
-                lb_line_rpt <span style="color:#f92672">&lt;=</span> lb_line_rpt <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-            <span style="color:#66d9ef">end</span>
-        <span style="color:#66d9ef">end</span>
-
-        <span style="color:#66d9ef">if</span> (state <span style="color:#f92672">==</span> READ_FB) <span style="color:#66d9ef">begin</span>
-            lb_we <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-            lb_addr_write <span style="color:#f92672">&lt;=</span> lb_addr_write <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-            fb_addr_read <span style="color:#f92672">&lt;=</span> fb_addr_read <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-        <span style="color:#66d9ef">end</span>
-
-        <span style="color:#66d9ef">if</span> (state <span style="color:#f92672">==</span> LINE_DONE) <span style="color:#66d9ef">begin</span>
-            lb_we <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-        <span style="color:#66d9ef">end</span>
-    <span style="color:#66d9ef">end</span>
-
-    <span style="color:#75715e">// linebuffer read address (display reads from)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(LB_SCALE_H)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lb_pix_rpt;  <span style="color:#75715e">// repeat pixel based on scale
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
-        <span style="color:#66d9ef">if</span> (sx <span style="color:#f92672">==</span> H_RES_FULL<span style="color:#f92672">-</span><span style="color:#ae81ff">2</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// address 0 when H_RES_FULL-1, so we need -2 (latency=1)
-</span><span style="color:#75715e"></span>            lb_addr_read <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-            lb_pix_rpt <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (lb_addr_read <span style="color:#f92672">&lt;</span> LB_LINE<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
-            lb_pix_rpt <span style="color:#f92672">&lt;=</span> (lb_pix_rpt <span style="color:#f92672">&lt;</span> LB_SCALE_H<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#f92672">?</span> lb_pix_rpt <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
-            <span style="color:#66d9ef">if</span> (lb_pix_rpt <span style="color:#f92672">==</span> LB_SCALE_H<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) lb_addr_read <span style="color:#f92672">&lt;=</span> lb_addr_read <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-        <span style="color:#66d9ef">end</span>
-    <span style="color:#66d9ef">end</span>
-
-    <span style="color:#75715e">// Colour Lookup Table
+    <span style="color:#75715e">// colour lookup table (CLUT)
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] clut [<span style="color:#ae81ff">16</span>];  <span style="color:#75715e">// 16 x 12-bit colour palette entries
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">initial</span> <span style="color:#66d9ef">begin</span>
         $display(<span style="color:#e6db74">&#34;Loading palette &#39;%s&#39; into CLUT.&#34;</span>, FB_PALETTE);
         $readmemh(FB_PALETTE, clut);  <span style="color:#75715e">// load palette into CLUT
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">end</span>
 
-    <span style="color:#75715e">// map colour index to palette using CLUT and read into linebuffer
+    <span style="color:#75715e">// map colour index to palette using CLUT and read into LB
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
-        {lb2_in, lb1_in, lb0_in} <span style="color:#f92672">&lt;=</span> fz_en_out <span style="color:#f92672">?</span> clut[colr_idx] <span style="color:#f92672">:</span> <span style="color:#ae81ff">12&#39;h0</span>;
+        {lb_in_2, lb_in_1, lb_in_0} <span style="color:#f92672">&lt;=</span> fz_en_out <span style="color:#f92672">?</span> clut[colr_idx] <span style="color:#f92672">:</span> <span style="color:#ae81ff">12&#39;h0</span>;
     <span style="color:#66d9ef">end</span>
 
     <span style="color:#75715e">// VGA output
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        vga_r <span style="color:#f92672">=</span> de <span style="color:#f92672">?</span> lb2_out <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
-        vga_g <span style="color:#f92672">=</span> de <span style="color:#f92672">?</span> lb1_out <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
-        vga_b <span style="color:#f92672">=</span> de <span style="color:#f92672">?</span> lb0_out <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
+        vga_r <span style="color:#f92672">=</span> de <span style="color:#f92672">?</span> lb_out_2 <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
+        vga_g <span style="color:#f92672">=</span> de <span style="color:#f92672">?</span> lb_out_1 <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
+        vga_b <span style="color:#f92672">=</span> de <span style="color:#f92672">?</span> lb_out_0 <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
-</code></pre></div><p>You may have noticed that the very top-left pixel remains dark; this is because the LFSR produces every value except zero. To fix this, add some logic to specifically update the pixel at address zero when fading.</p>
+</code></pre></div><p>You may have noticed that the top-left pixel remains dark; this is because the LFSR produces every value except zero. To fix this, add some logic to specifically update the pixel at address zero when fading.</p>
 <h2 id="explore">Explore</h2>
 <p>I hope you enjoyed this (draft) instalment of <em>Exploring FPGA Graphics</em>, but nothing beats creating your own designs. Here are a few suggestions to get you started:</p>
 <ul>
