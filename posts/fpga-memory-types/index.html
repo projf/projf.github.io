@@ -120,7 +120,7 @@
       <p>Designing with FPGAs involves many types of memory, some familiar from other devices, but some that are specific to FPGAs. This post gives a quick overview of the different flavours, together with their strengths and weaknesses, and some sample designs. This guide includes external memory types, such as SRAM and HBM, that are used in CPUs and GPUs, so much of what is said here is generally applicable, but the focus is on FPGAs.</p>
 <p>To give you a sense of the memory capability of small FPGAs, we include the memory specifications for Lattice iCE40 UP5K and Xilinx Spartan 7S25.</p>
 <p><strong>NB. This post is an early draft: expect mistakes and missing content.</strong></p>
-<p><em>Updated 2020-08-28. Feedback to <a href="https://twitter.com/WillFlux">@WillFlux</a> is most welcome.</em></p>
+<p><em>Updated 2020-11-23. Feedback to <a href="https://twitter.com/WillFlux">@WillFlux</a> is most welcome.</em></p>
 <h2 id="contents">Contents</h2>
 <ul>
 <li><a href="#memory-terminology">Memory Terminology</a></li>
@@ -157,7 +157,7 @@
 <p>Distributed ram is built with LUTs. LUTs are usually used to create the logic of your design, but can also support memory in some FPGAs. Distributed ram is, as its name suggests, distributed throughout the FPGA. A single 6-input LUT can store 64 bits.</p>
 <p>Distributed ram is read asynchronously, but written to synchronously (requires a clock). Writes are limited to a single port, but you can read from up to four ports in some FPGAs. Distributed ram is flexible in the data width it supports, for example, if dealing with 32-level data you use a width of 5 bits.</p>
 <p>Given the asynchronous nature of reads, distributed ram is ideal for fast buffers: you can use a value immediately, rather than waiting for the next clock tick. You can also use distributed ram to create small ROMs. However, distributed ram is not suited to large memories, you&rsquo;ll get better performance (and lower power consumption) for memories larger than about 128 bits (based on Xilinx 7 Series) using block ram (see next section).</p>
-<p>Not all FPGAs support distributed ram; for example, the iCE40 UP5K doesn&rsquo;t. In Xilinx 7 Series FPGAs, only LUTs in SLICEM blocks may be used as memory. A Spartan 7S25 FPGA has 14,600 6-input LUTs, of which 5,000 are SLICEM, so you have a maximum of: 5,000 x 64 bits = 320,000 bits.</p>
+<p>In Xilinx 7 Series FPGAs, only LUTs in SLICEM blocks may be used as memory. A Spartan 7S25 FPGA has 14,600 6-input LUTs, of which 5,000 are SLICEM, so you have a maximum of: 5,000 x 64 bits = 320,000 bits.</p>
 <p>For more on Xilinx distributed ram see <a href="https://www.xilinx.com/support/documentation/user_guides/ug474_7Series_CLB.pdf">UG474: 7 Series FPGAs Configurable Logic Block</a>.</p>
 <p>The following example shows a ROM module using distributed ram (note the lack of a clock):</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> rom_async #(
@@ -209,35 +209,9 @@ Be careful when interpreting the headline BRAM capacity on FPGA data sheets. For
 <h3 id="fifos">FIFOs</h3>
 <p>First in, first out&hellip;</p>
 <h3 id="example-modules">Example Modules</h3>
-<p>The following example shows a Lattice iCE40 block ram module.</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> bram_ice40 #(
-    <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>, 
-    <span style="color:#66d9ef">parameter</span> DEPTH<span style="color:#f92672">=</span><span style="color:#ae81ff">512</span>, 
-    <span style="color:#66d9ef">parameter</span> INIT_F<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;&#34;</span>,
-    <span style="color:#66d9ef">localparam</span> ADDRW<span style="color:#f92672">=</span>$clog2(DEPTH)
-    ) (
-    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,
-    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] addr,
-    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> we,
-    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] data_in,
-    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] data_out
-    );
-
-    <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] memory [DEPTH];
-
-    <span style="color:#66d9ef">initial</span> <span style="color:#66d9ef">begin</span>
-        <span style="color:#66d9ef">if</span> (INIT_F <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">begin</span>
-            $display(<span style="color:#e6db74">&#34;Loading memory init file &#39;%s&#39; into bram.&#34;</span>, INIT_F);
-            $readmemh(INIT_F, memory);
-        <span style="color:#66d9ef">end</span>
-    <span style="color:#66d9ef">end</span>
-
-    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
-        <span style="color:#66d9ef">if</span> (we) memory[addr] <span style="color:#f92672">&lt;=</span> data_in;
-        data_out <span style="color:#f92672">=</span> memory[addr];
-    <span style="color:#66d9ef">end</span>
-<span style="color:#66d9ef">endmodule</span>
-</code></pre></div><p>The following example shows a basic Xilinx block ram module using a single read and a single write port.</p>
+<p>The following example shows a dual-por block ram module for iCE40 (a port can only be read or write on this FPGA):</p>
+<p><em>New example to be added</em></p>
+<p>The following example shows a simple Xilinx block ram module using a single read and a single write port (ports may be both read and write):</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> bram_basic_xc7 #(
     <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>, 
     <span style="color:#66d9ef">parameter</span> DEPTH<span style="color:#f92672">=</span><span style="color:#ae81ff">256</span>, 
@@ -273,6 +247,31 @@ Be careful when interpreting the headline BRAM capacity on FPGA data sheets. For
     <span style="color:#75715e">// Port B: Sync Read
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
         data_out <span style="color:#f92672">&lt;=</span> memory[addr_read];
+    <span style="color:#66d9ef">end</span>
+<span style="color:#66d9ef">endmodule</span>
+</code></pre></div><p>The following example shows a synchronous ROM module that should work with both Xilinx and Lattice BRAM:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> rom_sync #(
+    <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>, 
+    <span style="color:#66d9ef">parameter</span> DEPTH<span style="color:#f92672">=</span><span style="color:#ae81ff">512</span>, 
+    <span style="color:#66d9ef">parameter</span> INIT_F<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;&#34;</span>,
+    <span style="color:#66d9ef">localparam</span> ADDRW<span style="color:#f92672">=</span>$clog2(DEPTH)
+    ) (
+    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,
+    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] addr,
+    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] data
+    );
+
+    <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] memory [DEPTH];
+
+    <span style="color:#66d9ef">initial</span> <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">if</span> (INIT_F <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">begin</span>
+            $display(<span style="color:#e6db74">&#34;Creating rom_sync from init file &#39;%s&#39;.&#34;</span>, INIT_F);
+            $readmemh(INIT_F, memory);
+        <span style="color:#66d9ef">end</span>
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
+        data <span style="color:#f92672">&lt;=</span> memory[addr];
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
 </code></pre></div><h3 id="ultraram">UltraRAM</h3>
