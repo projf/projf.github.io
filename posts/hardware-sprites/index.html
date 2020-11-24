@@ -120,8 +120,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
     <div class="content">
       <p>Welcome back to <em>Exploring FPGA Graphics</em>. In the previous part, we recreated <a href="/posts/fpga-pong/">Pong</a>. In this part, we learn how to create colourful animated graphics with hardware sprites. Hardware sprites maintain much of the simplicity of our Pong design while offering much greater creative freedom. In the <a href="/posts/fpga-ad-astra/">next part</a>, we&rsquo;ll create a demo that gives a taste of what&rsquo;s possible with sprites.</p>
 <p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We start by learning how displays work, before racing the beam with Pong, starfields and sprites, simulating life with bitmaps, drawing lines and triangles, and finally creating simple 3D models. I&rsquo;ll be writing and revising this series throughout 2020. New to the series? Start with <a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a>.</p>
-<p><strong>NB. Designs for iCEBreaker are coming in November 2020.</strong></p>
-<p><em>Updated 2020-11-02. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><em>Updated 2020-11-24. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <h3 id="series-outline">Series Outline</h3>
 <ul>
 <li><a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a> - learn how displays work and animate simple shapes</li>
@@ -145,7 +144,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
 <p>A sprite is a graphics object that can be moved and animated independently of the background and other sprites. Hardware sprites use dedicated logic for drawing, and until the mid-90s they were an essential part of computer graphics. Hardware sprites are a good fit for an FPGA as they&rsquo;re easy to control, and we can scale them to fit our game design: whether we want hundreds of tiny sprites or a few huge ones. Hardware sprites are also useful for cursors or pointers in professional applications, providing a responsive UI without complex screen redrawing.</p>
 <h2 id="a-simple-sprite">A Simple Sprite</h2>
 <p>We&rsquo;re going to start with a small 8x8 pixel sprite with just two colours.</p>
-<p>We&rsquo;ll load the sprite into FPGA memory using a simple text format. Each line is simply composed of eight 1s or 0s separated by spaces. I&rsquo;m going to start with the letter &lsquo;F&rsquo; and a full stop (period) as a sprite. It&rsquo;s a simple, asymmetric, design, making it easier to spot bugs (such as pixels being missed off):</p>
+<p>We&rsquo;ll load the sprite into FPGA memory using a simple text format. Each line is simply composed of eight 1s or 0s separated by spaces. I&rsquo;m going to start with the letter &lsquo;F&rsquo; and a full stop (period) as a sprite. It&rsquo;s a simple, asymmetric, design, making it easier to spot bugs (such as incorrect orientation or pixels being missed off):</p>
 <p><img src="/img/posts/hardware-sprites/letter-f.png" alt="F." title="F for Project F"></p>
 <p>The text file to initialize the sprite memory looks like this <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/res/simple/letter_f.mem">letter_f.mem</a>]</strong>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">1 1 1 1 1 1 0 0
@@ -267,26 +266,28 @@ In this series, we explore graphics at the hardware level and get a feel for the
 <p>To see our static sprite in action, we need a top module to drive it. The main parts of the sprite top module should be familiar to you from the previous parts: it uses the same clock generator and display timings as <a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a>.</p>
 <ul>
 <li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/xc7/top_sprite_v1.sv">xc7/top_sprite_v1.sv</a></strong></li>
-<li>Lattice iCE40: <em>coming soon</em></li>
+<li>Lattice iCE40: <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/ice40/top_sprite_v1.sv">ice40/top_sprite_v1.sv</a></strong></li>
 </ul>
-<p>Xilinx version show below:</p>
+<p>iCE40 version show below:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_sprite_v1 (
-    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_100m,     <span style="color:#75715e">// 100 MHz clock
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_rst,      <span style="color:#75715e">// reset button (active low)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> vga_hsync,    <span style="color:#75715e">// horizontal sync
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> vga_vsync,    <span style="color:#75715e">// vertical sync
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vga_r,  <span style="color:#75715e">// 4-bit VGA red
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vga_g,  <span style="color:#75715e">// 4-bit VGA green
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vga_b   <span style="color:#75715e">// 4-bit VGA blue
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_12m,      <span style="color:#75715e">// 12 MHz clock
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_rst,      <span style="color:#75715e">// reset button (active high)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> dvi_clk,      <span style="color:#75715e">// DVI pixel clock
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> dvi_hsync,    <span style="color:#75715e">// DVI horizontal sync
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> dvi_vsync,    <span style="color:#75715e">// DVI vertical sync
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> dvi_de,       <span style="color:#75715e">// DVI data enable
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] dvi_r,  <span style="color:#75715e">// 4-bit DVI red
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] dvi_g,  <span style="color:#75715e">// 4-bit DVI green
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] dvi_b   <span style="color:#75715e">// 4-bit DVI blue
 </span><span style="color:#75715e"></span>    );
 
     <span style="color:#75715e">// generate pixel clock
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> clk_pix;
     <span style="color:#66d9ef">logic</span> clk_locked;
     clock_gen clock_640x480 (
-       .clk(clk_100m),
-       .rst(<span style="color:#f92672">!</span>btn_rst),  <span style="color:#75715e">// reset button is active low
-</span><span style="color:#75715e"></span>       .clk_pix,
+       .clk(clk_12m),
+       .rst(btn_rst),
+       .clk_pix,
        .clk_locked
     );
 
@@ -299,15 +300,15 @@ In this series, we explore graphics at the hardware level and get a feel for the
         .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for clock lock
 </span><span style="color:#75715e"></span>        .sx,
         .sy,
-        .hsync(vga_hsync),
-        .vsync(vga_vsync),
+        .hsync(dvi_hsync),
+        .vsync(dvi_vsync),
         .de
     );
 
     <span style="color:#75715e">// sprite
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> SPR_WIDTH  <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span>;  <span style="color:#75715e">// width in pixels
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> SPR_HEIGHT <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span>;  <span style="color:#75715e">// number of lines
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> SPR_FILE <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;letter_f.mem&#34;</span>;
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> SPR_FILE <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;../res/simple/letter_f.mem&#34;</span>;
     <span style="color:#66d9ef">logic</span> spr_start;
     <span style="color:#66d9ef">logic</span> spr_pix;
 
@@ -333,11 +334,13 @@ In this series, we explore graphics at the hardware level and get a feel for the
         .pix(spr_pix)
     );
 
-    <span style="color:#75715e">// VGA output
+    <span style="color:#75715e">// DVI output
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        vga_r <span style="color:#f92672">=</span> (de <span style="color:#f92672">&amp;&amp;</span> spr_pix) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
-        vga_g <span style="color:#f92672">=</span> (de <span style="color:#f92672">&amp;&amp;</span> spr_pix) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hC</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
-        vga_b <span style="color:#f92672">=</span> (de <span style="color:#f92672">&amp;&amp;</span> spr_pix) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h0</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
+        dvi_clk <span style="color:#f92672">=</span> clk_pix;
+        dvi_de  <span style="color:#f92672">=</span> de;
+        dvi_r <span style="color:#f92672">=</span> (de <span style="color:#f92672">&amp;&amp;</span> spr_pix) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
+        dvi_g <span style="color:#f92672">=</span> (de <span style="color:#f92672">&amp;&amp;</span> spr_pix) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hC</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
+        dvi_b <span style="color:#f92672">=</span> (de <span style="color:#f92672">&amp;&amp;</span> spr_pix) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h0</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
 </code></pre></div><p><em>The sprite is rendered in colour <code>#FFCC00</code> in the video output.</em></p>
@@ -353,7 +356,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/hardware-spri
 <p>The observant amongst you might have noticed that our horizontal sprite position is off by one. The problem is our state machine waits for the screen to reach the sprite position, then it switches to drawing for the next pixel. You can see that in the next-state logic:</p>
 <p><code>AWAIT_POS:  state_next = (sx == sprx) ? DRAW : AWAIT_POS;</code></p>
 <p>The obvious thing is to wait for the screen position <code>sx</code> to be the pixel <em>before</em> the one we want to draw. However, if we want to draw at horizontal coordinate 0, the pixel before is at position 799 on the <em>line before</em>, so we need to correct both our horizontal and vertical sprite positions.</p>
-<p>Update the start signal logic in the top module, creating <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/xc7/top_sprite_v2.sv">xc7/top_sprite_v2.sv</a>]</strong>:</p>
+<p>Update the start signal logic in the top module; <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/xc7/top_sprite_v2.sv">xc7/top_sprite_v2.sv</a>]</strong> or <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/ice40/top_sprite_v2.sv">ice40/top_sprite_v2.sv</a>]</strong>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// size of screen with and without blanking
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> H_RES_FULL <span style="color:#f92672">=</span> <span style="color:#ae81ff">800</span>;
     <span style="color:#66d9ef">localparam</span> V_RES_FULL <span style="color:#f92672">=</span> <span style="color:#ae81ff">525</span>;
@@ -512,7 +515,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/hardware-spri
 </code></pre></div><p>We can then drive this with a small change to our top module:</p>
 <ul>
 <li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/xc7/top_sprite_v3.sv">xc7/top_sprite_v3.sv</a></strong></li>
-<li>Lattice iCE40: <em>coming soon</em></li>
+<li>Lattice iCE40: <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/ice40/top_sprite_v3.sv">ice40/top_sprite_v3.sv</a></strong></li>
 </ul>
 <p>Build the v3 design with scaling. This design has hard-coded scale parameters, <code>SCALE_X</code> and <code>SCALE_Y</code>, but these could easily be made inputs to the module to allow for changes at run time.</p>
 <h2 id="motion">Motion</h2>
@@ -532,7 +535,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/hardware-spri
 <p>To move our sprite, I&rsquo;ve borrowed the horizontal bouncing logic from our <a href="/posts/fpga-graphics/">first part</a>, yet again, to create:</p>
 <ul>
 <li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/xc7/top_sprite_v3a.sv">xc7/top_sprite_v3a.sv</a></strong></li>
-<li>Lattice iCE40: <em>coming soon</em></li>
+<li>Lattice iCE40: <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/ice40/top_sprite_v3a.sv">ice40/top_sprite_v3a.sv</a></strong></li>
 </ul>
 <p>Build this version of the project. You should see your sprite bounce back and forth across the screen. If you created your own sprite, remember to update the sprite filename, <code>SPR_FILE</code>, in <code>top_sprite_v3a.sv</code>. You can also tweak the sprite height, width, and scale as you like.</p>
 <h2 id="colourful">Colourful?</h2>
@@ -547,8 +550,8 @@ This design was common in older computers, for example, the <a href="https://en.
 </blockquote>
 <h3 id="more-memory">More Memory</h3>
 <p>If we&rsquo;re going to make larger sprites with more colour bits, we&rsquo;re going to need to rethink our memory design. A simple register array suffices for small designs but is a resource hog and timing disaster for larger sprites. FPGAs include block ram (BRAM), which is ideal for memories of a few hundred bits to a few tens of kilobits.</p>
-<p>The designs of this block ram module differ between the Xilinx and Lattice FPGAs. However, both modules take a clock and address as input, and output the requested value the <em>following</em> clock cycle. This extra latency has implications for correct positioning of our sprite, which we&rsquo;ll discuss shortly. Check out <a href="/posts/fpga-memory-types/">FPGA Memory Types</a> to learn more about BRAM and other memory.</p>
-<p>For Xilinx, we create a synchronous ROM using BRAM <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/xc7/rom_sync.sv">xc7/rom_sync.sv</a>]</strong>:</p>
+<p>Our sprites designs don&rsquo;t change at runtime, so we can create a ROM using block RAM. The ROM takes a clock and address as input, and outputs the requested data the <em>following</em> clock cycle. This extra latency has implications for correct positioning of our sprite, which we&rsquo;ll discuss shortly. Check out <a href="/posts/fpga-memory-types/">FPGA Memory Types</a> to learn more about BRAM and other memory.</p>
+<p>Synchronous ROM using BRAM <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/rom_sync.sv">rom_sync.sv</a>]</strong>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> rom_sync #(
     <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,
     <span style="color:#66d9ef">parameter</span> DEPTH<span style="color:#f92672">=</span><span style="color:#ae81ff">256</span>,
@@ -571,34 +574,6 @@ This design was common in older computers, for example, the <a href="https://en.
 
     <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
         data <span style="color:#f92672">&lt;=</span> memory[addr];
-    <span style="color:#66d9ef">end</span>
-<span style="color:#66d9ef">endmodule</span>
-</code></pre></div><p>While for Lattice, we need to implement write support or the design won&rsquo;t be inferred correctly <strong>ice40/bram.sv</strong>:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> bram #(
-    <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,
-    <span style="color:#66d9ef">parameter</span> DEPTH<span style="color:#f92672">=</span><span style="color:#ae81ff">512</span>,
-    <span style="color:#66d9ef">parameter</span> INIT_F<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;&#34;</span>,
-    <span style="color:#66d9ef">localparam</span> ADDRW<span style="color:#f92672">=</span>$clog2(DEPTH)
-    ) (
-    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,
-    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] addr,
-    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> we,
-    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] data_in,
-    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] data
-    );
-
-    <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] memory [DEPTH];
-
-    <span style="color:#66d9ef">initial</span> <span style="color:#66d9ef">begin</span>
-        <span style="color:#66d9ef">if</span> (INIT_F <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">begin</span>
-            $display(<span style="color:#e6db74">&#34;Creating bram from init file &#39;%s&#39;.&#34;</span>, INIT_F);
-            $readmemh(INIT_F, memory);
-        <span style="color:#66d9ef">end</span>
-    <span style="color:#66d9ef">end</span>
-
-    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
-        <span style="color:#66d9ef">if</span> (we) memory[addr] <span style="color:#f92672">&lt;=</span> data_in;
-        data <span style="color:#f92672">=</span> memory[addr];
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
 </code></pre></div><p>Once you&rsquo;ve created the appropriate memory module, we can create the final sprite module for this part <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/sprite.sv">sprite.sv</a>]</strong>:</p>
@@ -728,7 +703,7 @@ This design was common in older computers, for example, the <a href="https://en.
 
 </code></pre></div><p>There are several significant changes to the sprite module compared to v3:</p>
 <h4 id="external-memory">External Memory</h4>
-<p>We&rsquo;ve moved the memory interface outside the sprite module: this allows to use the same sprite module with Xilinx and Lattice memory designs. The sprite module sends the desired position using the <code>pos</code> output and receives the pixel data on the <code>data_in</code> input. In the <a href="/posts/fpga-ad-astra/">next part</a>, we&rsquo;ll take this a step further; multiple sprites will share one memory interface.</p>
+<p>We&rsquo;ve moved the memory interface outside the sprite module. The sprite module sends the desired position using the <code>pos</code> output and receives the pixel data on the <code>data_in</code> input. In the <a href="/posts/fpga-ad-astra/">next part</a>, we&rsquo;ll take this a step further; multiple sprites will share one memory interface.</p>
 <h4 id="latency">Latency</h4>
 <p>The block ram adds an additional cycle of latency, so we need to subtract two from the horizontal position. This complicates the wrapping a little, so we use a case statement to handle it:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#75715e">// BRAM adds an extra cycle of latency
@@ -740,7 +715,7 @@ This design was common in older computers, for example, the <a href="https://en.
 </code></pre></div><h4 id="drawing--done">Drawing &amp; Done</h4>
 <p>For better control and reuse of sprite instances, we&rsquo;ve added two new signals: <code>draw</code> is high when the sprite is drawing pixels, and <code>done</code> indicates the sprite is complete.</p>
 <h3 id="a-refined-palette">A Refined Palette</h3>
-<p>Our boards have 12-bit colour output, supporting 4,096 colours. We can map our 16 sprite colours to any of these using a colour lookup table (CLUT). We populate the colour lookup table using a simple text file <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/res/hedgehog/hedgehog_palette.mem">hedgehog_palette.mem</a>]</strong>:</p>
+<p>Our boards have 12-bit colour output, supporting 4,096 colours. We can map our 11 sprite colours to any of these using a colour lookup table (CLUT). We populate the colour lookup table using a simple text file <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/res/hedgehog/hedgehog_palette.mem">hedgehog_palette.mem</a>]</strong>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">CCC AAA 888 874 763 651 540 330 111 F0F 000
 </code></pre></div><p><img src="/img/posts/hardware-sprites/hedgehog-palette.png" alt="Hedgehog Palette" title="The colour of the hedge"></p>
 <p>The hedgehog sprite has ten drawing colours, with an additional colour <code>F0F</code> (magenta) used for transparency. These colours are 12-bit in hex format: <code>RGB</code>; the same as a <a href="https://en.wikipedia.org/wiki/Web_colors">web colour hex triplet</a>.</p>
@@ -772,7 +747,7 @@ This design was common in older computers, for example, the <a href="https://en.
 <p>We&rsquo;re now ready to draw our hedgehog using a new top module:</p>
 <ul>
 <li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/xc7/top_hedgehog_v1.sv">xc7/top_hedgehog_v1.sv</a></strong></li>
-<li>Lattice iCE40: <em>coming soon</em></li>
+<li>Lattice iCE40: <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/ice40/top_hedgehog_v1.sv">ice40/top_hedgehog_v1.sv</a></strong></li>
 </ul>
 <h2 id="animation">Animation</h2>
 <p>Our hedgehog looks like it&rsquo;s on ice. To complete our sprite design we need to add animation support so the hedgehog can move its legs. The required change is surprisingly small; we just need to load all three hedgehog images into memory and add offset the memory position to choose which image to display.</p>
@@ -802,9 +777,9 @@ You&rsquo;ll learn how to create your own memory files from images using <code>i
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [COLR_BITS<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] spr_rom_data;
     <span style="color:#66d9ef">logic</span> [SPR_ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] spr_rom_addr, spr_base_addr;
     rom_sync #(
-        .INIT_F(SPR_FILE),
         .WIDTH(COLR_BITS),
-        .DEPTH(SPR_DEPTH)
+        .DEPTH(SPR_DEPTH),
+        .INIT_F(SPR_FILE)
     ) spr_rom (
         .clk(clk_pix),
         .addr(spr_base_addr <span style="color:#f92672">+</span> spr_rom_addr),
@@ -813,7 +788,7 @@ You&rsquo;ll learn how to create your own memory files from images using <code>i
 </code></pre></div><p>Our completed top module animates the hedgehog at approximently four frames per second:</p>
 <ul>
 <li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/xc7/top_hedgehog.sv">xc7/top_hedgehog.sv</a></strong></li>
-<li>Lattice iCE40: <em>coming soon</em></li>
+<li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/ice40/top_hedgehog.sv">ice40/top_hedgehog.sv</a></strong></li>
 </ul>
 <p>Xilinx version shown below:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_hedgehog (
@@ -881,9 +856,9 @@ You&rsquo;ll learn how to create your own memory files from images using <code>i
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [COLR_BITS<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] spr_rom_data;
     <span style="color:#66d9ef">logic</span> [SPR_ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] spr_rom_addr, spr_base_addr;
     rom_sync #(
-        .INIT_F(SPR_FILE),
         .WIDTH(COLR_BITS),
-        .DEPTH(SPR_DEPTH)
+        .DEPTH(SPR_DEPTH),
+        .INIT_F(SPR_FILE)
     ) spr_rom (
         .clk(clk_pix),
         .addr(spr_base_addr <span style="color:#f92672">+</span> spr_rom_addr),
