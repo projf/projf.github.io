@@ -120,7 +120,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
     <div class="content">
       <p>Welcome back to <em>Exploring FPGA Graphics</em>. In the previous part we learnt how to create <a href="/posts/hardware-sprites/">hardware sprites</a>. In this fourth part, we create a demo by combining our knowledge of sprites with animated starfields.</p>
 <p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We start by learning how displays work, before racing the beam with Pong, starfields and sprites, simulating life with bitmaps, drawing lines and triangles, and finally creating simple 3D models. I&rsquo;ll be writing and revising this series throughout 2020. New to the series? Start with <a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a>.</p>
-<p><em>Updated 2020-11-24. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><em>Updated 2020-11-25. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <h3 id="series-outline">Series Outline</h3>
 <ul>
 <li><a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a> - learn how displays work and animate simple shapes</li>
@@ -165,7 +165,7 @@ Computer Space had an amazing fibreglass cabinet. You can see more photos at <a 
 <p>For an 8-bit LFSR, we set tap bits 8, 6, 5, and 4. To find taps for other lengths, you can refer to the <a href="https://en.wikipedia.org/wiki/Linear-feedback_shift_register#Some_polynomials_for_maximal_LFSRs">feedback polynomials on Wikipedia</a>.</p>
 <p>To create a starfield, we need a sequence that&rsquo;s the same length as the number of pixels we&rsquo;re drawing. If we iterate through our shift register every time we get to a new pixel, then each pixel will always be associated with the same number in the shift register. We could take a single bit and draw a star if it were true, but that would cover half the pixels on the screen with stars; instead, we only draw a star if a group of bits are all 1.</p>
 <p>We&rsquo;ll start with a 17-bit LFSR, as its longest sequence, 2<sup>17</sup>-1, fits within 640x480. If we draw this within an area of 512x256, which has 2<sup>17</sup> pixels, then the starfield will move left by one pixel every frame.</p>
-<p>Create an LFSR module <code>lfsr.sv</code> <strong>[<a href="https://github.com/projf/projf-explore/blob/master/fpga-ad-astra/lfsr.sv">src</a>]</strong>:</p>
+<p>Create an LFSR module <strong>[<a href="https://github.com/projf/projf-explore/blob/master/common/lfsr.sv">lfsr.sv</a>]</strong>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> lfsr #(
     <span style="color:#66d9ef">parameter</span> LEN<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,                  <span style="color:#75715e">// shift register length
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> TAPS<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b10111000</span>,       <span style="color:#75715e">// XOR taps
@@ -191,24 +191,26 @@ Computer Space had an amazing fibreglass cabinet. You can see more photos at <a 
 <p><strong>Building the Designs</strong><br>
 In the <a href="https://github.com/projf/projf-explore/tree/master/fpga-ad-astra">FPGA Ad Astra</a> section of the git repo, you&rsquo;ll find the design files, a makefile for iCEBreaker, a Vivado project for Arty, and instructions for building the designs for both boards.</p>
 </blockquote>
-<p>Shown below is the LSFR top module for XC7:</p>
+<p>Shown below is the LSFR top module for iCE40:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_lfsr (
-    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_100m,     <span style="color:#75715e">// 100 MHz clock
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_rst,      <span style="color:#75715e">// reset button (active low)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> vga_hsync,    <span style="color:#75715e">// horizontal sync
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> vga_vsync,    <span style="color:#75715e">// vertical sync
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vga_r,  <span style="color:#75715e">// 4-bit VGA red
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vga_g,  <span style="color:#75715e">// 4-bit VGA green
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vga_b   <span style="color:#75715e">// 4-bit VGA blue
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_12m,      <span style="color:#75715e">// 12 MHz clock
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_rst,      <span style="color:#75715e">// reset button (active high)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> dvi_clk,      <span style="color:#75715e">// DVI pixel clock
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> dvi_hsync,    <span style="color:#75715e">// DVI horizontal sync
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> dvi_vsync,    <span style="color:#75715e">// DVI vertical sync
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> dvi_de,       <span style="color:#75715e">// DVI data enable
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] dvi_r,  <span style="color:#75715e">// 4-bit DVI red
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] dvi_g,  <span style="color:#75715e">// 4-bit DVI green
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] dvi_b   <span style="color:#75715e">// 4-bit DVI blue
 </span><span style="color:#75715e"></span>    );
 
     <span style="color:#75715e">// generate pixel clock
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> clk_pix;
     <span style="color:#66d9ef">logic</span> clk_locked;
     clock_gen clock_640x480 (
-       .clk(clk_100m),
-       .rst(<span style="color:#f92672">!</span>btn_rst),  <span style="color:#75715e">// reset button is active low
-</span><span style="color:#75715e"></span>       .clk_pix,
+       .clk(clk_12m),
+       .rst(btn_rst),
+       .clk_pix,
        .clk_locked
     );
 
@@ -221,8 +223,8 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/fpga-ad-astra
         .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for clock lock
 </span><span style="color:#75715e"></span>        .sx,
         .sy,
-        .hsync(vga_hsync),
-        .vsync(vga_vsync),
+        .hsync(dvi_hsync),
+        .vsync(dvi_vsync),
         .de
     );
 
@@ -241,13 +243,27 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/fpga-ad-astra
         .sreg(sf_reg)
     );
 
-    <span style="color:#75715e">// VGA output
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        <span style="color:#66d9ef">logic</span> star;
-        star <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;</span>{sf_reg[<span style="color:#ae81ff">16</span><span style="color:#f92672">:</span><span style="color:#ae81ff">9</span>]};  <span style="color:#75715e">// (~512 stars for 8 bits with 512x256)
-</span><span style="color:#75715e"></span>        vga_r <span style="color:#f92672">=</span> (de <span style="color:#f92672">&amp;&amp;</span> sf_area <span style="color:#f92672">&amp;&amp;</span> star) <span style="color:#f92672">?</span> sf_reg[<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
-        vga_g <span style="color:#f92672">=</span> (de <span style="color:#f92672">&amp;&amp;</span> sf_area <span style="color:#f92672">&amp;&amp;</span> star) <span style="color:#f92672">?</span> sf_reg[<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
-        vga_b <span style="color:#f92672">=</span> (de <span style="color:#f92672">&amp;&amp;</span> sf_area <span style="color:#f92672">&amp;&amp;</span> star) <span style="color:#f92672">?</span> sf_reg[<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
+    <span style="color:#75715e">// adjust star density (~512 stars for AND 8 bits with 512x256)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> star;
+    <span style="color:#66d9ef">always_comb</span> star <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;</span>{sf_reg[<span style="color:#ae81ff">16</span><span style="color:#f92672">:</span><span style="color:#ae81ff">9</span>]};
+
+    <span style="color:#75715e">// DVI clock output
+</span><span style="color:#75715e"></span>    SB_IO #(
+        .PIN_TYPE(<span style="color:#ae81ff">6</span><span style="color:#ae81ff">&#39;b010000</span>)
+    ) dvi_clk_buf (
+        .PACKAGE_PIN(dvi_clk),
+        .CLOCK_ENABLE(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b1</span>),
+        .OUTPUT_CLK(clk_pix),
+        .D_OUT_0(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),
+        .D_OUT_1(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b1</span>)
+    );
+
+    <span style="color:#75715e">// DVI output
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        dvi_de <span style="color:#f92672">&lt;=</span> de;
+        dvi_r <span style="color:#f92672">&lt;=</span> (de <span style="color:#f92672">&amp;&amp;</span> sf_area <span style="color:#f92672">&amp;&amp;</span> star) <span style="color:#f92672">?</span> sf_reg[<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
+        dvi_g <span style="color:#f92672">&lt;=</span> (de <span style="color:#f92672">&amp;&amp;</span> sf_area <span style="color:#f92672">&amp;&amp;</span> star) <span style="color:#f92672">?</span> sf_reg[<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
+        dvi_b <span style="color:#f92672">&lt;=</span> (de <span style="color:#f92672">&amp;&amp;</span> sf_area <span style="color:#f92672">&amp;&amp;</span> star) <span style="color:#f92672">?</span> sf_reg[<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
 </code></pre></div><h2 id="a-screen-full-of-sky">A Screen Full of Sky</h2>
@@ -258,7 +274,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/fpga-ad-astra
 </ol>
 <p>The first option is extremely efficient when it comes to logic. As each value appears only once, it uniquely describes a position in the sequence. Historically, LFSR were used as counters, including on FPGAs. Xilinx has a nice application note describing this: <a href="https://www.xilinx.com/support/documentation/application_notes/xapp210.pdf">XAPP210</a>.</p>
 <p>The second option requires separate counter logic, but on a contemporary FPGA, the cost is minimal. The advantage of this approach is we can easily adjust the direction and speed of the starfield by counting a little more or a little less. This is the approach we&rsquo;ll use in this project.</p>
-<p>We&rsquo;re going to want a few starfields, so let&rsquo;s create a dedicated module <strong>[<a href="https://github.com/projf/projf-explore/blob/master/fpga-ad-astra/starfield.sv">src</a>]</strong>:</p>
+<p>We&rsquo;re going to want a few starfields, so let&rsquo;s create a dedicated module <strong>[<a href="https://github.com/projf/projf-explore/blob/master/fpga-ad-astra/starfield.sv">starfield.sv</a>]</strong>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> starfield #(
     <span style="color:#66d9ef">parameter</span> H<span style="color:#f92672">=</span><span style="color:#ae81ff">800</span>,
     <span style="color:#66d9ef">parameter</span> V<span style="color:#f92672">=</span><span style="color:#ae81ff">525</span>,
@@ -664,10 +680,10 @@ You can easily create your own font version with different characters: check out
     <span style="color:#66d9ef">end</span>
 
     <span style="color:#75715e">// VGA output
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        vga_r <span style="color:#f92672">=</span> (de) <span style="color:#f92672">?</span> (spr_pix) <span style="color:#f92672">?</span> red_spr   <span style="color:#f92672">:</span> starlight <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
-        vga_g <span style="color:#f92672">=</span> (de) <span style="color:#f92672">?</span> (spr_pix) <span style="color:#f92672">?</span> green_spr <span style="color:#f92672">:</span> starlight <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
-        vga_b <span style="color:#f92672">=</span> (de) <span style="color:#f92672">?</span> (spr_pix) <span style="color:#f92672">?</span> blue_spr  <span style="color:#f92672">:</span> starlight <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        vga_r <span style="color:#f92672">&lt;=</span> de <span style="color:#f92672">?</span> spr_pix <span style="color:#f92672">?</span> red_spr   <span style="color:#f92672">:</span> starlight <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
+        vga_g <span style="color:#f92672">&lt;=</span> de <span style="color:#f92672">?</span> spr_pix <span style="color:#f92672">?</span> green_spr <span style="color:#f92672">:</span> starlight <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
+        vga_b <span style="color:#f92672">&lt;=</span> de <span style="color:#f92672">?</span> spr_pix <span style="color:#f92672">?</span> blue_spr  <span style="color:#f92672">:</span> starlight <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
 </code></pre></div><h2 id="hello---こんにちは">Hello - こんにちは</h2>

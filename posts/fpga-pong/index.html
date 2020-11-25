@@ -120,7 +120,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
     <div class="content">
       <p>Welcome back to <em>Exploring FPGA Graphics</em>. In the previous part, we got an <a href="/posts/fpga-graphics/">introduction to FPGA graphics</a>; now we&rsquo;re ready to put our graphical skills to work recreating the arcade classic: Pong.</p>
 <p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We start by learning how displays work, before racing the beam with Pong, starfields and sprites, simulating life with bitmaps, drawing lines and triangles, and finally creating simple 3D models. I&rsquo;ll be writing and revising this series throughout 2020. New to the series? Start with <a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a>.</p>
-<p><em>Revised 2020-10-28. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><em>Updated 2020-11-25. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <h3 id="series-outline">Series Outline</h3>
 <ul>
 <li><a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a> - learn how displays work and animate simple shapes</li>
@@ -188,7 +188,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
     <span style="color:#66d9ef">localparam</span> V_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">480</span>;
 
     <span style="color:#66d9ef">logic</span> animate;  <span style="color:#75715e">// high for one clock tick at start of blanking
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> animate <span style="color:#f92672">=</span> (sy <span style="color:#f92672">==</span> <span style="color:#ae81ff">480</span> <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>);
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> animate <span style="color:#f92672">=</span> (sy <span style="color:#f92672">==</span> V_RES <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>);
 
     <span style="color:#75715e">// ball
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> B_SIZE <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span>;          <span style="color:#75715e">// size in pixels
@@ -225,13 +225,23 @@ In this series, we explore graphics at the hardware level and get a feel for the
               <span style="color:#f92672">&amp;&amp;</span> (sy <span style="color:#f92672">&gt;=</span> by) <span style="color:#f92672">&amp;&amp;</span> (sy <span style="color:#f92672">&lt;</span> by <span style="color:#f92672">+</span> B_SIZE);
     <span style="color:#66d9ef">end</span>
 
+    <span style="color:#75715e">// DVI clock output
+</span><span style="color:#75715e"></span>    SB_IO #(
+        .PIN_TYPE(<span style="color:#ae81ff">6</span><span style="color:#ae81ff">&#39;b010000</span>)
+    ) dvi_clk_buf (
+        .PACKAGE_PIN(dvi_clk),
+        .CLOCK_ENABLE(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b1</span>),
+        .OUTPUT_CLK(clk_pix),
+        .D_OUT_0(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),
+        .D_OUT_1(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b1</span>)
+    );
+
     <span style="color:#75715e">// DVI output
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        dvi_clk <span style="color:#f92672">=</span> clk_pix;
-        dvi_de  <span style="color:#f92672">=</span> de;
-        dvi_r <span style="color:#f92672">=</span> <span style="color:#f92672">!</span>de <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h0</span> <span style="color:#f92672">:</span> (b_draw <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>);
-        dvi_g <span style="color:#f92672">=</span> <span style="color:#f92672">!</span>de <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h0</span> <span style="color:#f92672">:</span> (b_draw <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>);
-        dvi_b <span style="color:#f92672">=</span> <span style="color:#f92672">!</span>de <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h0</span> <span style="color:#f92672">:</span> (b_draw <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>);
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        dvi_de <span style="color:#f92672">&lt;=</span> de;
+        dvi_r <span style="color:#f92672">&lt;=</span> <span style="color:#f92672">!</span>de <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h0</span> <span style="color:#f92672">:</span> (b_draw <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>);
+        dvi_g <span style="color:#f92672">&lt;=</span> <span style="color:#f92672">!</span>de <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h0</span> <span style="color:#f92672">:</span> (b_draw <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>);
+        dvi_b <span style="color:#f92672">&lt;=</span> <span style="color:#f92672">!</span>de <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h0</span> <span style="color:#f92672">:</span> (b_draw <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>);
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
 </code></pre></div><h3 id="pong-v1">Pong v1</h3>
@@ -325,10 +335,10 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/fpga-pong">FP
                 bx <span style="color:#f92672">&lt;=</span> bx <span style="color:#f92672">+</span> spx;
             <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> bx <span style="color:#f92672">&lt;=</span> (dx) <span style="color:#f92672">?</span> bx <span style="color:#f92672">-</span> spx <span style="color:#f92672">:</span> bx <span style="color:#f92672">+</span> spx;
 </code></pre></div><p>We can also speed up the ball and paddles by editing the following values:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] spx <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span><span style="color:#ae81ff">&#39;d6</span>;  <span style="color:#75715e">// horizontal ball speed
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] spy <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span><span style="color:#ae81ff">&#39;d4</span>;  <span style="color:#75715e">// vertical ball speed
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] spx <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span><span style="color:#ae81ff">&#39;d6</span>;  <span style="color:#75715e">// horizontal speed
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] spy <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span><span style="color:#ae81ff">&#39;d4</span>;  <span style="color:#75715e">// vertical speed
 </span><span style="color:#75715e"></span>
-    <span style="color:#66d9ef">localparam</span> P_SPEED <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;  <span style="color:#75715e">// paddle speed
+    <span style="color:#66d9ef">localparam</span> P_SPEED <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;  <span style="color:#75715e">// speed
 </span></code></pre></div><h3 id="pong-v3">Pong v3</h3>
 <p>Build and test the updated version with paddle collisions:</p>
 <ul>
@@ -358,7 +368,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/fpga-pong">FP
 <li>BTN1 - control</li>
 <li>BTN3 - up</li>
 </ul>
-<p>To safely use buttons in our design, we need to debounce them. Debouncing ensures we get a single, clean, transition from button presses. The debounce module looks like this:</p>
+<p>To safely use buttons in our design, we need to debounce them. Debouncing ensures we get a single, clean, transition from button presses. The debounce module looks like this <strong>[<a href="https://github.com/projf/projf-explore/blob/master/common/debounce.sv">debounce.sv</a>]</strong>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> debounce (
     <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,   <span style="color:#75715e">// clock
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> in,    <span style="color:#75715e">// signal input
@@ -547,7 +557,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/fpga-pong">FP
 <li>Lattice iCE40: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-pong/ice40/top_pong.sv">ice40/top_pong.sv</a></strong></li>
 </ul>
 <p>With the default ball and paddles speeds, it is possible to win a point against the AI.</p>
-<p><em>NB. The timing estimate of <code>44.59 ns (22.43 MHz)</code> for the iCE40 version of top_pong.sv is a bit slow for our pixel clock of 25.125 MHz. The final design could probably be tweaked to improve this, but I don&rsquo;t plan on modifying it at the moment.</em></p>
+<p><em>NB. The timing estimate of <code>40.55 ns (24.66 MHz)</code> for the iCE40 version of top_pong.sv is a little slow for our pixel clock of 25.125 MHz. The final design could probably be tweaked to improve this, but I don&rsquo;t plan on modifying it at the moment.</em></p>
 <h2 id="scoring">Scoring</h2>
 <p>At the moment we don&rsquo;t show a score for the players. We&rsquo;ll come back to this once we can draw sprites. Alternatively, you could draw simple blocks on the screen to keep score.</p>
 <h2 id="explore">Explore</h2>
