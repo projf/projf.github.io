@@ -120,7 +120,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
     <div class="content">
       <p>Welcome back to <em>Exploring FPGA Graphics</em>. In the previous part we learnt how to create <a href="/posts/hardware-sprites/">hardware sprites</a>. In this fourth part, we create a demo by combining our knowledge of sprites with animated starfields.</p>
 <p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We start by learning how displays work, before racing the beam with Pong, starfields and sprites, simulating life with bitmaps, drawing lines and triangles, and finally creating simple 3D models. I&rsquo;ll be writing and revising this series throughout 2020. New to the series? Start with <a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a>.</p>
-<p><em>Updated 2020-11-25. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><em>Updated 2020-11-26. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <h3 id="series-outline">Series Outline</h3>
 <ul>
 <li><a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a> - learn how displays work and animate simple shapes</li>
@@ -217,14 +217,15 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/fpga-ad-astra
     <span style="color:#75715e">// display timings
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>;  <span style="color:#75715e">// screen coordinate width in bits
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx, sy;
+    <span style="color:#66d9ef">logic</span> hsync, vsync;
     <span style="color:#66d9ef">logic</span> de;
     display_timings timings_640x480 (
         .clk_pix,
         .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for clock lock
 </span><span style="color:#75715e"></span>        .sx,
         .sy,
-        .hsync(dvi_hsync),
-        .vsync(dvi_vsync),
+        .hsync,
+        .vsync,
         .de
     );
 
@@ -247,24 +248,33 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/fpga-ad-astra
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> star;
     <span style="color:#66d9ef">always_comb</span> star <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;</span>{sf_reg[<span style="color:#ae81ff">16</span><span style="color:#f92672">:</span><span style="color:#ae81ff">9</span>]};
 
-    <span style="color:#75715e">// DVI clock output
+    <span style="color:#75715e">// colours
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] red, green, blue;
+    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+        red   <span style="color:#f92672">=</span> (de <span style="color:#f92672">&amp;&amp;</span> sf_area <span style="color:#f92672">&amp;&amp;</span> star) <span style="color:#f92672">?</span> sf_reg[<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
+        green <span style="color:#f92672">=</span> (de <span style="color:#f92672">&amp;&amp;</span> sf_area <span style="color:#f92672">&amp;&amp;</span> star) <span style="color:#f92672">?</span> sf_reg[<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
+        blue  <span style="color:#f92672">=</span> (de <span style="color:#f92672">&amp;&amp;</span> sf_area <span style="color:#f92672">&amp;&amp;</span> star) <span style="color:#f92672">?</span> sf_reg[<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// Output DVI clock: 180° out of phase with other DVI signals
 </span><span style="color:#75715e"></span>    SB_IO #(
-        .PIN_TYPE(<span style="color:#ae81ff">6</span><span style="color:#ae81ff">&#39;b010000</span>)
-    ) dvi_clk_buf (
+        .PIN_TYPE(<span style="color:#ae81ff">6</span><span style="color:#ae81ff">&#39;b010000</span>)  <span style="color:#75715e">// PIN_OUTPUT_DDR
+</span><span style="color:#75715e"></span>    ) dvi_clk_io (
         .PACKAGE_PIN(dvi_clk),
-        .CLOCK_ENABLE(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b1</span>),
         .OUTPUT_CLK(clk_pix),
         .D_OUT_0(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),
         .D_OUT_1(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b1</span>)
     );
 
-    <span style="color:#75715e">// DVI output
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
-        dvi_de <span style="color:#f92672">&lt;=</span> de;
-        dvi_r <span style="color:#f92672">&lt;=</span> (de <span style="color:#f92672">&amp;&amp;</span> sf_area <span style="color:#f92672">&amp;&amp;</span> star) <span style="color:#f92672">?</span> sf_reg[<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
-        dvi_g <span style="color:#f92672">&lt;=</span> (de <span style="color:#f92672">&amp;&amp;</span> sf_area <span style="color:#f92672">&amp;&amp;</span> star) <span style="color:#f92672">?</span> sf_reg[<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
-        dvi_b <span style="color:#f92672">&lt;=</span> (de <span style="color:#f92672">&amp;&amp;</span> sf_area <span style="color:#f92672">&amp;&amp;</span> star) <span style="color:#f92672">?</span> sf_reg[<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
-    <span style="color:#66d9ef">end</span>
+    <span style="color:#75715e">// Output DVI signals
+</span><span style="color:#75715e"></span>    SB_IO #(
+        .PIN_TYPE(<span style="color:#ae81ff">6</span><span style="color:#ae81ff">&#39;b010100</span>)  <span style="color:#75715e">// PIN_OUTPUT_REGISTERED
+</span><span style="color:#75715e"></span>    ) dvi_signal_io [<span style="color:#ae81ff">14</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] (
+        .PACKAGE_PIN({dvi_hsync, dvi_vsync, dvi_de, dvi_r, dvi_g, dvi_b}),
+        .OUTPUT_CLK(clk_pix),
+        .D_OUT_0({hsync, vsync, de, red, green, blue}),
+        .D_OUT_1()
+    );
 <span style="color:#66d9ef">endmodule</span>
 </code></pre></div><h2 id="a-screen-full-of-sky">A Screen Full of Sky</h2>
 <p>If we use the maximum sequence of an LFSR, then our starfield is limited to a few sizes. To fill the screen, we choose an LFSR that produces a sequence longer than our number of pixels, then restart it when we reach the end of the screen. There are two ways to do this:</p>
@@ -698,7 +708,7 @@ You can easily create your own font version with different characters: check out
 <p>These modules make extensive use of for loops to avoid duplication. To create multiple instances of a module we need to use <code>generate</code> rather than a normal <code>for</code> loop.</p>
 <p><em>NB. The iCE40 designs don&rsquo;t currently use generate as I&rsquo;ve had an issue with the <code>spr_glyph_line</code> signal that prevents it from working.</em></p>
 <h2 id="controlling-the-message">Controlling the Message</h2>
-<p>To display a custom message we can store a message as code points: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-ad-astra/greet.mem">greet.mem</a></strong>.</p>
+<p>To display a custom message we can store a message as code points: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-ad-astra/res/greet.mem">greet.mem</a></strong>.</p>
 <p>A single two-line message looks like this.</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">//   FPGA
 // AD ASTRA
@@ -770,7 +780,7 @@ You can easily create your own font version with different characters: check out
 </ul>
 <p>We cycle through the greetings using a frame counter; I&rsquo;ve chosen 80 frames (1.25 seconds). You can adjust this with the <code>MSG_CHG</code> parameter.</p>
 <h3 id="copperbars">Copperbars</h3>
-<p>The text feels a bit flat in plain gold: what we need are copper bars! While we don&rsquo;t have a co-processor (yet), we can create the effect using a simple counter. I&rsquo;ve gone for a sky and earth colour scheme, but you can easily change the colours to your own taste:</p>
+<p>The text feels a bit flat in plain gold: what we need are <a href="https://en.wikipedia.org/wiki/Copperbar">copper bars</a>! While we don&rsquo;t have a co-processor (yet), we can create the effect using a simple counter. I&rsquo;ve gone for a sky and earth colour scheme, but you can easily change the colours to your own taste:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// font colours
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> COLR_A   <span style="color:#f92672">=</span> <span style="color:#ae81ff">&#39;h125</span>;  <span style="color:#75715e">// initial colour A
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> COLR_B   <span style="color:#f92672">=</span> <span style="color:#ae81ff">&#39;h421</span>;  <span style="color:#75715e">// initial colour B

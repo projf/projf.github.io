@@ -120,7 +120,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
     <div class="content">
       <p>Welcome back to <em>Exploring FPGA Graphics</em>. In the previous part, we got an <a href="/posts/fpga-graphics/">introduction to FPGA graphics</a>; now we&rsquo;re ready to put our graphical skills to work recreating the arcade classic: Pong.</p>
 <p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We start by learning how displays work, before racing the beam with Pong, starfields and sprites, simulating life with bitmaps, drawing lines and triangles, and finally creating simple 3D models. I&rsquo;ll be writing and revising this series throughout 2020. New to the series? Start with <a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a>.</p>
-<p><em>Updated 2020-11-25. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><em>Updated 2020-11-26. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <h3 id="series-outline">Series Outline</h3>
 <ul>
 <li><a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a> - learn how displays work and animate simple shapes</li>
@@ -145,27 +145,25 @@ In this series, we explore graphics at the hardware level and get a feel for the
 <p>Pong may not have been the first computer game, but it has an excellent claim to being the first to break into public consciousness on release in 1972. Originally an arcade cabinet, it was quickly adapted for play at home with a television. If you&rsquo;d like to learn more about the early history of Atari, including Pong, I recommend <em><a href="https://mitpress.mit.edu/books/racing-beam">Racing the Beam</a></em> by Nick Montfort and Ian Bogost.</p>
 <p>If you&rsquo;re unfamiliar with Pong gameplay, check out this <a href="https://www.youtube.com/watch?v=it0sf4CMDeM">Pong video</a> on YouTube.</p>
 <h2 id="a-square-ball">A Square Ball</h2>
-<p>Pong uses a square ball, so we can reuse our design from <a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a>. We&rsquo;re going to look at the iCEBreaker version, but links to versions for both boards can be found below the source listing.</p>
+<p>Pong uses a square ball, so we can reuse our design from <a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a>. We&rsquo;re going to look at the Arty version, but links to versions for both boards can be found below the source listing.</p>
 <p>We generate our pixel clock and display timings, then set up a ball and update its position once per frame. For now the ball bounces off all four sides of the screen.</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_pong_v1 (
-    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_12m,      <span style="color:#75715e">// 12 MHz clock
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_rst,      <span style="color:#75715e">// reset button (active high)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> dvi_clk,      <span style="color:#75715e">// DVI pixel clock
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> dvi_hsync,    <span style="color:#75715e">// DVI horizontal sync
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> dvi_vsync,    <span style="color:#75715e">// DVI vertical sync
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> dvi_de,       <span style="color:#75715e">// DVI data enable
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] dvi_r,  <span style="color:#75715e">// 4-bit DVI red
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] dvi_g,  <span style="color:#75715e">// 4-bit DVI green
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] dvi_b   <span style="color:#75715e">// 4-bit DVI blue
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_100m,     <span style="color:#75715e">// 100 MHz clock
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_rst,      <span style="color:#75715e">// reset button (active low)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> vga_hsync,    <span style="color:#75715e">// horizontal sync
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> vga_vsync,    <span style="color:#75715e">// vertical sync
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vga_r,  <span style="color:#75715e">// 4-bit VGA red
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vga_g,  <span style="color:#75715e">// 4-bit VGA green
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vga_b   <span style="color:#75715e">// 4-bit VGA blue
 </span><span style="color:#75715e"></span>    );
 
     <span style="color:#75715e">// generate pixel clock
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> clk_pix;
     <span style="color:#66d9ef">logic</span> clk_locked;
     clock_gen clock_640x480 (
-       .clk(clk_12m),
-       .rst(btn_rst),
-       .clk_pix,
+       .clk(clk_100m),
+       .rst(<span style="color:#f92672">!</span>btn_rst),  <span style="color:#75715e">// reset button is active low
+</span><span style="color:#75715e"></span>       .clk_pix,
        .clk_locked
     );
 
@@ -178,8 +176,8 @@ In this series, we explore graphics at the hardware level and get a feel for the
         .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for clock lock
 </span><span style="color:#75715e"></span>        .sx,
         .sy,
-        .hsync(dvi_hsync),
-        .vsync(dvi_vsync),
+        .hsync(vga_hsync),
+        .vsync(vga_vsync),
         .de
     );
 
@@ -198,7 +196,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] spy <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span><span style="color:#ae81ff">&#39;d1</span>;  <span style="color:#75715e">// vertical speed
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> b_draw;                   <span style="color:#75715e">// draw ball?
 </span><span style="color:#75715e"></span>
-    <span style="color:#75715e">// ball animation
+     <span style="color:#75715e">// ball animation
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">if</span> (animate) <span style="color:#66d9ef">begin</span>
             <span style="color:#66d9ef">if</span> (bx <span style="color:#f92672">&gt;=</span> H_RES <span style="color:#f92672">-</span> (spx <span style="color:#f92672">+</span> B_SIZE)) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// right edge
@@ -225,23 +223,11 @@ In this series, we explore graphics at the hardware level and get a feel for the
               <span style="color:#f92672">&amp;&amp;</span> (sy <span style="color:#f92672">&gt;=</span> by) <span style="color:#f92672">&amp;&amp;</span> (sy <span style="color:#f92672">&lt;</span> by <span style="color:#f92672">+</span> B_SIZE);
     <span style="color:#66d9ef">end</span>
 
-    <span style="color:#75715e">// DVI clock output
-</span><span style="color:#75715e"></span>    SB_IO #(
-        .PIN_TYPE(<span style="color:#ae81ff">6</span><span style="color:#ae81ff">&#39;b010000</span>)
-    ) dvi_clk_buf (
-        .PACKAGE_PIN(dvi_clk),
-        .CLOCK_ENABLE(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b1</span>),
-        .OUTPUT_CLK(clk_pix),
-        .D_OUT_0(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),
-        .D_OUT_1(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b1</span>)
-    );
-
-    <span style="color:#75715e">// DVI output
+    <span style="color:#75715e">// VGA output
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
-        dvi_de <span style="color:#f92672">&lt;=</span> de;
-        dvi_r <span style="color:#f92672">&lt;=</span> <span style="color:#f92672">!</span>de <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h0</span> <span style="color:#f92672">:</span> (b_draw <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>);
-        dvi_g <span style="color:#f92672">&lt;=</span> <span style="color:#f92672">!</span>de <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h0</span> <span style="color:#f92672">:</span> (b_draw <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>);
-        dvi_b <span style="color:#f92672">&lt;=</span> <span style="color:#f92672">!</span>de <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h0</span> <span style="color:#f92672">:</span> (b_draw <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>);
+        vga_r <span style="color:#f92672">&lt;=</span> (de <span style="color:#f92672">&amp;&amp;</span> b_draw) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
+        vga_g <span style="color:#f92672">&lt;=</span> (de <span style="color:#f92672">&amp;&amp;</span> b_draw) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
+        vga_b <span style="color:#f92672">&lt;=</span> (de <span style="color:#f92672">&amp;&amp;</span> b_draw) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
 </code></pre></div><h3 id="pong-v1">Pong v1</h3>
@@ -557,7 +543,6 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/fpga-pong">FP
 <li>Lattice iCE40: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-pong/ice40/top_pong.sv">ice40/top_pong.sv</a></strong></li>
 </ul>
 <p>With the default ball and paddles speeds, it is possible to win a point against the AI.</p>
-<p><em>NB. The timing estimate of <code>40.55 ns (24.66 MHz)</code> for the iCE40 version of top_pong.sv is a little slow for our pixel clock of 25.125 MHz. The final design could probably be tweaked to improve this, but I don&rsquo;t plan on modifying it at the moment.</em></p>
 <h2 id="scoring">Scoring</h2>
 <p>At the moment we don&rsquo;t show a score for the players. We&rsquo;ll come back to this once we can draw sprites. Alternatively, you could draw simple blocks on the screen to keep score.</p>
 <h2 id="explore">Explore</h2>
