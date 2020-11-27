@@ -120,7 +120,7 @@
       <p>Welcome back to <em>Exploring FPGA Graphics</em>. In the previous two parts, we worked with sprites, but as graphics become more complex, a different approach is needed. Instead of drawing directly to the screen, we draw to a framebuffer, which is read by the display controller. This post provides an introduction to framebuffers and how to scale and fade them Wolfenstein 3D style. In the <a href="/posts/life-on-screen/">next part</a>, we&rsquo;ll use a framebuffer to visualize a simulation of life.</p>
 <p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We start by learning how displays work, before racing the beam with Pong, starfields and sprites, simulating life with bitmaps, drawing lines and triangles, and finally creating simple 3D models. I&rsquo;ll be writing and revising this series throughout 2020. New to the series? Start with <a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a>.</p>
 <p><strong>Designs for iCEBreaker are coming once I sort out a BRAM issue.</strong></p>
-<p><em>Updated 2020-11-25. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><em>Updated 2020-11-27. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <h3 id="series-outline">Series Outline</h3>
 <ul>
 <li><a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a> - learn how displays work and animate simple shapes</li>
@@ -150,7 +150,7 @@
 <p>A small monochrome framebuffer calls for a striking image: I&rsquo;ve chosen <a href="https://en.wikipedia.org/wiki/David_(Michelangelo)">David by Michelangelo</a>.</p>
 <p>The version on the right is the <a href="https://commons.wikimedia.org/wiki/File:Michelangelo%27s_David_-_63_grijswaarden.png">original from Wikipedia</a>; it has 64 shades of grey. I created the middle image by reducing the original to 16 colours using img2fmem with no dithering (we will discuss this tool later in the post). The monochrome image on the left was created by <a href="https://commons.wikimedia.org/wiki/User:Gerbrant/Dithering_algorithms">Gerbrant</a> using <a href="https://en.wikipedia.org/wiki/Floyd%E2%80%93Steinberg_dithering">Floyd-Steinberg dithering</a>.</p>
 <h3 id="a-corner-of-the-screen">A Corner of the Screen</h3>
-<p>Let&rsquo;s create a top module to output our framebuffer loaded with the monochrome image of David. The Xilinx version uses a new BRAM module, <strong><a href="https://github.com/projf/projf-explore/blob/master/framebuffers/xc7/bram_sdp.sv">bram_sdp.sv</a></strong>, but is otherwise similar to other top designs we&rsquo;ve used in previous parts.</p>
+<p>Let&rsquo;s create a top module to output our framebuffer loaded with the monochrome image of David. The Xilinx version uses a new BRAM module, <strong><a href="https://github.com/projf/projf-explore/blob/master/common/xc7/bram_sdp.sv">bram_sdp.sv</a></strong>, but is otherwise similar to other top designs we&rsquo;ve used in previous parts.</p>
 <ul>
 <li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/framebuffers/xc7/top_david_v1.sv">xc7/top_david_v1.sv</a></strong></li>
 <li>Lattice iCE40: <em>coming soon</em></li>
@@ -234,10 +234,10 @@
     <span style="color:#66d9ef">end</span>
 
     <span style="color:#75715e">// VGA output
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        vga_r <span style="color:#f92672">=</span> (fb_active <span style="color:#f92672">&amp;&amp;</span> colr) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
-        vga_g <span style="color:#f92672">=</span> (fb_active <span style="color:#f92672">&amp;&amp;</span> colr) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
-        vga_b <span style="color:#f92672">=</span> (fb_active <span style="color:#f92672">&amp;&amp;</span> colr) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        vga_r <span style="color:#f92672">&lt;=</span> (fb_active <span style="color:#f92672">&amp;&amp;</span> colr) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
+        vga_g <span style="color:#f92672">&lt;=</span> (fb_active <span style="color:#f92672">&amp;&amp;</span> colr) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
+        vga_b <span style="color:#f92672">&lt;=</span> (fb_active <span style="color:#f92672">&amp;&amp;</span> colr) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
 </code></pre></div><p>Build this design and program your board. You should see the dithered image of David looking at you from the top left of your screen.</p>
@@ -277,7 +277,7 @@ Wikipedia has a lovely <em><a href="https://en.wikipedia.org/wiki/List_of_color_
 <li>It uses multiplication, which takes up valuable (probably DSP) logic</li>
 </ol>
 <p>Using a <strong>linebuffer</strong> allows us to avoid all three of these problems. The linebuffer uses three simple dual-port BRAMs, one for each colour channel (red, green, blue). We copy a single 160-pixel line of the framebuffer into the linebuffer, then we read this out for four display lines before going back to the framebuffer for the next line. By making efficient use of memory bandwidth, we can better share memory with other systems, such as a CPU.</p>
-<p>Add a linebuffer module - <strong><a href="https://github.com/projf/projf-explore/blob/master/framebuffers/linebuffer.sv">linebuffer.sv</a></strong>:</p>
+<p>Add a linebuffer module - <strong><a href="https://github.com/projf/projf-explore/blob/master/common/linebuffer.sv">linebuffer.sv</a></strong>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> linebuffer #(
     <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,   <span style="color:#75715e">// data width of each channel
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> LEN<span style="color:#f92672">=</span><span style="color:#ae81ff">2048</span>,  <span style="color:#75715e">// length of line
@@ -689,10 +689,10 @@ You&rsquo;d expect the linebuffer to use 1.5 BRAMs (36Kb), but because all three
     <span style="color:#66d9ef">end</span>
 
     <span style="color:#75715e">// VGA output
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        vga_r <span style="color:#f92672">=</span> de <span style="color:#f92672">?</span> lb_out_2 <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
-        vga_g <span style="color:#f92672">=</span> de <span style="color:#f92672">?</span> lb_out_1 <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
-        vga_b <span style="color:#f92672">=</span> de <span style="color:#f92672">?</span> lb_out_0 <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        vga_r <span style="color:#f92672">&lt;=</span> de <span style="color:#f92672">?</span> lb_out_2 <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
+        vga_g <span style="color:#f92672">&lt;=</span> de <span style="color:#f92672">?</span> lb_out_1 <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
+        vga_b <span style="color:#f92672">&lt;=</span> de <span style="color:#f92672">?</span> lb_out_0 <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
 </code></pre></div><p>You may have noticed that the top-left pixel doesn&rsquo;t change; this is because the LFSR produces every value except zero. To fix this, add some logic to specifically update the pixel at address zero when fading.</p>
