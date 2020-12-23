@@ -185,7 +185,7 @@ Updated 2020-12-23. Feedback to @WillFlux is most welcome.'>
 <li><strong>X</strong> - input radicand we want the square root of</li>
 <li><strong>A</strong> - holds the current value we&rsquo;re working on</li>
 <li><strong>T</strong> - result of sign test</li>
-<li><strong>Q</strong> - answer (built up a digit at a time)</li>
+<li><strong>Q</strong> - the square root</li>
 </ul>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">Input: X=01111001 (decimal 121)
 
@@ -278,7 +278,7 @@ Output: Q=1010 (decimal 11), R=0 (remainder taken from final A).
 <p>The Verilog itself is straightforward. The algorithm is in the <code>always_comb</code> block, though we start with the initial shift already in place. The <code>always_ff</code> block sets up the initial values, then runs the algorithm for the number of digits in the root.</p>
 <h3 id="testing">Testing</h3>
 <p>The following test bench exercises the module:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#75715e">// Project F: Square Root Test Bench
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#75715e">// Project F: Test Bench for Square Root
 </span><span style="color:#75715e">// (C)2020 Will Green, Open source hardware released under the MIT License
 </span><span style="color:#75715e"></span>
 <span style="color:#66d9ef">`default_nettype</span> none
@@ -336,9 +336,122 @@ Output: Q=1010 (decimal 11), R=0 (remainder taken from final A).
                 $finish;
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
-</code></pre></div><h2 id="fixed-point-support">Fixed Point Support</h2>
-<p>In a previous recipe, we looked at <a href="/posts/fixed-point-numbers-in-verilog/">Fixed Point Numbers in Verilog</a>&hellip;</p>
-<p><em>This section is being written&hellip;</em></p>
+</code></pre></div><p>The output looks like this:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">150:	sqrt(  0) =  0 (r =  0)
+200:	sqrt(  1) =  1 (r =  0)
+250:	sqrt(121) = 11 (r =  0)
+300:	sqrt( 81) =  9 (r =  0)
+350:	sqrt( 90) =  9 (r =  9)
+400:	sqrt(255) = 15 (r = 30)
+</code></pre></div><h2 id="fixed-point-roots">Fixed-Point Roots</h2>
+<p>In a previous recipe, we looked at <a href="/posts/fixed-point-numbers-in-verilog/">Fixed Point Numbers in Verilog</a>. It turns out that supporting fixed-point square roots is straightforward: we just run more iterations to account for the fractional digits. Unlike with division, there&rsquo;s no possibility of overflow, as the root is always smaller than the radicand by definition.</p>
+<p>This following new version of the sqrt module adds a parameter <code>FBITS</code> for the number of fractional bits in the radicand. For example, if we want to calculate √2 using Q8.8 format (that is eight integer and eight fractional bits), we set <code>WIDTH=16</code> and <code>FBITS=8</code>.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#75715e">// Project F: Square Root (with fixed point support)
+</span><span style="color:#75715e">// (C)2020 Will Green, Open source hardware released under the MIT License
+</span><span style="color:#75715e"></span>
+<span style="color:#66d9ef">`default_nettype</span> none
+<span style="color:#66d9ef">`timescale</span> <span style="color:#ae81ff">1</span>ns <span style="color:#f92672">/</span> <span style="color:#ae81ff">1</span>ps
+
+<span style="color:#66d9ef">module</span> sqrt #(
+    <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,  <span style="color:#75715e">// width of radicund
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> FBITS<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>   <span style="color:#75715e">// fractional bits (for fixed point)
+</span><span style="color:#75715e"></span>    ) (
+    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,
+    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> start,          <span style="color:#75715e">// start signal
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x,  <span style="color:#75715e">// radicand
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] q,  <span style="color:#75715e">// root
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] r,  <span style="color:#75715e">// remainder
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> done            <span style="color:#75715e">// done signal
+</span><span style="color:#75715e"></span>    );
+
+    <span style="color:#66d9ef">localparam</span> ROOTW <span style="color:#f92672">=</span> (WIDTH<span style="color:#f92672">+</span>FBITS) <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// root width is half radicand+fbits width 
+</span><span style="color:#75715e"></span>
+    <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x1, x1_next;  <span style="color:#75715e">// copy of radicand
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] q1, q1_next;  <span style="color:#75715e">// intermediate root
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] ac, ac_next;  <span style="color:#75715e">// accumulator
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] test_res;     <span style="color:#75715e">// sign test result
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(ROOTW<span style="color:#f92672">+</span><span style="color:#ae81ff">1</span>)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] i;  <span style="color:#75715e">// radicand bit counter
+</span><span style="color:#75715e"></span>
+    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+        test_res <span style="color:#f92672">=</span> ac <span style="color:#f92672">-</span> {q1[WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>], <span style="color:#ae81ff">2</span><span style="color:#ae81ff">&#39;b01</span>};
+        <span style="color:#66d9ef">if</span> (test_res[WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>] <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// test is zero or positive?
+</span><span style="color:#75715e"></span>            {ac_next, x1_next} <span style="color:#f92672">=</span> {test_res[WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>], x1, <span style="color:#ae81ff">2</span><span style="color:#ae81ff">&#39;b0</span>};
+            q1_next <span style="color:#f92672">=</span> {q1[WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">2</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>], <span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b1</span>};
+        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
+            {ac_next, x1_next} <span style="color:#f92672">=</span> {ac[WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>], x1, <span style="color:#ae81ff">2</span><span style="color:#ae81ff">&#39;b0</span>};
+            q1_next <span style="color:#f92672">=</span> q1 <span style="color:#f92672">&lt;&lt;</span> <span style="color:#ae81ff">1</span>;
+        <span style="color:#66d9ef">end</span>
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">if</span> (start) <span style="color:#66d9ef">begin</span>
+            done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            q <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            r <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            i <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            {ac, x1} <span style="color:#f92672">&lt;=</span> {{WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">2</span>{<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>}}, x, <span style="color:#ae81ff">2</span><span style="color:#ae81ff">&#39;b0</span>};
+            q1 <span style="color:#f92672">&lt;=</span> {WIDTH{<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>}};
+        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>done) <span style="color:#66d9ef">begin</span>
+            <span style="color:#66d9ef">if</span> (i <span style="color:#f92672">==</span> ROOTW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// we&#39;re done
+</span><span style="color:#75715e"></span>                done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                q <span style="color:#f92672">&lt;=</span> q1_next;
+                r <span style="color:#f92672">&lt;=</span> ac_next <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">2</span>;  <span style="color:#75715e">// undo final shift
+</span><span style="color:#75715e"></span>            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// next iteration
+</span><span style="color:#75715e"></span>                i <span style="color:#f92672">&lt;=</span> i <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+                x1 <span style="color:#f92672">&lt;=</span> x1_next;
+                ac <span style="color:#f92672">&lt;=</span> ac_next;
+                q1 <span style="color:#f92672">&lt;=</span> q1_next;
+            <span style="color:#66d9ef">end</span>
+        <span style="color:#66d9ef">end</span>
+    <span style="color:#66d9ef">end</span>
+<span style="color:#66d9ef">endmodule</span>
+</code></pre></div><p>And we can create a simple test bench for it:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#75715e">// Project F: Test Bench for Fixed Point Square Root
+</span><span style="color:#75715e">// (C)2020 Will Green, Open source hardware released under the MIT License
+</span><span style="color:#75715e"></span>
+<span style="color:#66d9ef">`default_nettype</span> none
+<span style="color:#66d9ef">`timescale</span> <span style="color:#ae81ff">1</span>ns <span style="color:#f92672">/</span> <span style="color:#ae81ff">1</span>ps
+
+<span style="color:#66d9ef">module</span> sqrt_fixed_point_tb();
+    <span style="color:#66d9ef">parameter</span> CLK_PERIOD <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>;
+    <span style="color:#66d9ef">parameter</span> WIDTH <span style="color:#f92672">=</span> <span style="color:#ae81ff">16</span>;
+    <span style="color:#66d9ef">parameter</span> FBITS <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span>;
+    <span style="color:#66d9ef">parameter</span> SF <span style="color:#f92672">=</span> <span style="color:#ae81ff">2.0</span><span style="color:#f92672">**-</span><span style="color:#ae81ff">8.0</span>;  <span style="color:#75715e">// Q8.8 scaling factor is 2^-8
+</span><span style="color:#75715e"></span>
+    <span style="color:#66d9ef">logic</span> clk;
+    <span style="color:#66d9ef">logic</span> start;            <span style="color:#75715e">// start signal
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x;    <span style="color:#75715e">// radicand
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] q;    <span style="color:#75715e">// quotient
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] r;    <span style="color:#75715e">// remainder
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> done;             <span style="color:#75715e">// done signal
+</span><span style="color:#75715e"></span>
+    sqrt #(.WIDTH(WIDTH), .FBITS(FBITS)) sqrt_inst (.<span style="color:#f92672">*</span>);
+
+    <span style="color:#66d9ef">always</span> #(CLK_PERIOD <span style="color:#f92672">/</span> <span style="color:#ae81ff">2</span>) clk <span style="color:#f92672">=</span> <span style="color:#f92672">~</span>clk;
+
+    <span style="color:#66d9ef">initial</span> <span style="color:#66d9ef">begin</span>
+        clk <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
+
+        #<span style="color:#ae81ff">100</span>    x <span style="color:#f92672">=</span> <span style="color:#ae81ff">16</span><span style="color:#ae81ff">&#39;b1110</span>_1000_1001_0000;  <span style="color:#75715e">// 232.56250000
+</span><span style="color:#75715e"></span>                start <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
+        #<span style="color:#ae81ff">10</span>     start <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+        #<span style="color:#ae81ff">120</span>    $display(<span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">%d:</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">sqrt(%f) = %b (%f) (r = %b)&#34;</span>,
+                    $time, $itor(x)<span style="color:#f92672">*</span>SF, q, $itor(q)<span style="color:#f92672">*</span>SF, r);
+
+                x <span style="color:#f92672">=</span> <span style="color:#ae81ff">16</span><span style="color:#ae81ff">&#39;b0000</span>_0010_0000_0000;  <span style="color:#75715e">// 2.00000000
+</span><span style="color:#75715e"></span>                start <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
+        #<span style="color:#ae81ff">10</span>     start <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+        #<span style="color:#ae81ff">120</span>    $display(<span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">%d:</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">sqrt(%f) = %b (%f) (r = %b)&#34;</span>,
+                    $time, $itor(x)<span style="color:#f92672">*</span>SF, q, $itor(q)<span style="color:#f92672">*</span>SF, r);
+
+        $finish;
+    <span style="color:#66d9ef">end</span>
+<span style="color:#66d9ef">endmodule</span>
+</code></pre></div><p>The output looks like this:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">230:	sqrt(232.562500) = 0000111101000000 (15.250000) (r = 0000000000000000)
+360:	sqrt(2.000000) = 0000000101101010 (1.414062) (r = 0000000000011100)
+</code></pre></div><p>Our result for √2 has limited accuracy because we used eight binary bits for the fractional part. The smallest fraction our Q8.8 format can represent is 1/256 or ~0.004 in decimal.</p>
+<p>That wraps up this recipe, but watch out for forthcoming <a href="/tags/graphics/">graphics posts</a> using square root.</p>
 
       
       <div class="related">
