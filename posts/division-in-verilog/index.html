@@ -249,6 +249,10 @@ Outputs: Q=0100  R=010
 </code></pre></div><p><em>ProTip: I&rsquo;ve used SystemVerilog, but you can easily adapt <code>logic</code>, <code>$clog2</code>, and always* to Verilog.</em></p>
 <p>To use the module, set <code>WIDTH</code> to the correct number of bits and the inputs <code>x</code> and <code>y</code> to dividend and divisor respectively. To begin the calculation set <code>start</code> high for one clock. The <code>valid</code> signal indicates when the output data is valid; you can then read the results from <code>q</code> and <code>r</code>. If you divide by zero, then <code>valid</code>, <code>q</code>, and <code>r</code> will be zero, and the <code>dbz</code> flag signal will be high. The <code>busy</code> signal is high during calculation.</p>
 <p>The Verilog itself is straightforward. The algorithm is in the <code>always_comb</code> block, though we start with the initial shift already in place. The <code>always_ff</code> block tests for division by zero, sets up the initial values, then runs the algorithm for the same number of iterations as the width of the numbers.</p>
+<blockquote>
+<p><strong>Quick Aside: Accumulator Width</strong><br>
+The accumulator needs to be 1 bit wider than the dividend because the remainder comes from unshifting the final <code>ac_next</code>. For example, when we divide eight by nine, the remainder should be eight <code>4'b1000</code>, but without the wider accumulator the left-most digit would be lost, and the remainder would appear to be <code>4'b0000</code>.</p>
+</blockquote>
 <h3 id="testing">Testing</h3>
 <p>The following test bench exercises the module, including dividing by zero:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#75715e">// Project F: Test Bench for Integer Division
@@ -260,8 +264,8 @@ Outputs: Q=0100  R=010
 
 <span style="color:#66d9ef">module</span> div_int_tb();
 
-    <span style="color:#66d9ef">parameter</span> CLK_PERIOD <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>;
-    <span style="color:#66d9ef">parameter</span> WIDTH <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;
+    <span style="color:#66d9ef">parameter</span> CLK_PERIOD <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>;  <span style="color:#75715e">// 10 ns == 100 MHz
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> WIDTH <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;
 
     <span style="color:#66d9ef">logic</span> clk;
     <span style="color:#66d9ef">logic</span> start;            <span style="color:#75715e">// start signal
@@ -278,68 +282,68 @@ Outputs: Q=0100  R=010
     <span style="color:#66d9ef">always</span> #(CLK_PERIOD <span style="color:#f92672">/</span> <span style="color:#ae81ff">2</span>) clk <span style="color:#f92672">=</span> <span style="color:#f92672">~</span>clk;
 
     <span style="color:#66d9ef">initial</span> <span style="color:#66d9ef">begin</span>
-                clk <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
+        $monitor(<span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">%d:</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">%d /%d =%d (r =%d) (V=%b) (DBZ=%b)&#34;</span>,
+            $time, x, y, q, r, valid, dbz);
+    <span style="color:#66d9ef">end</span>
 
-        #<span style="color:#ae81ff">100</span>    x <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;b0111</span>;  <span style="color:#75715e">// 7
+    <span style="color:#66d9ef">initial</span> <span style="color:#66d9ef">begin</span>
+        clk <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
+
+        #<span style="color:#ae81ff">100</span>    x <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;b0000</span>;  <span style="color:#75715e">// 0
 </span><span style="color:#75715e"></span>                y <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;b0010</span>;  <span style="color:#75715e">// 2
 </span><span style="color:#75715e"></span>                start <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
         #<span style="color:#ae81ff">10</span>     start <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-        #<span style="color:#ae81ff">40</span>     $display(<span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">%d:</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">%d /%d =%d (r =%d) (DBZ=%b)&#34;</span>, $time, x, y, q, r, dbz);
 
-                x <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;b0000</span>;  <span style="color:#75715e">// 0
-</span><span style="color:#75715e"></span>                y <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;b0010</span>;  <span style="color:#75715e">// 2
-</span><span style="color:#75715e"></span>                start <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
-        #<span style="color:#ae81ff">10</span>     start <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-        #<span style="color:#ae81ff">40</span>     $display(<span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">%d:</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">%d /%d =%d (r =%d) (DBZ=%b)&#34;</span>, $time, x, y, q, r, dbz);
-
-                x <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;b0010</span>;  <span style="color:#75715e">// 2
+        #<span style="color:#ae81ff">50</span>     x <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;b0010</span>;  <span style="color:#75715e">// 2
 </span><span style="color:#75715e"></span>                y <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;b0000</span>;  <span style="color:#75715e">// 0
 </span><span style="color:#75715e"></span>                start <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
         #<span style="color:#ae81ff">10</span>     start <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-        #<span style="color:#ae81ff">40</span>     $display(<span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">%d:</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">%d /%d =%d (r =%d) (DBZ=%b)&#34;</span>, $time, x, y, q, r, dbz);
 
-                x <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;b0011</span>;  <span style="color:#75715e">// 3
+        #<span style="color:#ae81ff">50</span>     x <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;b0111</span>;  <span style="color:#75715e">// 7
 </span><span style="color:#75715e"></span>                y <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;b0010</span>;  <span style="color:#75715e">// 2
 </span><span style="color:#75715e"></span>                start <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
         #<span style="color:#ae81ff">10</span>     start <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-        #<span style="color:#ae81ff">40</span>     $display(<span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">%d:</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">%d /%d =%d (r =%d) (DBZ=%b)&#34;</span>, $time, x, y, q, r, dbz);
 
-                x <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;b1111</span>;  <span style="color:#75715e">// 15
+        #<span style="color:#ae81ff">50</span>     x <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;b1111</span>;  <span style="color:#75715e">// 15
 </span><span style="color:#75715e"></span>                y <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;b0101</span>;  <span style="color:#75715e">//  5
 </span><span style="color:#75715e"></span>                start <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
         #<span style="color:#ae81ff">10</span>     start <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-        #<span style="color:#ae81ff">40</span>     $display(<span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">%d:</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">%d /%d =%d (r =%d) (DBZ=%b)&#34;</span>, $time, x, y, q, r, dbz);
 
-                x <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;b1101</span>;  <span style="color:#75715e">// 13
-</span><span style="color:#75715e"></span>                y <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;b0111</span>;  <span style="color:#75715e">//  7
+        #<span style="color:#ae81ff">50</span>     x <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;b0001</span>;  <span style="color:#75715e">// 1
+</span><span style="color:#75715e"></span>                y <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;b0001</span>;  <span style="color:#75715e">// 1
 </span><span style="color:#75715e"></span>                start <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
         #<span style="color:#ae81ff">10</span>     start <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-        #<span style="color:#ae81ff">40</span>     $display(<span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">%d:</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">%d /%d =%d (r =%d) (DBZ=%b)&#34;</span>, $time, x, y, q, r, dbz);
 
-                x <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;b1000</span>;  <span style="color:#75715e">// 8
+        #<span style="color:#ae81ff">50</span>     x <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;b1000</span>;  <span style="color:#75715e">// 8
 </span><span style="color:#75715e"></span>                y <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;b1001</span>;  <span style="color:#75715e">// 9
 </span><span style="color:#75715e"></span>                start <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
         #<span style="color:#ae81ff">10</span>     start <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-        #<span style="color:#ae81ff">40</span>     $display(<span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">%d:</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">%d /%d =%d (r =%d) (DBZ=%b)&#34;</span>, $time, x, y, q, r, dbz);
-                $finish;
+
+        <span style="color:#75715e">// ...
+</span><span style="color:#75715e"></span>
+        #<span style="color:#ae81ff">50</span>     $finish;
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
-</code></pre></div><p><em>NB. I have tested with a wide range of values, but only show a few here to keep the example managable.</em></p>
-<p>The output looks like this:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext"> 7 / 2 = 3 (r = 1) (DBZ=0)
- 0 / 2 = 0 (r = 0) (DBZ=0)
- 2 / 0 = 0 (r = 0) (DBZ=1)
- 3 / 2 = 1 (r = 1) (DBZ=0)
-15 / 5 = 3 (r = 0) (DBZ=0)
-13 / 7 = 1 (r = 6) (DBZ=0)
- 8 / 9 = 0 (r = 8) (DBZ=0)
-</code></pre></div><h2 id="fixed-point-support">Fixed-Point Support</h2>
+</code></pre></div><p>The output looks like this:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">  0:	 x / x = x (r = x) (V=x) (DBZ=x)
+100:	 0 / 2 = x (r = x) (V=0) (DBZ=0)
+140:	 0 / 2 = 0 (r = 0) (V=1) (DBZ=0)
+160:	 2 / 0 = 0 (r = 0) (V=0) (DBZ=1)
+220:	 7 / 2 = 0 (r = 0) (V=0) (DBZ=0)
+260:	 7 / 2 = 3 (r = 1) (V=1) (DBZ=0)
+280:	15 / 5 = 3 (r = 1) (V=0) (DBZ=0)
+320:	15 / 5 = 3 (r = 0) (V=1) (DBZ=0)
+340:	 1 / 1 = 3 (r = 0) (V=0) (DBZ=0)
+380:	 1 / 1 = 1 (r = 0) (V=1) (DBZ=0)
+400:	 8 / 9 = 1 (r = 0) (V=0) (DBZ=0)
+440:	 8 / 9 = 0 (r = 8) (V=1) (DBZ=0)
+</code></pre></div><p><em>NB. I have tested with a wider range of values, but only show a few here for brevity.</em></p>
+<h2 id="fixed-point-support">Fixed-Point Support</h2>
 <p>In a previous recipe, we looked at <a href="/posts/fixed-point-numbers-in-verilog/">Fixed Point Numbers in Verilog</a>, but didn&rsquo;t cover division, so let&rsquo;s do that now. We have two changes to make:</p>
 <ol>
 <li>Increasing the number of iterations</li>
 <li>Handling overflow</li>
 </ol>
-<p><em>NB. We don&rsquo;t currently support signed values with this division algorithm.</em></p>
 <p>To account for the fractional part of the number, we need to increase the number of iterations by the number of fractional bits.</p>
 <p><strong>More explanation to follow&hellip;</strong></p>
 <p>With these changes, the module looks like this:</p>
@@ -399,7 +403,7 @@ Outputs: Q=0100  R=010
                 y1 <span style="color:#f92672">&lt;=</span> y;
                 {ac, q1} <span style="color:#f92672">&lt;=</span> {{WIDTH{<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>}}, x, <span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>};
             <span style="color:#66d9ef">end</span>
-        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (busy) <span style="color:#66d9ef">begin</span>      
+        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (busy) <span style="color:#66d9ef">begin</span>
             <span style="color:#66d9ef">if</span> (i <span style="color:#f92672">==</span> ITER<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// done
 </span><span style="color:#75715e"></span>                busy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
                 valid <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
@@ -428,8 +432,8 @@ Outputs: Q=0100  R=010
 
 <span style="color:#66d9ef">module</span> div_tb();
 
-    <span style="color:#66d9ef">parameter</span> CLK_PERIOD <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>;
-    <span style="color:#66d9ef">parameter</span> WIDTH <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span>;
+    <span style="color:#66d9ef">parameter</span> CLK_PERIOD <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>;  <span style="color:#75715e">// 10 ns == 100 MHz
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> WIDTH <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span>;
     <span style="color:#66d9ef">parameter</span> FBITS <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;
     <span style="color:#66d9ef">parameter</span> SF <span style="color:#f92672">=</span> <span style="color:#ae81ff">2.0</span><span style="color:#f92672">**-</span><span style="color:#ae81ff">4.0</span>;  <span style="color:#75715e">// Q4.4 scaling factor is 2^-4
 </span><span style="color:#75715e"></span>
@@ -449,75 +453,73 @@ Outputs: Q=0100  R=010
     <span style="color:#66d9ef">always</span> #(CLK_PERIOD <span style="color:#f92672">/</span> <span style="color:#ae81ff">2</span>) clk <span style="color:#f92672">=</span> <span style="color:#f92672">~</span>clk;
 
     <span style="color:#66d9ef">initial</span> <span style="color:#66d9ef">begin</span>
+        $monitor(<span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">%d:</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">%f / %f = %b (%f) (r = %b) (V=%b) (DBZ=%b) (OVF=%b)&#34;</span>,
+            $time, x<span style="color:#f92672">*</span>SF, y<span style="color:#f92672">*</span>SF, q, q<span style="color:#f92672">*</span>SF, r, valid, dbz, ovf);
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#66d9ef">initial</span> <span style="color:#66d9ef">begin</span>
                 clk <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
 
         #<span style="color:#ae81ff">100</span>    x <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b0011</span>_0000;  <span style="color:#75715e">// 3.0
 </span><span style="color:#75715e"></span>                y <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b0010</span>_0000;  <span style="color:#75715e">// 2.0
 </span><span style="color:#75715e"></span>                start <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
         #<span style="color:#ae81ff">10</span>     start <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-        #<span style="color:#ae81ff">120</span>    $display(<span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">%d:</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">%f / %f = %b (%f) (r = %b) (DBZ=%b) (OVF=%b)&#34;</span>, 
-                    $time, $itor(x)<span style="color:#f92672">*</span>SF, $itor(y)<span style="color:#f92672">*</span>SF, q, $itor(q)<span style="color:#f92672">*</span>SF, r, dbz, ovf);
 
-                x <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b0010</span>_0000;  <span style="color:#75715e">// 2.0
+        #<span style="color:#ae81ff">120</span>    x <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b0010</span>_0000;  <span style="color:#75715e">// 2.0
 </span><span style="color:#75715e"></span>                y <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b0001</span>_0110;  <span style="color:#75715e">// 1.375 (the largest number that&#39;s ≤√2 in Q4.4)
 </span><span style="color:#75715e"></span>                start <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
         #<span style="color:#ae81ff">10</span>     start <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-        #<span style="color:#ae81ff">120</span>    $display(<span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">%d:</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">%f / %f = %b (%f) (r = %b) (DBZ=%b) (OVF=%b)&#34;</span>, 
-                    $time, $itor(x)<span style="color:#f92672">*</span>SF, $itor(y)<span style="color:#f92672">*</span>SF, q, $itor(q)<span style="color:#f92672">*</span>SF, r, dbz, ovf);
 
-                x <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b0010</span>_0000;  <span style="color:#75715e">// 2.0
+        #<span style="color:#ae81ff">120</span>    x <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b0010</span>_0000;  <span style="color:#75715e">// 2.0
 </span><span style="color:#75715e"></span>                y <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b0000</span>_0000;  <span style="color:#75715e">// 0.0
 </span><span style="color:#75715e"></span>                start <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
         #<span style="color:#ae81ff">10</span>     start <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-        #<span style="color:#ae81ff">120</span>    $display(<span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">%d:</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">%f / %f = %b (%f) (r = %b) (DBZ=%b) (OVF=%b)&#34;</span>, 
-                    $time, $itor(x)<span style="color:#f92672">*</span>SF, $itor(y)<span style="color:#f92672">*</span>SF, q, $itor(q)<span style="color:#f92672">*</span>SF, r, dbz, ovf);
 
-                x <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b0000</span>_0000;  <span style="color:#75715e">// 0.0
+        #<span style="color:#ae81ff">120</span>    x <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b0000</span>_0000;  <span style="color:#75715e">// 0.0
 </span><span style="color:#75715e"></span>                y <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b0010</span>_0000;  <span style="color:#75715e">// 2.0
 </span><span style="color:#75715e"></span>                start <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
         #<span style="color:#ae81ff">10</span>     start <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-        #<span style="color:#ae81ff">120</span>    $display(<span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">%d:</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">%f / %f = %b (%f) (r = %b) (DBZ=%b) (OVF=%b)&#34;</span>, 
-                    $time, $itor(x)<span style="color:#f92672">*</span>SF, $itor(y)<span style="color:#f92672">*</span>SF, q, $itor(q)<span style="color:#f92672">*</span>SF, r, dbz, ovf);
 
-                x <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b0000</span>_0010;  <span style="color:#75715e">// 0.125
+        #<span style="color:#ae81ff">120</span>    x <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b0000</span>_0010;  <span style="color:#75715e">// 0.125
 </span><span style="color:#75715e"></span>                y <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b0010</span>_0000;  <span style="color:#75715e">// 2.0
 </span><span style="color:#75715e"></span>                start <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
         #<span style="color:#ae81ff">10</span>     start <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-        #<span style="color:#ae81ff">150</span>    $display(<span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">%d:</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">%f / %f = %b (%f) (r = %b) (DBZ=%b) (OVF=%b)&#34;</span>, 
-                    $time, $itor(x)<span style="color:#f92672">*</span>SF, $itor(y)<span style="color:#f92672">*</span>SF, q, $itor(q)<span style="color:#f92672">*</span>SF, r, dbz, ovf);
 
-                x <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b1000</span>_0000;  <span style="color:#75715e">// 8.0
+        #<span style="color:#ae81ff">120</span>    x <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b1000</span>_0000;  <span style="color:#75715e">// 8.0
 </span><span style="color:#75715e"></span>                y <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b0000</span>_0100;  <span style="color:#75715e">// 0.25
 </span><span style="color:#75715e"></span>                start <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
         #<span style="color:#ae81ff">10</span>     start <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-        #<span style="color:#ae81ff">120</span>    $display(<span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">%d:</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">%f / %f = %b (%f) (r = %b) (DBZ=%b) (OVF=%b)&#34;</span>, 
-                    $time, $itor(x)<span style="color:#f92672">*</span>SF, $itor(y)<span style="color:#f92672">*</span>SF, q, $itor(q)<span style="color:#f92672">*</span>SF, r, dbz, ovf);
 
-                x <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b1111</span>_1110;  <span style="color:#75715e">// 15.875
+        #<span style="color:#ae81ff">120</span>    x <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b1111</span>_1110;  <span style="color:#75715e">// 15.875
 </span><span style="color:#75715e"></span>                y <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b0010</span>_0000;  <span style="color:#75715e">// 2.0
 </span><span style="color:#75715e"></span>                start <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
         #<span style="color:#ae81ff">10</span>     start <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-        #<span style="color:#ae81ff">120</span>    $display(<span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">%d:</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">%f / %f = %b (%f) (r = %b) (DBZ=%b) (OVF=%b)&#34;</span>, 
-                    $time, $itor(x)<span style="color:#f92672">*</span>SF, $itor(y)<span style="color:#f92672">*</span>SF, q, $itor(q)<span style="color:#f92672">*</span>SF, r, dbz, ovf);
 
-                x <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b1000</span>_0000;  <span style="color:#75715e">// 8.0
+        #<span style="color:#ae81ff">120</span>    x <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b1000</span>_0000;  <span style="color:#75715e">// 8.0
 </span><span style="color:#75715e"></span>                y <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b1001</span>_0000;  <span style="color:#75715e">// 9.0
 </span><span style="color:#75715e"></span>                start <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
         #<span style="color:#ae81ff">10</span>     start <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-        #<span style="color:#ae81ff">120</span>    $display(<span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">%d:</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">%f / %f = %b (%f) (r = %b) (DBZ=%b) (OVF=%b)&#34;</span>, 
-                    $time, $itor(x)<span style="color:#f92672">*</span>SF, $itor(y)<span style="color:#f92672">*</span>SF, q, $itor(q)<span style="color:#f92672">*</span>SF, r, dbz, ovf);
-                $finish;
-    <span style="color:#66d9ef">end</span>
+
+        <span style="color:#75715e">// ...
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
 </code></pre></div><p>The output looks like this:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext"> 3.000000 /  2.000000 = 00011000  (1.500000) (r = 00000000) (DBZ=0) (OVF=0)
- 2.000000 /  1.375000 = 00010111  (1.437500) (r = 00000110) (DBZ=0) (OVF=0)
- 2.000000 /  0.000000 = 00000000  (0.000000) (r = 00000000) (DBZ=1) (OVF=0)
- 0.000000 /  2.000000 = 00000000  (0.000000) (r = 00000000) (DBZ=0) (OVF=0)
- 0.125000 /  2.000000 = 00000001  (0.062500) (r = 00000000) (DBZ=0) (OVF=0)
- 8.000000 /  0.250000 = 00000000  (0.000000) (r = 00000000) (DBZ=0) (OVF=1)
-15.875000 /  2.000000 = 01111111  (7.937500) (r = 00000000) (DBZ=0) (OVF=0)
- 8.000000 /  9.000000 = 00001110  (0.875000) (r = 00100000) (DBZ=0) (OVF=0)
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">   0:	 0.000000 /  0.000000 = xxxxxxxx  (0.000000) (r = xxxxxxxx) (V=x) (DBZ=x) (OVF=x)
+ 100:	 3.000000 /  2.000000 = xxxxxxxx  (0.000000) (r = xxxxxxxx) (V=0) (DBZ=0) (OVF=0)
+ 220:	 3.000000 /  2.000000 = 00011000  (1.500000) (r = 00000000) (V=1) (DBZ=0) (OVF=0)
+ 230:	 2.000000 /  1.375000 = 00011000  (1.500000) (r = 00000000) (V=0) (DBZ=0) (OVF=0)
+ 350:	 2.000000 /  1.375000 = 00010111  (1.437500) (r = 00000110) (V=1) (DBZ=0) (OVF=0)
+ 360:	 2.000000 /  0.000000 = 00010111  (1.437500) (r = 00000110) (V=0) (DBZ=1) (OVF=0)
+ 490:	 0.000000 /  2.000000 = 00010111  (1.437500) (r = 00000110) (V=0) (DBZ=0) (OVF=0)
+ 610:	 0.000000 /  2.000000 = 00000000  (0.000000) (r = 00000000) (V=1) (DBZ=0) (OVF=0)
+ 620:	 0.125000 /  2.000000 = 00000000  (0.000000) (r = 00000000) (V=0) (DBZ=0) (OVF=0)
+ 740:	 0.125000 /  2.000000 = 00000001  (0.062500) (r = 00000000) (V=1) (DBZ=0) (OVF=0)
+ 750:	 8.000000 /  0.250000 = 00000001  (0.062500) (r = 00000000) (V=0) (DBZ=0) (OVF=0)
+ 830:	 8.000000 /  0.250000 = 00000000  (0.000000) (r = 00000000) (V=0) (DBZ=0) (OVF=1)
+ 880:	15.875000 /  2.000000 = 00000000  (0.000000) (r = 00000000) (V=0) (DBZ=0) (OVF=0)
+1000:	15.875000 /  2.000000 = 01111111  (7.937500) (r = 00000000) (V=1) (DBZ=0) (OVF=0)
+1010:	 8.000000 /  9.000000 = 01111111  (7.937500) (r = 00000000) (V=0) (DBZ=0) (OVF=0)
+1130:	 8.000000 /  9.000000 = 00001110  (0.875000) (r = 00100000) (V=1) (DBZ=0) (OVF=0)
 </code></pre></div><p>Try experimenting with a wider range of test values and different fractional widths.</p>
 <h2 id="signed-numbers">Signed Numbers</h2>
 <p>I plan to add support for signed numbers during 2021. Follow <a href="https://twitter.com/WillFlux">@WillFlux</a> for updates.</p>
