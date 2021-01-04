@@ -120,7 +120,7 @@ This post is part of a series of handy recipes to solve common FPGA development 
     <div class="content">
       <p>Sometimes you need more precision than integers can provide, but floating-point computation is not trivial (try reading <a href="https://en.wikipedia.org/wiki/IEEE_754">IEEE 754</a>). You could use a library or IP block, but simple fixed point maths can often get the job done with little effort. Furthermore, most FPGAs have dedicated DSP blocks that make multiplication and addition of integers fast; we can take advantage of that with a fixed-point approach.</p>
 <p>This post is part of a series of <a href="/tags/cookbook">handy recipes</a> to solve common FPGA development problems. There is also a post on <a href="/posts/division-in-verilog/">division</a> and <a href="/posts/square-root-in-verilog/">square root</a>.</p>
-<p><em>Revised 2020-07-01. Feedback to <a href="https://twitter.com/WillFlux">@WillFlux</a> is most welcome.</em></p>
+<p><em>Updated 2021-01-04. Feedback to <a href="https://twitter.com/WillFlux">@WillFlux</a> is most welcome.</em></p>
 <h2 id="what-is-a-fixed-point-number">What is a Fixed Point Number?</h2>
 <p>In a regular binary integer, the bits represent powers of two, with the least significant bit being <code>1</code>.</p>
 <p>For example, decimal <code>13</code> is <code>1101</code> in binary: <code>8 + 4 + 1 = 13</code>.</p>
@@ -181,7 +181,7 @@ x 0000.1000             0.5000
     <span style="color:#66d9ef">reg</span> <span style="color:#66d9ef">signed</span> [<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] a, b, c;
     <span style="color:#66d9ef">reg</span> <span style="color:#66d9ef">signed</span> [<span style="color:#ae81ff">15</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] ab;  <span style="color:#75715e">// large enough for product
 </span><span style="color:#75715e"></span>
-    <span style="color:#66d9ef">localparam</span> sf <span style="color:#f92672">=</span> <span style="color:#ae81ff">2.0</span><span style="color:#f92672">**-</span><span style="color:#ae81ff">4.0</span>;  <span style="color:#75715e">// Q4.4 scaling factor is 2^-4
+    <span style="color:#66d9ef">localparam</span> SF <span style="color:#f92672">=</span> <span style="color:#ae81ff">2.0</span><span style="color:#f92672">**-</span><span style="color:#ae81ff">4.0</span>;  <span style="color:#75715e">// Q4.4 scaling factor is 2^-4
 </span><span style="color:#75715e"></span>
     <span style="color:#66d9ef">initial</span> <span style="color:#66d9ef">begin</span>
         $display(<span style="color:#e6db74">&#34;Fixed Point Examples from projectf.io.&#34;</span>);
@@ -189,24 +189,24 @@ x 0000.1000             0.5000
         a <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b0011</span>_1010;  <span style="color:#75715e">// 3.6250
 </span><span style="color:#75715e"></span>        b <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b0100</span>_0001;  <span style="color:#75715e">// 4.0625
 </span><span style="color:#75715e"></span>        c <span style="color:#f92672">=</span> a <span style="color:#f92672">+</span> b;         <span style="color:#75715e">// 0111.1011 = 7.6875
-</span><span style="color:#75715e"></span>        $display(<span style="color:#e6db74">&#34;%f + %f = %f&#34;</span>, $itor(a)<span style="color:#f92672">*</span>sf, $itor(b)<span style="color:#f92672">*</span>sf, $itor(c)<span style="color:#f92672">*</span>sf);
+</span><span style="color:#75715e"></span>        $display(<span style="color:#e6db74">&#34;%f + %f = %f&#34;</span>, $itor(a<span style="color:#f92672">*</span>SF), $itor(b<span style="color:#f92672">*</span>SF), $itor(c<span style="color:#f92672">*</span>SF));
 
         a <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b0011</span>_1010;  <span style="color:#75715e">// 3.6250
 </span><span style="color:#75715e"></span>        b <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b1110</span>_1000;  <span style="color:#75715e">// -1.5000
 </span><span style="color:#75715e"></span>        c <span style="color:#f92672">=</span> a <span style="color:#f92672">+</span> b;         <span style="color:#75715e">// 0010.0010 = 2.1250
-</span><span style="color:#75715e"></span>        $display(<span style="color:#e6db74">&#34;%f + %f = %f&#34;</span>, $itor(a)<span style="color:#f92672">*</span>sf, $itor(b)<span style="color:#f92672">*</span>sf, $itor(c)<span style="color:#f92672">*</span>sf);
+</span><span style="color:#75715e"></span>        $display(<span style="color:#e6db74">&#34;%f + %f = %f&#34;</span>, $itor(a<span style="color:#f92672">*</span>SF), $itor(b<span style="color:#f92672">*</span>SF), $itor(c<span style="color:#f92672">*</span>SF));
 
         a <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b0011</span>_0100;  <span style="color:#75715e">// 3.2500
 </span><span style="color:#75715e"></span>        b <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b0010</span>_0001;  <span style="color:#75715e">// 2.0625
 </span><span style="color:#75715e"></span>        ab <span style="color:#f92672">=</span> a <span style="color:#f92672">*</span> b;        <span style="color:#75715e">// 00000110.10110100 = 6.703125
 </span><span style="color:#75715e"></span>        c <span style="color:#f92672">=</span> ab[<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">4</span>];      <span style="color:#75715e">// take middle 8 bits: 0110.1011 = 6.6875
-</span><span style="color:#75715e"></span>        $display(<span style="color:#e6db74">&#34;%f x %f = %f&#34;</span>, $itor(a)<span style="color:#f92672">*</span>sf, $itor(b)<span style="color:#f92672">*</span>sf, $itor(c)<span style="color:#f92672">*</span>sf);
+</span><span style="color:#75715e"></span>        $display(<span style="color:#e6db74">&#34;%f * %f = %f&#34;</span>, $itor(a<span style="color:#f92672">*</span>SF), $itor(b<span style="color:#f92672">*</span>SF), $itor(c<span style="color:#f92672">*</span>SF));
 
         a <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b0111</span>_1000;  <span style="color:#75715e">// 7.5000
 </span><span style="color:#75715e"></span>        b <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b0000</span>_1000;  <span style="color:#75715e">// 0.5000
 </span><span style="color:#75715e"></span>        ab <span style="color:#f92672">=</span> a <span style="color:#f92672">*</span> b;        <span style="color:#75715e">// 00000011.11000000 = 3.7500
 </span><span style="color:#75715e"></span>        c <span style="color:#f92672">=</span> ab[<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">4</span>];      <span style="color:#75715e">// take middle 8 bits: 0011.1100 = 3.7500
-</span><span style="color:#75715e"></span>        $display(<span style="color:#e6db74">&#34;%f x %f = %f&#34;</span>, $itor(a)<span style="color:#f92672">*</span>sf, $itor(b)<span style="color:#f92672">*</span>sf, $itor(c)<span style="color:#f92672">*</span>sf);
+</span><span style="color:#75715e"></span>        $display(<span style="color:#e6db74">&#34;%f * %f = %f&#34;</span>, $itor(a<span style="color:#f92672">*</span>SF), $itor(b<span style="color:#f92672">*</span>SF), $itor(c<span style="color:#f92672">*</span>SF));
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
 </code></pre></div><p><em>NB. My syntax highlighter doesn&rsquo;t like underscore in numbers, but they do work in actual tools.</em></p>
@@ -219,7 +219,7 @@ x 0000.1000             0.5000
 </span><span style="color:#75715e"></span>b <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b0111</span>_0000;  <span style="color:#75715e">// 7.0000
 </span><span style="color:#75715e"></span>ab <span style="color:#f92672">=</span> a <span style="color:#f92672">*</span> b;        <span style="color:#75715e">// 00000101.01000000
 </span><span style="color:#75715e"></span>c <span style="color:#f92672">=</span> ab[<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">4</span>];      <span style="color:#75715e">// take middle 8 bits: 0101.1010
-</span><span style="color:#75715e"></span>$display(<span style="color:#e6db74">&#34;%f&#34;</span>, $itor(c)<span style="color:#f92672">*</span><span style="color:#ae81ff">2.0</span><span style="color:#f92672">**-</span><span style="color:#ae81ff">10.0</span>);  <span style="color:#75715e">// divide result by 2^10
+</span><span style="color:#75715e"></span>$display(<span style="color:#e6db74">&#34;%f&#34;</span>, $itor(c<span style="color:#f92672">*</span><span style="color:#ae81ff">2.0</span><span style="color:#f92672">**-</span><span style="color:#ae81ff">10.0</span>));  <span style="color:#75715e">// divide result by 2^10
 </span></code></pre></div><p>We get the result 0.082031, which is close to the exact value of 0.08203125. To improve on the accuracy further would require using more bits.</p>
 <h2 id="range--precision">Range &amp; Precision</h2>
 <p>You can get a wider range by using more integer bits and better precision by using more fractional bits. However, using more bits increases the amount of FPGA logic required. Consider what your problem requires and the capabilities of your FPGA.</p>
