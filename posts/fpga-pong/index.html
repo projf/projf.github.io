@@ -120,7 +120,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
     <div class="content">
       <p>Welcome back to <em>Exploring FPGA Graphics</em>. In the previous part, we got an <a href="/posts/fpga-graphics/">introduction to FPGA graphics</a>; now we&rsquo;re ready to put our graphical skills to work recreating the arcade classic: Pong.</p>
 <p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We start by learning how displays work, before racing the beam with Pong, starfields and sprites, simulating life with bitmaps, drawing lines and triangles, and finally creating simple 3D models. I&rsquo;ll be writing and revising this series throughout 2020 and 2021. New to the series? Start with <a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a>.</p>
-<p><em>Updated 2021-01-05. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><em>Updated 2021-01-08. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <h3 id="series-outline">Series Outline</h3>
 <ul>
 <li><a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a> - learn how displays work and animate simple shapes</li>
@@ -145,7 +145,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
 <p>Pong may not have been the first computer game, but it has an excellent claim to being the first to break into public consciousness on release in 1972. Originally an arcade cabinet, it was quickly adapted for play at home with a television. If you&rsquo;d like to learn more about the early history of Atari, including Pong, I recommend <em><a href="https://mitpress.mit.edu/books/racing-beam">Racing the Beam</a></em> by Nick Montfort and Ian Bogost.</p>
 <p>If you&rsquo;re unfamiliar with Pong gameplay, check out this <a href="https://www.youtube.com/watch?v=it0sf4CMDeM">Pong video</a> on YouTube.</p>
 <h2 id="a-square-ball">A Square Ball</h2>
-<p>Pong uses a square ball, so we can reuse our design from <a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a>. We&rsquo;re going to look at the Arty version, but links to versions for both boards can be found below the source listing.</p>
+<p>Pong uses a square ball, so we can reuse our design from <a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a>. We&rsquo;re going to start off looking at the Arty (Xilinx) version, but links to designs for both boards can be found below the source listing.</p>
 <p>We generate our pixel clock and display timings, then set up a ball and update its position once per frame. For now the ball bounces off all four sides of the screen.</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_pong_v1 (
     <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_100m,     <span style="color:#75715e">// 100 MHz clock
@@ -170,33 +170,35 @@ In this series, we explore graphics at the hardware level and get a feel for the
     <span style="color:#75715e">// display timings
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>;  <span style="color:#75715e">// screen coordinate width in bits
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx, sy;
-    <span style="color:#66d9ef">logic</span> de;
-    display_timings timings_640x480 (
+    <span style="color:#66d9ef">logic</span> hsync, vsync, de;
+    display_timings_480p timings_640x480 (
         .clk_pix,
         .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for clock lock
 </span><span style="color:#75715e"></span>        .sx,
         .sy,
-        .hsync(vga_hsync),
-        .vsync(vga_vsync),
+        .hsync,
+        .vsync,
         .de
     );
 
-    <span style="color:#75715e">// size of screen (excluding blanking)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> H_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">640</span>;
+    <span style="color:#75715e">// size of screen with and without blanking
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> H_RES_FULL <span style="color:#f92672">=</span> <span style="color:#ae81ff">800</span>;
+    <span style="color:#66d9ef">localparam</span> V_RES_FULL <span style="color:#f92672">=</span> <span style="color:#ae81ff">525</span>;
+    <span style="color:#66d9ef">localparam</span> H_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">640</span>;
     <span style="color:#66d9ef">localparam</span> V_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">480</span>;
 
     <span style="color:#66d9ef">logic</span> animate;  <span style="color:#75715e">// high for one clock tick at start of blanking
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> animate <span style="color:#f92672">=</span> (sy <span style="color:#f92672">==</span> V_RES <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>);
 
     <span style="color:#75715e">// ball
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> B_SIZE <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span>;          <span style="color:#75715e">// size in pixels
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] bx, by;       <span style="color:#75715e">// position
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> dx, dy;                   <span style="color:#75715e">// direction: 0 is right/down
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] spx <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span><span style="color:#ae81ff">&#39;d1</span>;  <span style="color:#75715e">// horizontal speed
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] spy <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span><span style="color:#ae81ff">&#39;d1</span>;  <span style="color:#75715e">// vertical speed
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> b_draw;                   <span style="color:#75715e">// draw ball?
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> B_SIZE <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span>;      <span style="color:#75715e">// size in pixels
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] bx, by;   <span style="color:#75715e">// position
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> dx, dy;               <span style="color:#75715e">// direction: 0 is right/down
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] spx <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// horizontal speed
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] spy <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// vertical speed
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> b_draw;               <span style="color:#75715e">// draw ball?
 </span><span style="color:#75715e"></span>
-     <span style="color:#75715e">// ball animation
+    <span style="color:#75715e">// ball animation
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">if</span> (animate) <span style="color:#66d9ef">begin</span>
             <span style="color:#66d9ef">if</span> (bx <span style="color:#f92672">&gt;=</span> H_RES <span style="color:#f92672">-</span> (spx <span style="color:#f92672">+</span> B_SIZE)) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// right edge
@@ -225,6 +227,8 @@ In this series, we explore graphics at the hardware level and get a feel for the
 
     <span style="color:#75715e">// VGA output
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        vga_hsync <span style="color:#f92672">&lt;=</span> hsync;
+        vga_vsync <span style="color:#f92672">&lt;=</span> vsync;
         vga_r <span style="color:#f92672">&lt;=</span> (de <span style="color:#f92672">&amp;&amp;</span> b_draw) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
         vga_g <span style="color:#f92672">&lt;=</span> (de <span style="color:#f92672">&amp;&amp;</span> b_draw) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
         vga_b <span style="color:#f92672">&lt;=</span> (de <span style="color:#f92672">&amp;&amp;</span> b_draw) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
@@ -238,50 +242,51 @@ In this series, we explore graphics at the hardware level and get a feel for the
 <li>Lattice iCE40: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-pong/ice40/top_pong_v1.sv">ice40/top_pong_v1.sv</a></strong></li>
 </ul>
 <blockquote>
-<p><strong>Building the Designs</strong><br>
+<p><strong>Building the Designs</strong>
 In the <a href="https://github.com/projf/projf-explore/tree/master/fpga-pong">FPGA Pong</a> section of the git repo, you&rsquo;ll find the design files, a makefile for iCEBreaker, a Vivado project for Arty, and instructions for building the designs for both boards.</p>
 </blockquote>
 <h2 id="paddle-paddle">Paddle, Paddle</h2>
-<p>Next, we need to add some paddles. The paddles are simple rectangles that move vertically on the left and right sides of the screen. These paddles have a crude AI that compares their vertical position to the ball and moves them in the direction of the ball. We check if the paddles have reached the screen edge, but not whether they&rsquo;ve have collided with the ball.</p>
+<p>Next, we need to add some paddles. The paddles are simple rectangles that move vertically on the left and right sides of the screen. These paddles have a crude AI that moves in the direction of the ball. We check if the paddles have reached the screen edge, but not whether they&rsquo;ve have collided with the ball.</p>
 <p>The paddles are added to the top module in a very similar way to the ball:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// paddles
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> P_HEIGHT <span style="color:#f92672">=</span> <span style="color:#ae81ff">40</span>;       <span style="color:#75715e">// height in pixels
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> P_WIDTH  <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>;       <span style="color:#75715e">// width in pixels
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> P_SPEED  <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;        <span style="color:#75715e">// speed
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> P_OFFSET <span style="color:#f92672">=</span> <span style="color:#ae81ff">32</span>;       <span style="color:#75715e">// offset from screen edge
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] p1y, p2y;     <span style="color:#75715e">// vertical position of paddles 1 and 2
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> p1_draw, p2_draw;         <span style="color:#75715e">// draw paddles?
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> P_H <span style="color:#f92672">=</span> <span style="color:#ae81ff">40</span>;         <span style="color:#75715e">// height in pixels
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> P_W <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>;         <span style="color:#75715e">// width in pixels
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> P_SP <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;         <span style="color:#75715e">// speed
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> P_OFFS <span style="color:#f92672">=</span> <span style="color:#ae81ff">32</span>;      <span style="color:#75715e">// offset from screen edge
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] p1y, p2y;  <span style="color:#75715e">// vertical position of paddles 1 and 2
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> p1_draw, p2_draw;      <span style="color:#75715e">// draw paddles?
 </span><span style="color:#75715e"></span>
     <span style="color:#75715e">// paddle animation
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">if</span> (animate) <span style="color:#66d9ef">begin</span>
             <span style="color:#75715e">// &#34;AI&#34; paddle 1
-</span><span style="color:#75715e"></span>            <span style="color:#66d9ef">if</span> ((p1y <span style="color:#f92672">+</span> P_HEIGHT<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>) <span style="color:#f92672">&lt;</span> by) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// top of ball is below
-</span><span style="color:#75715e"></span>                <span style="color:#66d9ef">if</span> (p1y <span style="color:#f92672">&lt;</span> V_RES <span style="color:#f92672">-</span> (P_HEIGHT <span style="color:#f92672">+</span> P_SPEED)) p1y <span style="color:#f92672">&lt;=</span> p1y <span style="color:#f92672">+</span> P_SPEED;  <span style="color:#75715e">// screen bottom?
-</span><span style="color:#75715e"></span>            <span style="color:#66d9ef">end</span>
-            <span style="color:#66d9ef">if</span> ((p1y <span style="color:#f92672">+</span> P_HEIGHT<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>) <span style="color:#f92672">&gt;</span> (by <span style="color:#f92672">+</span> B_SIZE)) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// bottom of ball is above
-</span><span style="color:#75715e"></span>                <span style="color:#66d9ef">if</span> (p1y <span style="color:#f92672">&gt;</span> P_SPEED) p1y <span style="color:#f92672">&lt;=</span> p1y <span style="color:#f92672">-</span> P_SPEED;  <span style="color:#75715e">// screen top?
+</span><span style="color:#75715e"></span>            <span style="color:#66d9ef">if</span> ((p1y <span style="color:#f92672">+</span> P_H<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>) <span style="color:#f92672">+</span> P_SP<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span> <span style="color:#f92672">&lt;</span> (by <span style="color:#f92672">+</span> B_SIZE<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>)) <span style="color:#66d9ef">begin</span>
+                <span style="color:#66d9ef">if</span> (p1y <span style="color:#f92672">&lt;</span> V_RES <span style="color:#f92672">-</span> (P_H <span style="color:#f92672">+</span> P_SP<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>))  <span style="color:#75715e">// screen bottom?
+</span><span style="color:#75715e"></span>                    p1y <span style="color:#f92672">&lt;=</span> p1y <span style="color:#f92672">+</span> P_SP;  <span style="color:#75715e">// move down
+</span><span style="color:#75715e"></span>            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> ((p1y <span style="color:#f92672">+</span> P_H<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>) <span style="color:#f92672">&gt;</span> (by <span style="color:#f92672">+</span> B_SIZE<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>) <span style="color:#f92672">+</span> P_SP<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>) <span style="color:#66d9ef">begin</span>
+                <span style="color:#66d9ef">if</span> (p1y <span style="color:#f92672">&gt;</span> P_SP)  <span style="color:#75715e">// screen top?
+</span><span style="color:#75715e"></span>                    p1y <span style="color:#f92672">&lt;=</span> p1y <span style="color:#f92672">-</span> P_SP;  <span style="color:#75715e">// move up
 </span><span style="color:#75715e"></span>            <span style="color:#66d9ef">end</span>
 
             <span style="color:#75715e">// &#34;AI&#34; paddle 2
-</span><span style="color:#75715e"></span>            <span style="color:#66d9ef">if</span> ((p2y <span style="color:#f92672">+</span> P_HEIGHT<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>) <span style="color:#f92672">&lt;</span> by) <span style="color:#66d9ef">begin</span>
-                <span style="color:#66d9ef">if</span> (p2y <span style="color:#f92672">&lt;</span> V_RES <span style="color:#f92672">-</span> (P_HEIGHT <span style="color:#f92672">+</span> P_SPEED)) p2y <span style="color:#f92672">&lt;=</span> p2y <span style="color:#f92672">+</span> P_SPEED;
-            <span style="color:#66d9ef">end</span>
-            <span style="color:#66d9ef">if</span> ((p2y <span style="color:#f92672">+</span> P_HEIGHT<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>) <span style="color:#f92672">&gt;</span> (by <span style="color:#f92672">+</span> B_SIZE)) <span style="color:#66d9ef">begin</span>
-                <span style="color:#66d9ef">if</span> (p2y <span style="color:#f92672">&gt;</span> P_SPEED) p2y <span style="color:#f92672">&lt;=</span> p2y <span style="color:#f92672">-</span> P_SPEED;
+</span><span style="color:#75715e"></span>            <span style="color:#66d9ef">if</span> ((p2y <span style="color:#f92672">+</span> P_H<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>) <span style="color:#f92672">+</span> P_SP<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span> <span style="color:#f92672">&lt;</span> (by <span style="color:#f92672">+</span> B_SIZE<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>)) <span style="color:#66d9ef">begin</span>
+                <span style="color:#66d9ef">if</span> (p2y <span style="color:#f92672">&lt;</span> V_RES <span style="color:#f92672">-</span> (P_H <span style="color:#f92672">+</span> P_SP<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>))
+                    p2y <span style="color:#f92672">&lt;=</span> p2y <span style="color:#f92672">+</span> P_SP;
+            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> ((p2y <span style="color:#f92672">+</span> P_H<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>) <span style="color:#f92672">&gt;</span> (by <span style="color:#f92672">+</span> B_SIZE<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>) <span style="color:#f92672">+</span> P_SP<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>) <span style="color:#66d9ef">begin</span>
+                <span style="color:#66d9ef">if</span> (p2y <span style="color:#f92672">&gt;</span> P_SP)
+                    p2y <span style="color:#f92672">&lt;=</span> p2y <span style="color:#f92672">-</span> P_SP;
             <span style="color:#66d9ef">end</span>
         <span style="color:#66d9ef">end</span>
     <span style="color:#66d9ef">end</span>
 
     <span style="color:#75715e">// draw paddles - are paddles at current screen position?
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        p1_draw <span style="color:#f92672">=</span> (sx <span style="color:#f92672">&gt;=</span> P_OFFSET) <span style="color:#f92672">&amp;&amp;</span> (sx <span style="color:#f92672">&lt;</span> P_OFFSET <span style="color:#f92672">+</span> P_WIDTH)
-               <span style="color:#f92672">&amp;&amp;</span> (sy <span style="color:#f92672">&gt;=</span> p1y) <span style="color:#f92672">&amp;&amp;</span> (sy <span style="color:#f92672">&lt;</span> p1y <span style="color:#f92672">+</span> P_HEIGHT);
-        p2_draw <span style="color:#f92672">=</span> (sx <span style="color:#f92672">&gt;=</span> H_RES <span style="color:#f92672">-</span> P_OFFSET <span style="color:#f92672">-</span> P_WIDTH) <span style="color:#f92672">&amp;&amp;</span> (sx <span style="color:#f92672">&lt;</span> H_RES <span style="color:#f92672">-</span> P_OFFSET)
-               <span style="color:#f92672">&amp;&amp;</span> (sy <span style="color:#f92672">&gt;=</span> p2y) <span style="color:#f92672">&amp;&amp;</span> (sy <span style="color:#f92672">&lt;</span> p2y <span style="color:#f92672">+</span> P_HEIGHT);
+        p1_draw <span style="color:#f92672">=</span> (sx <span style="color:#f92672">&gt;=</span> P_OFFS) <span style="color:#f92672">&amp;&amp;</span> (sx <span style="color:#f92672">&lt;</span> P_OFFS <span style="color:#f92672">+</span> P_W)
+               <span style="color:#f92672">&amp;&amp;</span> (sy <span style="color:#f92672">&gt;=</span> p1y) <span style="color:#f92672">&amp;&amp;</span> (sy <span style="color:#f92672">&lt;</span> p1y <span style="color:#f92672">+</span> P_H);
+        p2_draw <span style="color:#f92672">=</span> (sx <span style="color:#f92672">&gt;=</span> H_RES <span style="color:#f92672">-</span> P_OFFS <span style="color:#f92672">-</span> P_W) <span style="color:#f92672">&amp;&amp;</span> (sx <span style="color:#f92672">&lt;</span> H_RES <span style="color:#f92672">-</span> P_OFFS)
+               <span style="color:#f92672">&amp;&amp;</span> (sy <span style="color:#f92672">&gt;=</span> p2y) <span style="color:#f92672">&amp;&amp;</span> (sy <span style="color:#f92672">&lt;</span> p2y <span style="color:#f92672">+</span> P_H);
     <span style="color:#66d9ef">end</span>
-</code></pre></div><p>We compare paddle positions with the top or bottom of the ball to prevent them being too twitchy.</p>
-<p><em>Improvements to paddle logic are coming in 2021: the current movement is jerky when close to the ball&rsquo;s vertical position.</em></p>
+</code></pre></div><p>Each paddle compares the vertical position of its centre with that of the ball. If the paddle is above the ball and adding its speed would move it nearer the ball&rsquo;s vertical position, the paddle moves down. If the paddle is below the ball and subtracting its speed would move it nearer the ball&rsquo;s vertical position, the paddle moves up. In either case, the paddle checks if its reached the screen edge before moving.</p>
 <h3 id="pong-v2">Pong v2</h3>
 <p>Build the second version of Pong using our update top module:</p>
 <ul>
@@ -322,10 +327,10 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/fpga-pong">FP
                 bx <span style="color:#f92672">&lt;=</span> bx <span style="color:#f92672">+</span> spx;
             <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> bx <span style="color:#f92672">&lt;=</span> (dx) <span style="color:#f92672">?</span> bx <span style="color:#f92672">-</span> spx <span style="color:#f92672">:</span> bx <span style="color:#f92672">+</span> spx;
 </code></pre></div><p>We can also speed up the ball and paddles by editing the following values:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] spx <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span><span style="color:#ae81ff">&#39;d6</span>;  <span style="color:#75715e">// horizontal speed
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] spy <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span><span style="color:#ae81ff">&#39;d4</span>;  <span style="color:#75715e">// vertical speed
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] spx <span style="color:#f92672">=</span> <span style="color:#ae81ff">6</span>;  <span style="color:#75715e">// horizontal speed
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] spy <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;  <span style="color:#75715e">// vertical speed
 </span><span style="color:#75715e"></span>
-    <span style="color:#66d9ef">localparam</span> P_SPEED <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;  <span style="color:#75715e">// speed
+    <span style="color:#66d9ef">localparam</span> P_SP <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;  <span style="color:#75715e">// speed
 </span></code></pre></div><h3 id="pong-v3">Pong v3</h3>
 <p>Build and test the updated version with paddle collisions:</p>
 <ul>
@@ -390,9 +395,12 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/fpga-pong">FP
 </code></pre></div><p>We want continuous signals for up and down, but a one-off event for the control button:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// debounce buttons
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> sig_ctrl, move_up, move_dn;
-    debounce deb_btn_ctrl (.clk(clk_pix), .in(btn_ctrl), .out(), .ondn(), .onup(sig_ctrl));
-    debounce deb_btn_up (.clk(clk_pix), .in(btn_up), .out(move_up), .ondn(), .onup());
-    debounce deb_btn_dn (.clk(clk_pix), .in(btn_dn), .out(move_dn), .ondn(), .onup());
+    debounce deb_ctrl
+        (.clk(clk_pix), .in(btn_ctrl), .out(), .ondn(), .onup(sig_ctrl));
+    debounce deb_up
+        (.clk(clk_pix), .in(btn_up), .out(move_up), .ondn(), .onup());
+    debounce deb_dn
+        (.clk(clk_pix), .in(btn_dn), .out(move_dn), .ondn(), .onup());
 </code></pre></div><p>The <code>onup()</code> and <code>ondown()</code> outputs work like traditional UI events. In this case, <code>sig_ctrl</code> will be high for one tick when the control button is released.</p>
 <p>We start with two states:</p>
 <ul>
@@ -415,32 +423,33 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/fpga-pong">FP
         state <span style="color:#f92672">&lt;=</span> state_next;
     <span style="color:#66d9ef">end</span>
 </code></pre></div><p><em>ProTip: Using SystemVerilog enums makes finite state machines easier to understand and debug.</em></p>
-<p>The human-controlled paddle needs updating to reflect the state of play:</p>
+<p>The logic for paddle 1 needs updating to allow for human control:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// paddle animation
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">if</span> (animate) <span style="color:#66d9ef">begin</span>
             <span style="color:#66d9ef">if</span> (state <span style="color:#f92672">==</span> PLAY) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// human paddle 1
 </span><span style="color:#75715e"></span>                <span style="color:#66d9ef">if</span> (move_up) <span style="color:#66d9ef">begin</span>
-                    <span style="color:#66d9ef">if</span> (p1y <span style="color:#f92672">&gt;</span> P_SPEED) p1y <span style="color:#f92672">&lt;=</span> p1y <span style="color:#f92672">-</span> P_SPEED;  <span style="color:#75715e">// at top?
-</span><span style="color:#75715e"></span>                <span style="color:#66d9ef">end</span>
+                    <span style="color:#66d9ef">if</span> (p1y <span style="color:#f92672">&gt;</span> P_SP) p1y <span style="color:#f92672">&lt;=</span> p1y <span style="color:#f92672">-</span> P_SP;
+                <span style="color:#66d9ef">end</span>
                 <span style="color:#66d9ef">if</span> (move_dn) <span style="color:#66d9ef">begin</span>
-                    <span style="color:#66d9ef">if</span> (p1y <span style="color:#f92672">&lt;</span> V_RES <span style="color:#f92672">-</span> (P_HEIGHT <span style="color:#f92672">+</span> P_SPEED)) p1y <span style="color:#f92672">&lt;=</span> p1y <span style="color:#f92672">+</span> P_SPEED;  <span style="color:#75715e">// at bottom?
-</span><span style="color:#75715e"></span>                <span style="color:#66d9ef">end</span>
+                    <span style="color:#66d9ef">if</span> (p1y <span style="color:#f92672">&lt;</span> V_RES <span style="color:#f92672">-</span> (P_H <span style="color:#f92672">+</span> P_SP)) p1y <span style="color:#f92672">&lt;=</span> p1y <span style="color:#f92672">+</span> P_SP;
+                <span style="color:#66d9ef">end</span>
             <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// &#34;AI&#34; paddle 1
-</span><span style="color:#75715e"></span>                <span style="color:#66d9ef">if</span> ((p1y <span style="color:#f92672">+</span> P_HEIGHT<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>) <span style="color:#f92672">&lt;</span> by) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// top of ball is below
-</span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">if</span> (p1y <span style="color:#f92672">&lt;</span> V_RES <span style="color:#f92672">-</span> (P_HEIGHT <span style="color:#f92672">+</span> P_SPEED)) p1y <span style="color:#f92672">&lt;=</span> p1y <span style="color:#f92672">+</span> P_SPEED;  <span style="color:#75715e">// screen bottom?
-</span><span style="color:#75715e"></span>                <span style="color:#66d9ef">end</span>
-                <span style="color:#66d9ef">if</span> ((p1y <span style="color:#f92672">+</span> P_HEIGHT<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>) <span style="color:#f92672">&gt;</span> (by <span style="color:#f92672">+</span> B_SIZE)) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// bottom of ball is above
-</span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">if</span> (p1y <span style="color:#f92672">&gt;</span> P_SPEED) p1y <span style="color:#f92672">&lt;=</span> p1y <span style="color:#f92672">-</span> P_SPEED;  <span style="color:#75715e">// screen top?
-</span><span style="color:#75715e"></span>                <span style="color:#66d9ef">end</span>
+</span><span style="color:#75715e"></span>                <span style="color:#66d9ef">if</span> ((p1y <span style="color:#f92672">+</span> P_H<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>) <span style="color:#f92672">+</span> P_SP<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span> <span style="color:#f92672">&lt;</span> (by <span style="color:#f92672">+</span> B_SIZE<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>)) <span style="color:#66d9ef">begin</span>
+                    <span style="color:#66d9ef">if</span> (p1y <span style="color:#f92672">&lt;</span> V_RES <span style="color:#f92672">-</span> (P_H <span style="color:#f92672">+</span> P_SP<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>))
+                        p1y <span style="color:#f92672">&lt;=</span> p1y <span style="color:#f92672">+</span> P_SP;
+                <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> ((p1y <span style="color:#f92672">+</span> P_H<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>) <span style="color:#f92672">&gt;</span> (by <span style="color:#f92672">+</span> B_SIZE<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>) <span style="color:#f92672">+</span> P_SP<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>) <span style="color:#66d9ef">begin</span>
+                    <span style="color:#66d9ef">if</span> (p1y <span style="color:#f92672">&gt;</span> P_SP)
+                        p1y <span style="color:#f92672">&lt;=</span> p1y <span style="color:#f92672">-</span> P_SP;
+                <span style="color:#66d9ef">end</span>
             <span style="color:#66d9ef">end</span>
 
             <span style="color:#75715e">// &#34;AI&#34; paddle 2
-</span><span style="color:#75715e"></span>            <span style="color:#66d9ef">if</span> ((p2y <span style="color:#f92672">+</span> P_HEIGHT<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>) <span style="color:#f92672">&lt;</span> by) <span style="color:#66d9ef">begin</span>
-                <span style="color:#66d9ef">if</span> (p2y <span style="color:#f92672">&lt;</span> V_RES <span style="color:#f92672">-</span> (P_HEIGHT <span style="color:#f92672">+</span> P_SPEED)) p2y <span style="color:#f92672">&lt;=</span> p2y <span style="color:#f92672">+</span> P_SPEED;
+</span><span style="color:#75715e"></span>            <span style="color:#66d9ef">if</span> ((p2y <span style="color:#f92672">+</span> P_H<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>) <span style="color:#f92672">&lt;</span> by) <span style="color:#66d9ef">begin</span>
+                <span style="color:#66d9ef">if</span> (p2y <span style="color:#f92672">&lt;</span> V_RES <span style="color:#f92672">-</span> (P_H <span style="color:#f92672">+</span> P_SP)) p2y <span style="color:#f92672">&lt;=</span> p2y <span style="color:#f92672">+</span> P_SP;
             <span style="color:#66d9ef">end</span>
-            <span style="color:#66d9ef">if</span> ((p2y <span style="color:#f92672">+</span> P_HEIGHT<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>) <span style="color:#f92672">&gt;</span> (by <span style="color:#f92672">+</span> B_SIZE)) <span style="color:#66d9ef">begin</span>
-                <span style="color:#66d9ef">if</span> (p2y <span style="color:#f92672">&gt;</span> P_SPEED) p2y <span style="color:#f92672">&lt;=</span> p2y <span style="color:#f92672">-</span> P_SPEED;
+            <span style="color:#66d9ef">if</span> ((p2y <span style="color:#f92672">+</span> P_H<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>) <span style="color:#f92672">&gt;</span> (by <span style="color:#f92672">+</span> B_SIZE)) <span style="color:#66d9ef">begin</span>
+                <span style="color:#66d9ef">if</span> (p2y <span style="color:#f92672">&gt;</span> P_SP) p2y <span style="color:#f92672">&lt;=</span> p2y <span style="color:#f92672">-</span> P_SP;
             <span style="color:#66d9ef">end</span>
         <span style="color:#66d9ef">end</span>
     <span style="color:#66d9ef">end</span>
@@ -484,14 +493,14 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/fpga-pong">FP
 </span><span style="color:#75715e"></span>        lft_col <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
     <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> bx <span style="color:#f92672">&lt;=</span> (dx) <span style="color:#f92672">?</span> bx <span style="color:#f92672">-</span> spx <span style="color:#f92672">:</span> bx <span style="color:#f92672">+</span> spx;
 </code></pre></div><p>Then add support for the INIT and START states to the paddle and ball animations:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// paddle animation
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">if</span> (state <span style="color:#f92672">==</span> INIT <span style="color:#f92672">||</span> state <span style="color:#f92672">==</span> START) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// reset paddle positions
-</span><span style="color:#75715e"></span>            p1y <span style="color:#f92672">&lt;=</span> (V_RES <span style="color:#f92672">-</span> P_HEIGHT) <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">1</span>;
-            p2y <span style="color:#f92672">&lt;=</span> (V_RES <span style="color:#f92672">-</span> P_HEIGHT) <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">1</span>;
+</span><span style="color:#75715e"></span>            p1y <span style="color:#f92672">&lt;=</span> (V_RES <span style="color:#f92672">-</span> P_H) <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">1</span>;
+            p2y <span style="color:#f92672">&lt;=</span> (V_RES <span style="color:#f92672">-</span> P_H) <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">1</span>;
         <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (animate <span style="color:#f92672">&amp;&amp;</span> state <span style="color:#f92672">!=</span> POINT_END) <span style="color:#66d9ef">begin</span>
-
-    ...
+            <span style="color:#66d9ef">if</span> (state <span style="color:#f92672">==</span> PLAY) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// human paddle 1
+</span><span style="color:#75715e"></span>            <span style="color:#75715e">// ...
+</span><span style="color:#75715e"></span>
     <span style="color:#75715e">// ball animation
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">if</span> (state <span style="color:#f92672">==</span> INIT <span style="color:#f92672">||</span> state <span style="color:#f92672">==</span> START) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// reset ball position
@@ -499,60 +508,294 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/fpga-pong">FP
             by <span style="color:#f92672">&lt;=</span> (V_RES <span style="color:#f92672">-</span> B_SIZE) <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">1</span>;
             dx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// serve towards player 2 (AI)
 </span><span style="color:#75715e"></span>            dy <span style="color:#f92672">&lt;=</span> <span style="color:#f92672">~</span>dy;
-            spx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">10</span><span style="color:#ae81ff">&#39;d5</span>;
-            spy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">10</span><span style="color:#ae81ff">&#39;d2</span>;
             lft_col <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
             rgt_col <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
         <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (animate <span style="color:#f92672">&amp;&amp;</span> state <span style="color:#f92672">!=</span> POINT_END) <span style="color:#66d9ef">begin</span>
-</code></pre></div><h2 id="bouncing-mad">Bouncing Mad</h2>
-<p>To make the game more interesting, we can change the angle of bounce depending on where the ball hits the paddle. A simple way to do this is to update the vertical speed depending on where the ball hits the paddle. We create a new parameter called <strong>P_SEC</strong>, which is the size of a section of paddle:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// paddles
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> P_HEIGHT <span style="color:#f92672">=</span> <span style="color:#ae81ff">40</span>;           <span style="color:#75715e">// height in pixels
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> P_SEC <span style="color:#f92672">=</span> P_HEIGHT <span style="color:#f92672">/</span> <span style="color:#ae81ff">8</span>;    <span style="color:#75715e">// paddle sections
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> P_WIDTH  <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>;           <span style="color:#75715e">// width in pixels
-</span></code></pre></div><p>It&rsquo;s then just a case of comparing the vertical ball position with that of the paddle when a collision occurs. Here&rsquo;s the logic for the 1st paddle:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">if</span> (p1_col) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// left paddle collision
-</span><span style="color:#75715e"></span>        dx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-        bx <span style="color:#f92672">&lt;=</span> bx <span style="color:#f92672">+</span> spx;
-        <span style="color:#66d9ef">if</span> (by <span style="color:#f92672">&lt;</span> p1y <span style="color:#f92672">-</span> B_SIZE<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span> <span style="color:#f92672">+</span> P_SEC) <span style="color:#66d9ef">begin</span>
-            dy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-            spy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">10</span><span style="color:#ae81ff">&#39;d5</span>;
-        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (by <span style="color:#f92672">&lt;</span> p1y <span style="color:#f92672">-</span> B_SIZE<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">2</span><span style="color:#f92672">*</span>P_SEC) <span style="color:#66d9ef">begin</span> 
-            dy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-            spy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">10</span><span style="color:#ae81ff">&#39;d4</span>;
-        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (by <span style="color:#f92672">&lt;</span> p1y <span style="color:#f92672">-</span> B_SIZE<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">3</span><span style="color:#f92672">*</span>P_SEC) <span style="color:#66d9ef">begin</span> 
-            dy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-            spy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">10</span><span style="color:#ae81ff">&#39;d2</span>;
-        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (by <span style="color:#f92672">&lt;</span> p1y <span style="color:#f92672">-</span> B_SIZE<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">5</span><span style="color:#f92672">*</span>P_SEC) <span style="color:#66d9ef">begin</span> 
-            dy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-            spy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (by <span style="color:#f92672">&lt;</span> p1y <span style="color:#f92672">-</span> B_SIZE<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">6</span><span style="color:#f92672">*</span>P_SEC) <span style="color:#66d9ef">begin</span> 
-            dy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-            spy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">10</span><span style="color:#ae81ff">&#39;d2</span>;
-        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (by <span style="color:#f92672">&lt;</span> p1y <span style="color:#f92672">-</span> B_SIZE<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">7</span><span style="color:#f92672">*</span>P_SEC) <span style="color:#66d9ef">begin</span> 
-            dy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-            spy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">10</span><span style="color:#ae81ff">&#39;d4</span>;
-        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
-            dy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-            spy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">10</span><span style="color:#ae81ff">&#39;d5</span>;
+            <span style="color:#66d9ef">if</span> (p1_col) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// left paddle collision
+</span><span style="color:#75715e"></span>            <span style="color:#75715e">// ...
+</span></code></pre></div><h2 id="bouncing-mad">Bouncing Mad</h2>
+<p>To make the game more interesting, we can change the bounce angle depending on where the ball hits the paddle. A simple way to do this is to update the vertical direction depending on where the ball hits the paddle. If the ball strikes the top half of the paddle, it goes up, if it strikes the bottom half it goes down. We need to add this for collisions with either paddle:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">            <span style="color:#66d9ef">if</span> (p1_col) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// left paddle collision
+</span><span style="color:#75715e"></span>                dx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                bx <span style="color:#f92672">&lt;=</span> bx <span style="color:#f92672">+</span> spx;
+                dy <span style="color:#f92672">&lt;=</span> (by <span style="color:#f92672">+</span> B_SIZE<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span> <span style="color:#f92672">&lt;</span> p1y <span style="color:#f92672">+</span> P_H<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>) <span style="color:#f92672">?</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
+            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (p2_col) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// right paddle collision
+</span><span style="color:#75715e"></span>                dx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                bx <span style="color:#f92672">&lt;=</span> bx <span style="color:#f92672">-</span> spx;
+                dy <span style="color:#f92672">&lt;=</span> (by <span style="color:#f92672">+</span> B_SIZE<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span> <span style="color:#f92672">&lt;</span> p1y <span style="color:#f92672">+</span> P_H<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>) <span style="color:#f92672">?</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
+            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (bx <span style="color:#f92672">&gt;=</span> H_RES <span style="color:#f92672">-</span> (spx <span style="color:#f92672">+</span> B_SIZE)) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// right edge
+</span><span style="color:#75715e"></span>                <span style="color:#75715e">// ...
+</span></code></pre></div><p>We can also increase the ball speed over time by counting the number of collisions:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// ball speed control
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> SPEED_STEP <span style="color:#f92672">=</span> <span style="color:#ae81ff">5</span>;  <span style="color:#75715e">// speed up after this many collisions
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(SPEED_STEP)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_sp;  <span style="color:#75715e">// speed counter
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">if</span> (state <span style="color:#f92672">==</span> INIT) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// demo speed
+</span><span style="color:#75715e"></span>            spx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">6</span>;
+            spy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">4</span>;
+        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (state <span style="color:#f92672">==</span> START) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// initial game speed
+</span><span style="color:#75715e"></span>            spx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">4</span>;
+            spy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">2</span>;
+        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (state <span style="color:#f92672">==</span> PLAY <span style="color:#f92672">&amp;&amp;</span> animate <span style="color:#f92672">&amp;&amp;</span> (p1_col <span style="color:#f92672">||</span> p2_col)) <span style="color:#66d9ef">begin</span>
+            <span style="color:#66d9ef">if</span> (cnt_sp <span style="color:#f92672">==</span> SPEED_STEP<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
+                spx <span style="color:#f92672">&lt;=</span> spx <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+                spy <span style="color:#f92672">&lt;=</span> spy <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+                cnt_sp <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
+                cnt_sp <span style="color:#f92672">&lt;=</span> cnt_sp <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+            <span style="color:#66d9ef">end</span>
         <span style="color:#66d9ef">end</span>
-</code></pre></div><p>Repeat this for the second paddle <code>p2y</code>, and you&rsquo;ve got a pretty decent game of Pong.</p>
-<h3 id="pong-final">Pong Final</h3>
+    <span style="color:#66d9ef">end</span>
+</code></pre></div><h3 id="pong-final">Pong Final</h3>
 <p>With this set of changes, our final version is ready to play:</p>
 <ul>
 <li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-pong/xc7/top_pong.sv">xc7/top_pong.sv</a></strong></li>
 <li>Lattice iCE40: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-pong/ice40/top_pong.sv">ice40/top_pong.sv</a></strong></li>
 </ul>
-<p>With the default ball and paddles speeds, it is possible to win a point against the AI.</p>
-<h2 id="scoring">Scoring</h2>
-<p>At the moment we don&rsquo;t show a score for the players. We&rsquo;ll come back to this once we can draw sprites. Alternatively, you could draw simple blocks on the screen to keep score.</p>
+<p>The complete iCE40 version is shown below:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_pong (
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_12m,      <span style="color:#75715e">// 12 MHz clock
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_rst,      <span style="color:#75715e">// reset button (active high)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_up,       <span style="color:#75715e">// up button
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_ctrl,     <span style="color:#75715e">// control button
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_dn,       <span style="color:#75715e">// down button
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> dvi_clk,      <span style="color:#75715e">// DVI pixel clock
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> dvi_hsync,    <span style="color:#75715e">// DVI horizontal sync
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> dvi_vsync,    <span style="color:#75715e">// DVI vertical sync
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> dvi_de,       <span style="color:#75715e">// DVI data enable
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] dvi_r,  <span style="color:#75715e">// 4-bit DVI red
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] dvi_g,  <span style="color:#75715e">// 4-bit DVI green
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] dvi_b   <span style="color:#75715e">// 4-bit DVI blue
+</span><span style="color:#75715e"></span>    );
+
+    <span style="color:#75715e">// generate pixel clock
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> clk_pix;
+    <span style="color:#66d9ef">logic</span> clk_locked;
+    clock_gen clock_640x480 (
+       .clk(clk_12m),
+       .rst(btn_rst),
+       .clk_pix,
+       .clk_locked
+    );
+
+    <span style="color:#75715e">// display timings
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>;  <span style="color:#75715e">// screen coordinate width in bits
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx, sy;
+    <span style="color:#66d9ef">logic</span> hsync, vsync, de;
+    display_timings_480p timings_640x480 (
+        .clk_pix,
+        .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for clock lock
+</span><span style="color:#75715e"></span>        .sx,
+        .sy,
+        .hsync,
+        .vsync,
+        .de
+    );
+
+    <span style="color:#75715e">// size of screen with and without blanking
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> H_RES_FULL <span style="color:#f92672">=</span> <span style="color:#ae81ff">800</span>;
+    <span style="color:#66d9ef">localparam</span> V_RES_FULL <span style="color:#f92672">=</span> <span style="color:#ae81ff">525</span>;
+    <span style="color:#66d9ef">localparam</span> H_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">640</span>;
+    <span style="color:#66d9ef">localparam</span> V_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">480</span>;
+
+    <span style="color:#66d9ef">logic</span> animate;  <span style="color:#75715e">// high for one clock tick at start of blanking
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> animate <span style="color:#f92672">=</span> (sy <span style="color:#f92672">==</span> V_RES <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>);
+
+    <span style="color:#75715e">// debounce buttons
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> sig_ctrl, move_up, move_dn;
+    debounce deb_ctrl
+        (.clk(clk_pix), .in(btn_ctrl), .out(), .ondn(), .onup(sig_ctrl));
+    debounce deb_up
+        (.clk(clk_pix), .in(btn_up), .out(move_up), .ondn(), .onup());
+    debounce deb_dn
+        (.clk(clk_pix), .in(btn_dn), .out(move_dn), .ondn(), .onup());
+
+    <span style="color:#75715e">// ball
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> B_SIZE <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span>;      <span style="color:#75715e">// size in pixels
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] bx, by;   <span style="color:#75715e">// position
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> dx, dy;               <span style="color:#75715e">// direction: 0 is right/down
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] spx;      <span style="color:#75715e">// horizontal speed
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] spy;      <span style="color:#75715e">// vertical speed
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> lft_col, rgt_col;     <span style="color:#75715e">// flag collision with left or right of screen
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> b_draw;               <span style="color:#75715e">// draw ball?
+</span><span style="color:#75715e"></span>
+    <span style="color:#75715e">// paddles
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> P_H <span style="color:#f92672">=</span> <span style="color:#ae81ff">40</span>;         <span style="color:#75715e">// height in pixels
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> P_W <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>;         <span style="color:#75715e">// width in pixels
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> P_SP <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;         <span style="color:#75715e">// speed
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> P_OFFS <span style="color:#f92672">=</span> <span style="color:#ae81ff">32</span>;      <span style="color:#75715e">// offset from screen edge
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] p1y, p2y;  <span style="color:#75715e">// vertical position of paddles 1 and 2
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> p1_draw, p2_draw;      <span style="color:#75715e">// draw paddles?
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> p1_col, p2_col;        <span style="color:#75715e">// paddle collision?
+</span><span style="color:#75715e"></span>
+    <span style="color:#75715e">// game state
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">enum</span> {INIT, IDLE, START, PLAY, POINT_END} state, state_next;
+    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">case</span>(state)
+            INIT: state_next <span style="color:#f92672">=</span> IDLE;
+            IDLE: state_next <span style="color:#f92672">=</span> (sig_ctrl) <span style="color:#f92672">?</span> START <span style="color:#f92672">:</span> IDLE;
+            START: state_next <span style="color:#f92672">=</span> (sig_ctrl) <span style="color:#f92672">?</span> PLAY <span style="color:#f92672">:</span> START;
+            PLAY: state_next <span style="color:#f92672">=</span> (lft_col <span style="color:#f92672">||</span> rgt_col) <span style="color:#f92672">?</span> POINT_END <span style="color:#f92672">:</span> PLAY;
+            POINT_END: state_next <span style="color:#f92672">=</span> (sig_ctrl) <span style="color:#f92672">?</span> START <span style="color:#f92672">:</span> POINT_END;
+            <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> state_next <span style="color:#f92672">=</span> IDLE;
+        <span style="color:#66d9ef">endcase</span>
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        state <span style="color:#f92672">&lt;=</span> state_next;
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// paddle animation
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">if</span> (state <span style="color:#f92672">==</span> INIT <span style="color:#f92672">||</span> state <span style="color:#f92672">==</span> START) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// reset paddle positions
+</span><span style="color:#75715e"></span>            p1y <span style="color:#f92672">&lt;=</span> (V_RES <span style="color:#f92672">-</span> P_H) <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">1</span>;
+            p2y <span style="color:#f92672">&lt;=</span> (V_RES <span style="color:#f92672">-</span> P_H) <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">1</span>;
+        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (animate <span style="color:#f92672">&amp;&amp;</span> state <span style="color:#f92672">!=</span> POINT_END) <span style="color:#66d9ef">begin</span>
+            <span style="color:#66d9ef">if</span> (state <span style="color:#f92672">==</span> PLAY) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// human paddle 1
+</span><span style="color:#75715e"></span>                <span style="color:#66d9ef">if</span> (move_up) <span style="color:#66d9ef">begin</span>
+                    <span style="color:#66d9ef">if</span> (p1y <span style="color:#f92672">&gt;</span> P_SP) p1y <span style="color:#f92672">&lt;=</span> p1y <span style="color:#f92672">-</span> P_SP;
+                <span style="color:#66d9ef">end</span>
+                <span style="color:#66d9ef">if</span> (move_dn) <span style="color:#66d9ef">begin</span>
+                    <span style="color:#66d9ef">if</span> (p1y <span style="color:#f92672">&lt;</span> V_RES <span style="color:#f92672">-</span> (P_H <span style="color:#f92672">+</span> P_SP)) p1y <span style="color:#f92672">&lt;=</span> p1y <span style="color:#f92672">+</span> P_SP;
+                <span style="color:#66d9ef">end</span>
+            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// &#34;AI&#34; paddle 1
+</span><span style="color:#75715e"></span>                <span style="color:#66d9ef">if</span> ((p1y <span style="color:#f92672">+</span> P_H<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>) <span style="color:#f92672">+</span> P_SP<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span> <span style="color:#f92672">&lt;</span> (by <span style="color:#f92672">+</span> B_SIZE<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>)) <span style="color:#66d9ef">begin</span>
+                    <span style="color:#66d9ef">if</span> (p1y <span style="color:#f92672">&lt;</span> V_RES <span style="color:#f92672">-</span> (P_H <span style="color:#f92672">+</span> P_SP<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>))
+                        p1y <span style="color:#f92672">&lt;=</span> p1y <span style="color:#f92672">+</span> P_SP;
+                <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> ((p1y <span style="color:#f92672">+</span> P_H<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>) <span style="color:#f92672">&gt;</span> (by <span style="color:#f92672">+</span> B_SIZE<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>) <span style="color:#f92672">+</span> P_SP<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>) <span style="color:#66d9ef">begin</span>
+                    <span style="color:#66d9ef">if</span> (p1y <span style="color:#f92672">&gt;</span> P_SP)
+                        p1y <span style="color:#f92672">&lt;=</span> p1y <span style="color:#f92672">-</span> P_SP;
+                <span style="color:#66d9ef">end</span>
+            <span style="color:#66d9ef">end</span>
+
+            <span style="color:#75715e">// &#34;AI&#34; paddle 2
+</span><span style="color:#75715e"></span>            <span style="color:#66d9ef">if</span> ((p2y <span style="color:#f92672">+</span> P_H<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>) <span style="color:#f92672">+</span> P_SP<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span> <span style="color:#f92672">&lt;</span> (by <span style="color:#f92672">+</span> B_SIZE<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>)) <span style="color:#66d9ef">begin</span>
+                <span style="color:#66d9ef">if</span> (p2y <span style="color:#f92672">&lt;</span> V_RES <span style="color:#f92672">-</span> (P_H <span style="color:#f92672">+</span> P_SP<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>))
+                    p2y <span style="color:#f92672">&lt;=</span> p2y <span style="color:#f92672">+</span> P_SP;
+            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> ((p2y <span style="color:#f92672">+</span> P_H<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>) <span style="color:#f92672">&gt;</span> (by <span style="color:#f92672">+</span> B_SIZE<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>) <span style="color:#f92672">+</span> P_SP<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>) <span style="color:#66d9ef">begin</span>
+                <span style="color:#66d9ef">if</span> (p2y <span style="color:#f92672">&gt;</span> P_SP)
+                    p2y <span style="color:#f92672">&lt;=</span> p2y <span style="color:#f92672">-</span> P_SP;
+            <span style="color:#66d9ef">end</span>
+        <span style="color:#66d9ef">end</span>
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// draw paddles - are paddles at current screen position?
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+        p1_draw <span style="color:#f92672">=</span> (sx <span style="color:#f92672">&gt;=</span> P_OFFS) <span style="color:#f92672">&amp;&amp;</span> (sx <span style="color:#f92672">&lt;</span> P_OFFS <span style="color:#f92672">+</span> P_W)
+               <span style="color:#f92672">&amp;&amp;</span> (sy <span style="color:#f92672">&gt;=</span> p1y) <span style="color:#f92672">&amp;&amp;</span> (sy <span style="color:#f92672">&lt;</span> p1y <span style="color:#f92672">+</span> P_H);
+        p2_draw <span style="color:#f92672">=</span> (sx <span style="color:#f92672">&gt;=</span> H_RES <span style="color:#f92672">-</span> P_OFFS <span style="color:#f92672">-</span> P_W) <span style="color:#f92672">&amp;&amp;</span> (sx <span style="color:#f92672">&lt;</span> H_RES <span style="color:#f92672">-</span> P_OFFS)
+               <span style="color:#f92672">&amp;&amp;</span> (sy <span style="color:#f92672">&gt;=</span> p2y) <span style="color:#f92672">&amp;&amp;</span> (sy <span style="color:#f92672">&lt;</span> p2y <span style="color:#f92672">+</span> P_H);
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// paddle collision detection
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">if</span> (animate) <span style="color:#66d9ef">begin</span>
+            p1_col <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            p2_col <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (b_draw) <span style="color:#66d9ef">begin</span>
+            <span style="color:#66d9ef">if</span> (p1_draw) p1_col <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+            <span style="color:#66d9ef">if</span> (p2_draw) p2_col <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+        <span style="color:#66d9ef">end</span>
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// ball speed control
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> SPEED_STEP <span style="color:#f92672">=</span> <span style="color:#ae81ff">5</span>;  <span style="color:#75715e">// speed up after this many collisions
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(SPEED_STEP)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_sp;  <span style="color:#75715e">// speed counter
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">if</span> (state <span style="color:#f92672">==</span> INIT) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// demo speed
+</span><span style="color:#75715e"></span>            spx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">6</span>;
+            spy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">4</span>;
+        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (state <span style="color:#f92672">==</span> START) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// initial game speed
+</span><span style="color:#75715e"></span>            spx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">4</span>;
+            spy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">2</span>;
+        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (state <span style="color:#f92672">==</span> PLAY <span style="color:#f92672">&amp;&amp;</span> animate <span style="color:#f92672">&amp;&amp;</span> (p1_col <span style="color:#f92672">||</span> p2_col)) <span style="color:#66d9ef">begin</span>
+            <span style="color:#66d9ef">if</span> (cnt_sp <span style="color:#f92672">==</span> SPEED_STEP<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
+                spx <span style="color:#f92672">&lt;=</span> spx <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+                spy <span style="color:#f92672">&lt;=</span> spy <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+                cnt_sp <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
+                cnt_sp <span style="color:#f92672">&lt;=</span> cnt_sp <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+            <span style="color:#66d9ef">end</span>
+        <span style="color:#66d9ef">end</span>
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// ball animation
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">if</span> (state <span style="color:#f92672">==</span> INIT <span style="color:#f92672">||</span> state <span style="color:#f92672">==</span> START) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// reset ball position
+</span><span style="color:#75715e"></span>            bx <span style="color:#f92672">&lt;=</span> (H_RES <span style="color:#f92672">-</span> B_SIZE) <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">1</span>;
+            by <span style="color:#f92672">&lt;=</span> (V_RES <span style="color:#f92672">-</span> B_SIZE) <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">1</span>;
+            dx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// serve towards player 2 (AI)
+</span><span style="color:#75715e"></span>            dy <span style="color:#f92672">&lt;=</span> <span style="color:#f92672">~</span>dy;
+            lft_col <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            rgt_col <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (animate <span style="color:#f92672">&amp;&amp;</span> state <span style="color:#f92672">!=</span> POINT_END) <span style="color:#66d9ef">begin</span>
+            <span style="color:#66d9ef">if</span> (p1_col) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// left paddle collision
+</span><span style="color:#75715e"></span>                dx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                bx <span style="color:#f92672">&lt;=</span> bx <span style="color:#f92672">+</span> spx;
+                dy <span style="color:#f92672">&lt;=</span> (by <span style="color:#f92672">+</span> B_SIZE<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span> <span style="color:#f92672">&lt;</span> p1y <span style="color:#f92672">+</span> P_H<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>) <span style="color:#f92672">?</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
+            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (p2_col) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// right paddle collision
+</span><span style="color:#75715e"></span>                dx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                bx <span style="color:#f92672">&lt;=</span> bx <span style="color:#f92672">-</span> spx;
+                dy <span style="color:#f92672">&lt;=</span> (by <span style="color:#f92672">+</span> B_SIZE<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span> <span style="color:#f92672">&lt;</span> p1y <span style="color:#f92672">+</span> P_H<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>) <span style="color:#f92672">?</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
+            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (bx <span style="color:#f92672">&gt;=</span> H_RES <span style="color:#f92672">-</span> (spx <span style="color:#f92672">+</span> B_SIZE)) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// right edge
+</span><span style="color:#75715e"></span>                rgt_col <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (bx <span style="color:#f92672">&lt;</span> spx) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// left edge
+</span><span style="color:#75715e"></span>                lft_col <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> bx <span style="color:#f92672">&lt;=</span> (dx) <span style="color:#f92672">?</span> bx <span style="color:#f92672">-</span> spx <span style="color:#f92672">:</span> bx <span style="color:#f92672">+</span> spx;
+
+            <span style="color:#66d9ef">if</span> (by <span style="color:#f92672">&gt;=</span> V_RES <span style="color:#f92672">-</span> (spy <span style="color:#f92672">+</span> B_SIZE)) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// bottom edge
+</span><span style="color:#75715e"></span>                dy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                by <span style="color:#f92672">&lt;=</span> by <span style="color:#f92672">-</span> spy;
+            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (by <span style="color:#f92672">&lt;</span> spy) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// top edge
+</span><span style="color:#75715e"></span>                dy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                by <span style="color:#f92672">&lt;=</span> by <span style="color:#f92672">+</span> spy;
+            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> by <span style="color:#f92672">&lt;=</span> (dy) <span style="color:#f92672">?</span> by <span style="color:#f92672">-</span> spy <span style="color:#f92672">:</span> by <span style="color:#f92672">+</span> spy;
+        <span style="color:#66d9ef">end</span>
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// draw ball - is ball at current screen position?
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+        b_draw <span style="color:#f92672">=</span> (sx <span style="color:#f92672">&gt;=</span> bx) <span style="color:#f92672">&amp;&amp;</span> (sx <span style="color:#f92672">&lt;</span> bx <span style="color:#f92672">+</span> B_SIZE)
+              <span style="color:#f92672">&amp;&amp;</span> (sy <span style="color:#f92672">&gt;=</span> by) <span style="color:#f92672">&amp;&amp;</span> (sy <span style="color:#f92672">&lt;</span> by <span style="color:#f92672">+</span> B_SIZE);
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// colours
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] red, green, blue;
+    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+        red   <span style="color:#f92672">=</span> (de <span style="color:#f92672">&amp;&amp;</span> (b_draw <span style="color:#f92672">|</span> p1_draw <span style="color:#f92672">|</span> p2_draw)) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
+        green <span style="color:#f92672">=</span> (de <span style="color:#f92672">&amp;&amp;</span> (b_draw <span style="color:#f92672">|</span> p1_draw <span style="color:#f92672">|</span> p2_draw)) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
+        blue  <span style="color:#f92672">=</span> (de <span style="color:#f92672">&amp;&amp;</span> (b_draw <span style="color:#f92672">|</span> p1_draw <span style="color:#f92672">|</span> p2_draw)) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// Output DVI clock: 180° out of phase with other DVI signals
+</span><span style="color:#75715e"></span>    SB_IO #(
+        .PIN_TYPE(<span style="color:#ae81ff">6</span><span style="color:#ae81ff">&#39;b010000</span>)  <span style="color:#75715e">// PIN_OUTPUT_DDR
+</span><span style="color:#75715e"></span>    ) dvi_clk_io (
+        .PACKAGE_PIN(dvi_clk),
+        .OUTPUT_CLK(clk_pix),
+        .D_OUT_0(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),
+        .D_OUT_1(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b1</span>)
+    );
+
+    <span style="color:#75715e">// Output DVI signals
+</span><span style="color:#75715e"></span>    SB_IO #(
+        .PIN_TYPE(<span style="color:#ae81ff">6</span><span style="color:#ae81ff">&#39;b010100</span>)  <span style="color:#75715e">// PIN_OUTPUT_REGISTERED
+</span><span style="color:#75715e"></span>    ) dvi_signal_io [<span style="color:#ae81ff">14</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] (
+        .PACKAGE_PIN({dvi_hsync, dvi_vsync, dvi_de, dvi_r, dvi_g, dvi_b}),
+        .OUTPUT_CLK(clk_pix),
+        .D_OUT_0({hsync, vsync, de, red, green, blue}),
+        .D_OUT_1()
+    );
+<span style="color:#66d9ef">endmodule</span>
+</code></pre></div><h2 id="scoring">Scoring</h2>
+<p>At the moment we don&rsquo;t show a score for the players. Once you <a href="/posts/hardware-sprites/">learn about sprites</a>, you can use them to keep score. Alternatively, you could draw simple blocks on the screen to keep score.</p>
 <h2 id="explore">Explore</h2>
 <p>I hope you enjoyed this instalment of <em>Exploring FPGA Graphics</em>, but nothing beats creating your own designs. Here are a few suggestions to improve FPGA Pong:</p>
 <ul>
 <li>Change the colours of the ball and paddles</li>
-<li>Add a net down the middle of the screen</li>
-<li>Increase the ball speed over time until a point is lost</li>
-<li>Improve AI, so it positions the paddle to direct the ball away from the player</li>
+<li>Draw a net down the middle of the screen</li>
+<li>Add more sophisticated bouncing, so the ball moves off at different angles from the paddle</li>
+<li>Improve the AI, so it positions the paddle to direct the ball away from the player</li>
 </ul>
 <p>Feedback is most welcome; you can get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</p>
 <h2 id="next-time">Next Time</h2>

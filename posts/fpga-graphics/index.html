@@ -120,7 +120,7 @@ In this first post, we learn how computer displays work and animate simple shape
     <div class="content">
       <p>Welcome to <em>Exploring FPGA Graphics</em>. In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We start by learning how displays work, before racing the beam with Pong, starfields and sprites, simulating life with bitmaps, drawing lines and triangles, and finally creating simple 3D models. I&rsquo;ll be writing and revising this series throughout 2020 and 2021.</p>
 <p>In this first post, we learn how computer displays work and animate simple shapes with an FPGA.</p>
-<p><em>Updated 2021-01-05. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><em>Updated 2021-01-08. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <blockquote>
 <p>In all beginnings dwells a magic force<br>
 <em>Herman Hesse, Stages from <a href="https://en.wikipedia.org/wiki/The_Glass_Bead_Game">The Glass Bead Game</a></em></p>
@@ -181,8 +181,8 @@ Any modern display, including <a href="https://en.wikipedia.org/wiki/Multisync_m
 </ul>
 <h2 id="display-timings-module">Display Timings Module</h2>
 <p>Using our ~25 MHz pixel clock, we can generate timings for our 640x480 display. Creating display timings is straightforward: there&rsquo;s one counter for horizontal position and one for vertical. We use these counters to decide on the correct time for sync signals.</p>
-<p>640x480 display timings generator <strong>[<a href="https://github.com/projf/projf-explore/blob/master/common/display_timings.sv">display_timings.sv</a>]</strong>:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> display_timings (
+<p>640x480 display timings generator <strong>[<a href="https://github.com/projf/projf-explore/blob/master/common/display_timings_480p.sv">display_timings_480p.sv</a>]</strong>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> display_timings_480p (
     <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_pix,   <span style="color:#75715e">// pixel clock
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst,       <span style="color:#75715e">// reset
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">9</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx,  <span style="color:#75715e">// horizontal screen position
@@ -193,20 +193,20 @@ Any modern display, including <a href="https://en.wikipedia.org/wiki/Multisync_m
 </span><span style="color:#75715e"></span>    );
 
     <span style="color:#75715e">// horizontal timings
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> HA_END <span style="color:#f92672">=</span> <span style="color:#ae81ff">639</span>;          <span style="color:#75715e">// end of active pixels
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> HS_STA <span style="color:#f92672">=</span> HA_END <span style="color:#f92672">+</span> <span style="color:#ae81ff">16</span>;  <span style="color:#75715e">// sync starts after front porch
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> HS_END <span style="color:#f92672">=</span> HS_STA <span style="color:#f92672">+</span> <span style="color:#ae81ff">96</span>;  <span style="color:#75715e">// sync ends
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> LINE   <span style="color:#f92672">=</span> <span style="color:#ae81ff">799</span>;          <span style="color:#75715e">// last pixel on line (after back porch)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> HA_END <span style="color:#f92672">=</span> <span style="color:#ae81ff">639</span>;           <span style="color:#75715e">// end of active pixels
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> HS_STA <span style="color:#f92672">=</span> HA_END <span style="color:#f92672">+</span> <span style="color:#ae81ff">16</span>;   <span style="color:#75715e">// sync starts after front porch
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> HS_END <span style="color:#f92672">=</span> HS_STA <span style="color:#f92672">+</span> <span style="color:#ae81ff">96</span>;   <span style="color:#75715e">// sync ends
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> LINE   <span style="color:#f92672">=</span> <span style="color:#ae81ff">799</span>;           <span style="color:#75715e">// last pixel on line (after back porch)
 </span><span style="color:#75715e"></span>
     <span style="color:#75715e">// vertical timings
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> VA_END <span style="color:#f92672">=</span> <span style="color:#ae81ff">479</span>;          <span style="color:#75715e">// end of active pixels
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> VS_STA <span style="color:#f92672">=</span> VA_END <span style="color:#f92672">+</span> <span style="color:#ae81ff">10</span>;  <span style="color:#75715e">// sync starts after front porch
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> VS_END <span style="color:#f92672">=</span> VS_STA <span style="color:#f92672">+</span> <span style="color:#ae81ff">2</span>;   <span style="color:#75715e">// sync ends
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> SCREEN <span style="color:#f92672">=</span> <span style="color:#ae81ff">524</span>;          <span style="color:#75715e">// last line on screen (after back porch)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> VA_END <span style="color:#f92672">=</span> <span style="color:#ae81ff">479</span>;           <span style="color:#75715e">// end of active pixels
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> VS_STA <span style="color:#f92672">=</span> VA_END <span style="color:#f92672">+</span> <span style="color:#ae81ff">10</span>;   <span style="color:#75715e">// sync starts after front porch
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> VS_END <span style="color:#f92672">=</span> VS_STA <span style="color:#f92672">+</span> <span style="color:#ae81ff">2</span>;    <span style="color:#75715e">// sync ends
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> SCREEN <span style="color:#f92672">=</span> <span style="color:#ae81ff">524</span>;           <span style="color:#75715e">// last line on screen (after back porch)
 </span><span style="color:#75715e"></span>
     <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        hsync <span style="color:#f92672">=</span> <span style="color:#f92672">~</span>(sx <span style="color:#f92672">&gt;=</span> HS_STA <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">&lt;</span> HS_END);  <span style="color:#75715e">// invert: hsync polarity is negative
-</span><span style="color:#75715e"></span>        vsync <span style="color:#f92672">=</span> <span style="color:#f92672">~</span>(sy <span style="color:#f92672">&gt;=</span> VS_STA <span style="color:#f92672">&amp;&amp;</span> sy <span style="color:#f92672">&lt;</span> VS_END);  <span style="color:#75715e">// invert: vsync polarity is negative
+        hsync <span style="color:#f92672">=</span> <span style="color:#f92672">~</span>(sx <span style="color:#f92672">&gt;=</span> HS_STA <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">&lt;</span> HS_END);  <span style="color:#75715e">// invert: negative polarity
+</span><span style="color:#75715e"></span>        vsync <span style="color:#f92672">=</span> <span style="color:#f92672">~</span>(sy <span style="color:#f92672">&gt;=</span> VS_STA <span style="color:#f92672">&amp;&amp;</span> sy <span style="color:#f92672">&lt;</span> VS_END);  <span style="color:#75715e">// invert: negative polarity
 </span><span style="color:#75715e"></span>        de <span style="color:#f92672">=</span> (sx <span style="color:#f92672">&lt;=</span> HA_END <span style="color:#f92672">&amp;&amp;</span> sy <span style="color:#f92672">&lt;=</span> VA_END);
     <span style="color:#66d9ef">end</span>
 
@@ -276,14 +276,14 @@ Any modern display, including <a href="https://en.wikipedia.org/wiki/Multisync_m
     <span style="color:#75715e">// display timings
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>;  <span style="color:#75715e">// screen coordinate width in bits
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx, sy;
-    <span style="color:#66d9ef">logic</span> de;
-    display_timings timings_640x480 (
+    <span style="color:#66d9ef">logic</span> hsync, vsync, de;
+    display_timings_480p timings_640x480 (
         .clk_pix,
         .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for clock lock
 </span><span style="color:#75715e"></span>        .sx,
         .sy,
-        .hsync(vga_hsync),
-        .vsync(vga_vsync),
+        .hsync,
+        .vsync,
         .de
     );
 
@@ -293,12 +293,14 @@ Any modern display, including <a href="https://en.wikipedia.org/wiki/Multisync_m
 
     <span style="color:#75715e">// VGA output
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        vga_hsync <span style="color:#f92672">&lt;=</span> hsync;
+        vga_vsync <span style="color:#f92672">&lt;=</span> vsync;
         vga_r <span style="color:#f92672">&lt;=</span> <span style="color:#f92672">!</span>de <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h0</span> <span style="color:#f92672">:</span> (q_draw <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>);
         vga_g <span style="color:#f92672">&lt;=</span> <span style="color:#f92672">!</span>de <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h0</span> <span style="color:#f92672">:</span> (q_draw <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h8</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h8</span>);
         vga_b <span style="color:#f92672">&lt;=</span> <span style="color:#f92672">!</span>de <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h0</span> <span style="color:#f92672">:</span> (q_draw <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h0</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;hF</span>);
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
-</code></pre></div><p>Take a look at the VGA section of the top module. For each colour, we check whether we&rsquo;re in the blanking interval (when de is 0). If we are in the blanking interval, we set the colour intensity to zero. Otherwise, we look at the value of <code>q_draw</code>: if true, we set the pixel to orange, if false we set it to blue. The colour intensity must be zero in the blanking interval; otherwise, your display may be garbled or misaligned.</p>
+</code></pre></div><p>Take a look at the VGA output section of the top module. For each colour, we check whether we&rsquo;re in the blanking interval (when de is 0). If we are in the blanking interval, we set the colour intensity to zero. Otherwise, we look at the value of <code>q_draw</code>: if true, we set the pixel to orange, if false we set it to blue. The colour intensity must be zero in the blanking interval; otherwise, your display may be garbled or misaligned. We want the output signals to be registered, and in sync with each other, so we use an <code>always_ff</code> with all five output signals.</p>
 <h3 id="icebreaker-dvi">iCEBreaker DVI</h3>
 <p>The version for iCE40 DVI is similar, but the DVI Pmod requires the data enable, <code>de</code>, and pixel clock, <code>clk_pix</code>, too. The <a href="https://www.ti.com/product/TFP410">TFP410</a> chip on the DVI Pmod takes our colour and sync signals and encodes them into DVI using <a href="https://en.wikipedia.org/wiki/Transition-minimized_differential_signaling">Transition-minimized differential signalling</a> (TMDS).</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_square (
@@ -326,9 +328,8 @@ Any modern display, including <a href="https://en.wikipedia.org/wiki/Multisync_m
     <span style="color:#75715e">// display timings
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>;  <span style="color:#75715e">// screen coordinate width in bits
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx, sy;
-    <span style="color:#66d9ef">logic</span> hsync, vsync;
-    <span style="color:#66d9ef">logic</span> de;
-    display_timings timings_640x480 (
+    <span style="color:#66d9ef">logic</span> hsync, vsync, de;
+    display_timings_480p timings_640x480 (
         .clk_pix,
         .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for clock lock
 </span><span style="color:#75715e"></span>        .sx,
@@ -357,7 +358,7 @@ Any modern display, including <a href="https://en.wikipedia.org/wiki/Multisync_m
         .PACKAGE_PIN(dvi_clk),
         .OUTPUT_CLK(clk_pix),
         .D_OUT_0(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),  <span style="color:#75715e">// output not DDR because we disable rising edge out
-</span><span style="color:#75715e"></span>        .D_OUT_1(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b1</span>)   <span style="color:#75715e">// output 180° out of phase because we enable falling edge out
+</span><span style="color:#75715e"></span>        .D_OUT_1(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b1</span>)   <span style="color:#75715e">// output 180° out of phase using falling edge out
 </span><span style="color:#75715e"></span>    );
 
     <span style="color:#75715e">// Output DVI signals
