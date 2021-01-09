@@ -120,7 +120,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
     <div class="content">
       <p>Welcome back to <em>Exploring FPGA Graphics</em>. In the previous part we learnt how to create <a href="/posts/hardware-sprites/">hardware sprites</a>. In this fourth part, we create a demo by combining our knowledge of sprites with animated starfields.</p>
 <p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We start by learning how displays work, before racing the beam with Pong, starfields and sprites, simulating life with bitmaps, drawing lines and triangles, and finally creating simple 3D models. I&rsquo;ll be writing and revising this series throughout 2020 and 2021. New to the series? Start with <a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a>.</p>
-<p><em>Updated 2021-01-05. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><em>Updated 2021-01-09. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <h3 id="series-outline">Series Outline</h3>
 <ul>
 <li><a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a> - learn how displays work and animate simple shapes</li>
@@ -217,9 +217,8 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/fpga-ad-astra
     <span style="color:#75715e">// display timings
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>;  <span style="color:#75715e">// screen coordinate width in bits
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx, sy;
-    <span style="color:#66d9ef">logic</span> hsync, vsync;
-    <span style="color:#66d9ef">logic</span> de;
-    display_timings timings_640x480 (
+    <span style="color:#66d9ef">logic</span> hsync, vsync, de;
+    display_timings_480p timings_640x480 (
         .clk_pix,
         .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for clock lock
 </span><span style="color:#75715e"></span>        .sx,
@@ -228,6 +227,12 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/fpga-ad-astra
         .vsync,
         .de
     );
+
+    <span style="color:#75715e">// size of screen with and without blanking
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> H_RES_FULL <span style="color:#f92672">=</span> <span style="color:#ae81ff">800</span>;
+    <span style="color:#66d9ef">localparam</span> V_RES_FULL <span style="color:#f92672">=</span> <span style="color:#ae81ff">525</span>;
+    <span style="color:#66d9ef">localparam</span> H_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">640</span>;
+    <span style="color:#66d9ef">localparam</span> V_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">480</span>;
 
     <span style="color:#66d9ef">logic</span> sf_area;
     <span style="color:#66d9ef">always_comb</span> sf_area <span style="color:#f92672">=</span> (sx <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">512</span> <span style="color:#f92672">&amp;&amp;</span> sy <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">256</span>);
@@ -299,7 +304,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/fpga-ad-astra
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sf_star  <span style="color:#75715e">// star brightness
 </span><span style="color:#75715e"></span>    );
 
-    <span style="color:#66d9ef">localparam</span> RST_CNT <span style="color:#f92672">=</span> H <span style="color:#f92672">*</span> V <span style="color:#f92672">+</span> INC <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// counter starts at zero, so subtract 1
+    <span style="color:#66d9ef">localparam</span> RST_CNT <span style="color:#f92672">=</span> H <span style="color:#f92672">*</span> V <span style="color:#f92672">+</span> INC <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// counter starts at zero, so sub 1
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">20</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sf_reg, sf_cnt;
 
     <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
@@ -369,13 +374,14 @@ You can easily create your own font version with different characters: check out
 <p>Our fonts are monochrome: each pixel is either 0 or 1, so we could read one bit at a time over a one-bit bus. However, as we&rsquo;re reading the sprite during the blanking interval there&rsquo;s no need to read a pixel at a time; it&rsquo;s more efficient to read a whole line of 8 or 16 pixels (for the Hiragana glyphs) at a time. By reading a whole sprite line in a single clock, we make very light use of the memory bus. We will also change the memory layout in the top module (covered later), so each glyph consists of 8 or 16 entries of 8 or 16 bits.</p>
 <h4 id="most-or-least-significant">Most or Least Significant?</h4>
 <p>As we discussed in Hex Glyphs, above, a font may be drawn most or least significant bit first. Because we load an entire glyph line into our sprite at a time, it&rsquo;s easy to reverse the bits with a <strong>for loop</strong> if required:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">if</span> (state <span style="color:#f92672">==</span> READ_MEM) <span style="color:#66d9ef">begin</span>
-        <span style="color:#66d9ef">if</span> (LSB) <span style="color:#66d9ef">begin</span>
-            spr_line <span style="color:#f92672">&lt;=</span> data_in;  <span style="color:#75715e">// NB. Assumes read takes one clock cycle
-</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// reverse if MSB is left-most pixel
-</span><span style="color:#75715e"></span>            <span style="color:#66d9ef">for</span> (i<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>; i<span style="color:#f92672">&lt;</span>WIDTH; i<span style="color:#f92672">=</span>i<span style="color:#f92672">+</span><span style="color:#ae81ff">1</span>) spr_line[i] <span style="color:#f92672">&lt;=</span> data_in[(WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>)<span style="color:#f92672">-</span>i];
-        <span style="color:#66d9ef">end</span>
-    <span style="color:#66d9ef">end</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">            READ_MEM: <span style="color:#66d9ef">begin</span>
+                <span style="color:#66d9ef">if</span> (LSB) <span style="color:#66d9ef">begin</span>
+                    spr_line <span style="color:#f92672">&lt;=</span> data_in;  <span style="color:#75715e">// Assumes read takes one clock cycle
+</span><span style="color:#75715e"></span>                <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// reverse if MSB is left-most pixel
+</span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">for</span> (i<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>; i<span style="color:#f92672">&lt;</span>WIDTH; i<span style="color:#f92672">=</span>i<span style="color:#f92672">+</span><span style="color:#ae81ff">1</span>)
+                        spr_line[i] <span style="color:#f92672">&lt;=</span> data_in[(WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>)<span style="color:#f92672">-</span>i];
+                <span style="color:#66d9ef">end</span>
+            <span style="color:#66d9ef">end</span>
 </code></pre></div><p>On the surface, for loops in Verilog seem the same as those in software; this is misleading.</p>
 <p>A for loop in Verilog <strong>duplicates logic</strong>, so the above bit reversal is actually equivilent to (if <code>WIDTH=8</code>):</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    spr_line[<span style="color:#ae81ff">0</span>] <span style="color:#f92672">&lt;=</span> data_in[<span style="color:#ae81ff">7</span>];
@@ -395,7 +401,7 @@ You can easily create your own font version with different characters: check out
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> SCALE_X<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>,       <span style="color:#75715e">// sprite width scale-factor
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> SCALE_Y<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>,       <span style="color:#75715e">// sprite height scale-factor
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> LSB<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>,           <span style="color:#75715e">// first pixel in LSB
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">10</span>,        <span style="color:#75715e">// width of screen coordinates
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">10</span>,        <span style="color:#75715e">// screen coordinate width in bits
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> H_RES_FULL<span style="color:#f92672">=</span><span style="color:#ae81ff">800</span>,  <span style="color:#75715e">// horizontal screen resolution inc. blanking
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> ADDRW<span style="color:#f92672">=</span><span style="color:#ae81ff">9</span>          <span style="color:#75715e">// width of graphic memory address bus
 </span><span style="color:#75715e"></span>    ) (
@@ -408,8 +414,8 @@ You can easily create your own font version with different characters: check out
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] data_in,  <span style="color:#75715e">// data from external memory
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] pos,      <span style="color:#75715e">// sprite line position
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> pix,                  <span style="color:#75715e">// pixel colour to draw (0 or 1)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> draw,                 <span style="color:#75715e">// signal sprite is drawing
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> done                  <span style="color:#75715e">// signal sprite drawing is complete
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> drawing,              <span style="color:#75715e">// sprite is drawing
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> done                  <span style="color:#75715e">// sprite drawing is complete
 </span><span style="color:#75715e"></span>    );
 
     <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] spr_line;  <span style="color:#75715e">// local copy of sprite line
@@ -438,48 +444,44 @@ You can easily create your own font version with different characters: check out
     <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
         state <span style="color:#f92672">&lt;=</span> state_next;  <span style="color:#75715e">// advance to next state
 </span><span style="color:#75715e"></span>
-        <span style="color:#66d9ef">if</span> (state <span style="color:#f92672">==</span> START) <span style="color:#66d9ef">begin</span>
-            done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-            oy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-            cnt_y <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-            pos <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-        <span style="color:#66d9ef">end</span>
-
-        <span style="color:#66d9ef">if</span> (state <span style="color:#f92672">==</span> READ_MEM) <span style="color:#66d9ef">begin</span>
-            <span style="color:#66d9ef">if</span> (LSB) <span style="color:#66d9ef">begin</span>
-                spr_line <span style="color:#f92672">&lt;=</span> data_in;  <span style="color:#75715e">// NB. Assumes read takes one clock cycle
-</span><span style="color:#75715e"></span>            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// reverse if MSB is left-most pixel
-</span><span style="color:#75715e"></span>                <span style="color:#66d9ef">for</span> (i<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>; i<span style="color:#f92672">&lt;</span>WIDTH; i<span style="color:#f92672">=</span>i<span style="color:#f92672">+</span><span style="color:#ae81ff">1</span>) spr_line[i] <span style="color:#f92672">&lt;=</span> data_in[(WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>)<span style="color:#f92672">-</span>i];
-            <span style="color:#66d9ef">end</span>
-         <span style="color:#66d9ef">end</span>
-
-        <span style="color:#66d9ef">if</span> (state <span style="color:#f92672">==</span> AWAIT_POS) <span style="color:#66d9ef">begin</span>
-            ox <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-            cnt_x <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-        <span style="color:#66d9ef">end</span>
-
-        <span style="color:#66d9ef">if</span> (state <span style="color:#f92672">==</span> DRAW) <span style="color:#66d9ef">begin</span>
-            <span style="color:#66d9ef">if</span> (SCALE_X <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">||</span> cnt_x <span style="color:#f92672">==</span> SCALE_X<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
-                ox <span style="color:#f92672">&lt;=</span> ox <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-                cnt_x <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
-                cnt_x <span style="color:#f92672">&lt;=</span> cnt_x <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-            <span style="color:#66d9ef">end</span>
-        <span style="color:#66d9ef">end</span>
-
-        <span style="color:#66d9ef">if</span> (state <span style="color:#f92672">==</span> NEXT_LINE) <span style="color:#66d9ef">begin</span>
-            <span style="color:#66d9ef">if</span> (SCALE_Y <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">||</span> cnt_y <span style="color:#f92672">==</span> SCALE_Y<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
-                oy <span style="color:#f92672">&lt;=</span> oy <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+        <span style="color:#66d9ef">case</span> (state)
+            START: <span style="color:#66d9ef">begin</span>
+                done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                oy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
                 cnt_y <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-                pos <span style="color:#f92672">&lt;=</span> pos <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
-                cnt_y <span style="color:#f92672">&lt;=</span> cnt_y <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+                pos <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
             <span style="color:#66d9ef">end</span>
-        <span style="color:#66d9ef">end</span>
-
-        <span style="color:#66d9ef">if</span> (state <span style="color:#f92672">==</span> DONE) <span style="color:#66d9ef">begin</span>
-            done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-        <span style="color:#66d9ef">end</span>
+            READ_MEM: <span style="color:#66d9ef">begin</span>
+                <span style="color:#66d9ef">if</span> (LSB) <span style="color:#66d9ef">begin</span>
+                    spr_line <span style="color:#f92672">&lt;=</span> data_in;  <span style="color:#75715e">// Assumes read takes one clock cycle
+</span><span style="color:#75715e"></span>                <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// reverse if MSB is left-most pixel
+</span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">for</span> (i<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>; i<span style="color:#f92672">&lt;</span>WIDTH; i<span style="color:#f92672">=</span>i<span style="color:#f92672">+</span><span style="color:#ae81ff">1</span>)
+                        spr_line[i] <span style="color:#f92672">&lt;=</span> data_in[(WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>)<span style="color:#f92672">-</span>i];
+                <span style="color:#66d9ef">end</span>
+            <span style="color:#66d9ef">end</span>
+            AWAIT_POS: <span style="color:#66d9ef">begin</span>
+                ox <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                cnt_x <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            <span style="color:#66d9ef">end</span>
+            DRAW: <span style="color:#66d9ef">begin</span>
+                <span style="color:#66d9ef">if</span> (SCALE_X <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">||</span> cnt_x <span style="color:#f92672">==</span> SCALE_X<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
+                    ox <span style="color:#f92672">&lt;=</span> ox <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+                    cnt_x <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
+                    cnt_x <span style="color:#f92672">&lt;=</span> cnt_x <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+                <span style="color:#66d9ef">end</span>
+            <span style="color:#66d9ef">end</span>
+            NEXT_LINE: <span style="color:#66d9ef">begin</span>
+                <span style="color:#66d9ef">if</span> (SCALE_Y <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">||</span> cnt_y <span style="color:#f92672">==</span> SCALE_Y<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
+                    oy <span style="color:#f92672">&lt;=</span> oy <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+                    cnt_y <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                    pos <span style="color:#f92672">&lt;=</span> pos <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+                <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
+                    cnt_y <span style="color:#f92672">&lt;=</span> cnt_y <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+                <span style="color:#66d9ef">end</span>
+            <span style="color:#66d9ef">end</span>
+            DONE: done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+        <span style="color:#66d9ef">endcase</span>
 
         <span style="color:#66d9ef">if</span> (rst) <span style="color:#66d9ef">begin</span>
             state <span style="color:#f92672">&lt;=</span> IDLE;
@@ -505,7 +507,7 @@ You can easily create your own font version with different characters: check out
         last_pixel <span style="color:#f92672">=</span> (ox <span style="color:#f92672">==</span> WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span> <span style="color:#f92672">&amp;&amp;</span> cnt_x <span style="color:#f92672">==</span> SCALE_X<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>);
         load_line  <span style="color:#f92672">=</span> (cnt_y <span style="color:#f92672">==</span> SCALE_Y<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>);
         last_line  <span style="color:#f92672">=</span> (oy <span style="color:#f92672">==</span> HEIGHT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span> <span style="color:#f92672">&amp;&amp;</span> cnt_y <span style="color:#f92672">==</span> SCALE_Y<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>);
-        draw <span style="color:#f92672">=</span> (state <span style="color:#f92672">==</span> DRAW);
+        drawing <span style="color:#f92672">=</span> (state <span style="color:#f92672">==</span> DRAW);
 
         <span style="color:#75715e">// BRAM adds an extra cycle of latency
 </span><span style="color:#75715e"></span>        <span style="color:#66d9ef">case</span> (sprx)
@@ -517,13 +519,14 @@ You can easily create your own font version with different characters: check out
 
     <span style="color:#75715e">// determine next state
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        <span style="color:#66d9ef">case</span>(state)
+        <span style="color:#66d9ef">case</span> (state)
             IDLE:       state_next <span style="color:#f92672">=</span> start <span style="color:#f92672">?</span> START <span style="color:#f92672">:</span> IDLE;
             START:      state_next <span style="color:#f92672">=</span> AWAIT_DMA;
             AWAIT_DMA:  state_next <span style="color:#f92672">=</span> dma_avail <span style="color:#f92672">?</span> READ_MEM <span style="color:#f92672">:</span> AWAIT_DMA;
             READ_MEM:   state_next <span style="color:#f92672">=</span> AWAIT_POS;
             AWAIT_POS:  state_next <span style="color:#f92672">=</span> (sx <span style="color:#f92672">==</span> sprx_cor) <span style="color:#f92672">?</span> DRAW <span style="color:#f92672">:</span> AWAIT_POS;
-            DRAW:       state_next <span style="color:#f92672">=</span> <span style="color:#f92672">!</span>last_pixel <span style="color:#f92672">?</span> DRAW <span style="color:#f92672">:</span> (<span style="color:#f92672">!</span>last_line <span style="color:#f92672">?</span> NEXT_LINE <span style="color:#f92672">:</span> DONE);
+            DRAW:       state_next <span style="color:#f92672">=</span> <span style="color:#f92672">!</span>last_pixel <span style="color:#f92672">?</span> DRAW <span style="color:#f92672">:</span>
+                                    (<span style="color:#f92672">!</span>last_line <span style="color:#f92672">?</span> NEXT_LINE <span style="color:#f92672">:</span> DONE);
             NEXT_LINE:  state_next <span style="color:#f92672">=</span> load_line <span style="color:#f92672">?</span> AWAIT_DMA <span style="color:#f92672">:</span> AWAIT_POS;
             DONE:       state_next <span style="color:#f92672">=</span> IDLE;
             <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span>    state_next <span style="color:#f92672">=</span> IDLE;
@@ -563,14 +566,14 @@ You can easily create your own font version with different characters: check out
     <span style="color:#75715e">// display timings
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>;  <span style="color:#75715e">// screen coordinate width in bits
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx, sy;
-    <span style="color:#66d9ef">logic</span> de;
-    display_timings timings_640x480 (
+    <span style="color:#66d9ef">logic</span> hsync, vsync, de;
+    display_timings_480p timings_640x480 (
         .clk_pix,
         .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for clock lock
 </span><span style="color:#75715e"></span>        .sx,
         .sy,
-        .hsync(vga_hsync),
-        .vsync(vga_vsync),
+        .hsync,
+        .vsync,
         .de
     );
 
@@ -648,7 +651,7 @@ You can easily create your own font version with different characters: check out
         .data_in(font_rom_data),
         .pos(spr_glyph_line),
         .pix(spr_pix),
-        .draw(),
+        .drawing(),
         .done()
     );
 
@@ -691,6 +694,8 @@ You can easily create your own font version with different characters: check out
 
     <span style="color:#75715e">// VGA output
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        vga_hsync <span style="color:#f92672">&lt;=</span> hsync;
+        vga_vsync <span style="color:#f92672">&lt;=</span> vsync;
         vga_r <span style="color:#f92672">&lt;=</span> de <span style="color:#f92672">?</span> spr_pix <span style="color:#f92672">?</span> red_spr   <span style="color:#f92672">:</span> starlight <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
         vga_g <span style="color:#f92672">&lt;=</span> de <span style="color:#f92672">?</span> spr_pix <span style="color:#f92672">?</span> green_spr <span style="color:#f92672">:</span> starlight <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
         vga_b <span style="color:#f92672">&lt;=</span> de <span style="color:#f92672">?</span> spr_pix <span style="color:#f92672">?</span> blue_spr  <span style="color:#f92672">:</span> starlight <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
@@ -748,7 +753,9 @@ You can easily create your own font version with different characters: check out
         greet_rom_addr <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
         msg_start <span style="color:#f92672">=</span> greeting <span style="color:#f92672">*</span> GREET_LENGTH;  <span style="color:#75715e">// calculate start of message
 </span><span style="color:#75715e"></span>        <span style="color:#66d9ef">for</span> (i <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>; i <span style="color:#f92672">&lt;</span> SPR_CNT; i <span style="color:#f92672">=</span> i <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
-            <span style="color:#66d9ef">if</span> (sx <span style="color:#f92672">==</span> H_RES<span style="color:#f92672">+</span>i) greet_rom_addr <span style="color:#f92672">=</span> (sy <span style="color:#f92672">&lt;</span> LINE2) <span style="color:#f92672">?</span> (msg_start<span style="color:#f92672">+</span>i) <span style="color:#f92672">:</span> (msg_start<span style="color:#f92672">+</span>i<span style="color:#f92672">+</span><span style="color:#ae81ff">8</span>);
+            <span style="color:#66d9ef">if</span> (sx <span style="color:#f92672">==</span> H_RES<span style="color:#f92672">+</span>i)
+                greet_rom_addr <span style="color:#f92672">=</span> (sy <span style="color:#f92672">&lt;</span> LINE2) <span style="color:#f92672">?</span> (msg_start<span style="color:#f92672">+</span>i) <span style="color:#f92672">:</span>
+                                                (msg_start<span style="color:#f92672">+</span>i<span style="color:#f92672">+</span>GREET_LENGTH<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>);
         <span style="color:#66d9ef">end</span>
     <span style="color:#66d9ef">end</span>
 
@@ -769,7 +776,8 @@ You can easily create your own font version with different characters: check out
         <span style="color:#66d9ef">for</span> (i <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>; i <span style="color:#f92672">&lt;</span> SPR_CNT; i <span style="color:#f92672">=</span> i <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
             spr_fdma[i] <span style="color:#f92672">=</span> (sx <span style="color:#f92672">==</span> H_RES<span style="color:#f92672">+</span>i<span style="color:#f92672">+</span><span style="color:#ae81ff">2</span>);  <span style="color:#75715e">// wait two cycles
 </span><span style="color:#75715e"></span>            spr_glyph_addr[i] <span style="color:#f92672">=</span> (spr_cp[i] <span style="color:#f92672">-</span> CP_START) <span style="color:#f92672">*</span> FONT_HEIGHT;
-            <span style="color:#66d9ef">if</span> (spr_fdma[i]) font_rom_addr <span style="color:#f92672">=</span> spr_glyph_addr[i] <span style="color:#f92672">+</span> spr_glyph_line[i];
+            <span style="color:#66d9ef">if</span> (spr_fdma[i])
+                font_rom_addr <span style="color:#f92672">=</span> spr_glyph_addr[i] <span style="color:#f92672">+</span> spr_glyph_line[i];
         <span style="color:#66d9ef">end</span>
     <span style="color:#66d9ef">end</span>
 </code></pre></div><h3 id="greetings-demo-v1">Greetings Demo v1</h3>

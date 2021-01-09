@@ -121,7 +121,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
       <p>Welcome back to <em>Exploring FPGA Graphics</em>. In this post we&rsquo;re going to use the designs we created in <a href="/posts/framebuffers/">Framebuffers</a> to experiment with Conway&rsquo;s Game of Life.</p>
 <p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We start by learning how displays work, before racing the beam with Pong, starfields and sprites, simulating life with bitmaps, drawing lines and triangles, and finally creating simple 3D models. I&rsquo;ll be writing and revising this series throughout 2020 and 2021. New to the series? Start with <a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a>.</p>
 <p><strong>Designs for iCEBreaker are not yet available pending a BRAM fix.</strong></p>
-<p><em>Updated 2021-01-05. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><em>Updated 2021-01-09. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <blockquote>
 <p>He is Archimedes, Mick Jagger, Salvador Dalí, and Richard Feynman, all rolled into one.<br>
 <em>The Guardian, <a href="https://www.theguardian.com/science/2015/jul/23/john-horton-conway-the-most-charismatic-mathematician-in-the-world">John Horton Conway: the world&rsquo;s most charismatic mathematician</a> (2015)</em></p>
@@ -334,7 +334,7 @@ The iCE40 FPGA has pseudo dual-port BRAM; you can read from one port, and write 
 
     <span style="color:#66d9ef">localparam</span> GEN_FRAMES <span style="color:#f92672">=</span> <span style="color:#ae81ff">15</span>;  <span style="color:#75715e">// each generation lasts this many frames
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> SEED_FILE <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;simple_life.mem&#34;</span>;  <span style="color:#75715e">// seed to initiate universe with
-</span><span style="color:#75715e"></span>    
+</span><span style="color:#75715e"></span>
     <span style="color:#75715e">// generate pixel clock
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> clk_pix;
     <span style="color:#66d9ef">logic</span> clk_locked;
@@ -348,14 +348,14 @@ The iCE40 FPGA has pseudo dual-port BRAM; you can read from one port, and write 
     <span style="color:#75715e">// display timings
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>;  <span style="color:#75715e">// screen coordinate width in bits
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx, sy;
-    <span style="color:#66d9ef">logic</span> de;
-    display_timings timings_640x480 (
+    <span style="color:#66d9ef">logic</span> hsync, vsync, de;
+    display_timings_480p timings_640x480 (
         .clk_pix,
         .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for clock lock
 </span><span style="color:#75715e"></span>        .sx,
         .sy,
-        .hsync(vga_hsync),
-        .vsync(vga_vsync),
+        .hsync,
+        .vsync,
         .de
     );
 
@@ -398,7 +398,8 @@ The iCE40 FPGA has pseudo dual-port BRAM; you can read from one port, and write 
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> front_buffer;  <span style="color:#75715e">// which buffer to draw the display from
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(GEN_FRAMES)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_frames;
     <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
-        <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> V_RES_FULL<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span> <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">==</span> H_RES_FULL<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) cnt_frames <span style="color:#f92672">&lt;=</span> cnt_frames <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+        <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> V_RES_FULL<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span> <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">==</span> H_RES_FULL<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>)
+            cnt_frames <span style="color:#f92672">&lt;=</span> cnt_frames <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
         <span style="color:#66d9ef">if</span> (cnt_frames <span style="color:#f92672">==</span> GEN_FRAMES <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
             front_buffer <span style="color:#f92672">&lt;=</span> <span style="color:#f92672">~</span>front_buffer;
             cnt_frames <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
@@ -424,10 +425,10 @@ The iCE40 FPGA has pseudo dual-port BRAM; you can read from one port, and write 
     );
 
     <span style="color:#75715e">// linebuffer (LB)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_SCALE_V <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span>;                <span style="color:#75715e">// factor to scale vertical drawing
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_SCALE_H <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span>;                <span style="color:#75715e">// factor to scale horizontal drawing
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_LEN  <span style="color:#f92672">=</span> <span style="color:#ae81ff">640</span> <span style="color:#f92672">/</span> LB_SCALE_H;    <span style="color:#75715e">// line length
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_WIDTH <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;                  <span style="color:#75715e">// bits per colour channel
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_SCALE_V <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span>;               <span style="color:#75715e">// scale vertical drawing
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_SCALE_H <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span>;               <span style="color:#75715e">// scale horizontal drawing
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_LEN <span style="color:#f92672">=</span> H_RES <span style="color:#f92672">/</span> LB_SCALE_H;  <span style="color:#75715e">// line length
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_WIDTH <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;                 <span style="color:#75715e">// bits per colour channel
 </span><span style="color:#75715e"></span>
     <span style="color:#75715e">// LB data in from FB
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [FB_ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lb_fb_addr;
@@ -441,17 +442,18 @@ The iCE40 FPGA has pseudo dual-port BRAM; you can read from one port, and write 
     <span style="color:#75715e">// count screen lines for vertical scaling - read when cnt_scale_v==0
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(LB_SCALE_V)<span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_scale_v;
     <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
-        <span style="color:#66d9ef">if</span> (sx <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) cnt_scale_v <span style="color:#f92672">&lt;=</span> (cnt_scale_v <span style="color:#f92672">==</span> scale_v_cor<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#f92672">?</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">:</span> cnt_scale_v <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-        <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> V_RES_FULL<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) cnt_scale_v <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// reset count in final blanking line
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">end</span>
+        <span style="color:#66d9ef">if</span> (sx <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>)
+            cnt_scale_v <span style="color:#f92672">&lt;=</span> (cnt_scale_v <span style="color:#f92672">==</span> scale_v_cor<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#f92672">?</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">:</span> cnt_scale_v <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+        <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> V_RES_FULL<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) cnt_scale_v <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+    <span style="color:#66d9ef">end</span>
 
     <span style="color:#66d9ef">logic</span> [$clog2(FB_WIDTH)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_h_cnt;  <span style="color:#75715e">// counter for FB pixels on line
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
-        <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> V_RES_FULL<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span> <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">==</span> H_RES<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) lb_fb_addr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// reset on last frame line
-</span><span style="color:#75715e"></span>
-        <span style="color:#75715e">// reset the horizontal counter at the start of blanking on reading lines
+        <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> V_RES_FULL<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span> <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">==</span> H_RES<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) lb_fb_addr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+
+        <span style="color:#75715e">// reset horizontal counter at the start of blanking on reading lines
 </span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (cnt_scale_v <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">==</span> H_RES) <span style="color:#66d9ef">begin</span>
-            <span style="color:#66d9ef">if</span> (lb_fb_addr <span style="color:#f92672">&lt;</span> FB_PIXELS<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) fb_h_cnt <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// if we&#39;ve not read all pixels
+            <span style="color:#66d9ef">if</span> (lb_fb_addr <span style="color:#f92672">&lt;</span> FB_PIXELS<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) fb_h_cnt <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// read all pixels?
 </span><span style="color:#75715e"></span>        <span style="color:#66d9ef">end</span>
 
         <span style="color:#75715e">// read each pixel on FB line and write to LB
@@ -506,6 +508,8 @@ The iCE40 FPGA has pseudo dual-port BRAM; you can read from one port, and write 
 
     <span style="color:#75715e">// VGA output
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        vga_hsync <span style="color:#f92672">&lt;=</span> hsync;
+        vga_vsync <span style="color:#f92672">&lt;=</span> vsync;
         vga_r <span style="color:#f92672">&lt;=</span> de <span style="color:#f92672">?</span> lb_out_2 <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
         vga_g <span style="color:#f92672">&lt;=</span> de <span style="color:#f92672">?</span> lb_out_1 <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
         vga_b <span style="color:#f92672">&lt;=</span> de <span style="color:#f92672">?</span> lb_out_0 <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;

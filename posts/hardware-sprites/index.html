@@ -120,7 +120,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
     <div class="content">
       <p>Welcome back to <em>Exploring FPGA Graphics</em>. In the previous part, we recreated <a href="/posts/fpga-pong/">Pong</a>. In this part, we learn how to create colourful animated graphics with hardware sprites. Hardware sprites maintain much of the simplicity of our Pong design while offering much greater creative freedom. In the <a href="/posts/fpga-ad-astra/">next part</a>, we&rsquo;ll create a demo that gives a taste of what&rsquo;s possible with sprites.</p>
 <p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We start by learning how displays work, before racing the beam with Pong, starfields and sprites, simulating life with bitmaps, drawing lines and triangles, and finally creating simple 3D models. I&rsquo;ll be writing and revising this series throughout 2020 and 2021. New to the series? Start with <a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a>.</p>
-<p><em>Updated 2021-01-08. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><em>Updated 2021-01-09. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <h3 id="series-outline">Series Outline</h3>
 <ul>
 <li><a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a> - learn how displays work and animate simple shapes</li>
@@ -182,14 +182,17 @@ In this series, we explore graphics at the hardware level and get a feel for the
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> pix                <span style="color:#75715e">// pixel colour to draw
 </span><span style="color:#75715e"></span>    );
 
-    <span style="color:#66d9ef">localparam</span> BPP <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// bits per pixel
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(DEPTH)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] addr;  <span style="color:#75715e">// ROM address (pixel position)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> data;  <span style="color:#75715e">// ROM data (pixel colour)
+    <span style="color:#75715e">// sprite graphic ROM
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(DEPTH)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] spr_rom_addr;  <span style="color:#75715e">// pixel position
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> spr_rom_data;  <span style="color:#75715e">// pixel colour
 </span><span style="color:#75715e"></span>    rom_async #(
-        .WIDTH(BPP),
-        .DEPTH(DEPTH),
+        .WIDTH(<span style="color:#ae81ff">1</span>),  <span style="color:#75715e">// 1 bit per pixel
+</span><span style="color:#75715e"></span>        .DEPTH(DEPTH),
         .INIT_F(SPR_FILE)
-    ) spr_rom ( .<span style="color:#f92672">*</span> );
+    ) spr_rom (
+        .addr(spr_rom_addr),
+        .data(spr_rom_data)
+    );
 
     <span style="color:#75715e">// position within sprite
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(WIDTH)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>]  ox;
@@ -209,12 +212,12 @@ In this series, we explore graphics at the hardware level and get a feel for the
         <span style="color:#66d9ef">case</span> (state)
             START: <span style="color:#66d9ef">begin</span>
                 oy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-                addr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                spr_rom_addr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
             <span style="color:#66d9ef">end</span>
             AWAIT_POS: ox <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
             DRAW: <span style="color:#66d9ef">begin</span>
                 ox <span style="color:#f92672">&lt;=</span> ox <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-                addr <span style="color:#f92672">&lt;=</span> addr <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+                spr_rom_addr <span style="color:#f92672">&lt;=</span> spr_rom_addr <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
             <span style="color:#66d9ef">end</span>
             NEXT_LINE: oy <span style="color:#f92672">&lt;=</span> oy <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
         <span style="color:#66d9ef">endcase</span>
@@ -223,13 +226,13 @@ In this series, we explore graphics at the hardware level and get a feel for the
             state <span style="color:#f92672">&lt;=</span> IDLE;
             ox <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
             oy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-            addr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            spr_rom_addr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
         <span style="color:#66d9ef">end</span>
     <span style="color:#66d9ef">end</span>
 
     <span style="color:#75715e">// output current pixel colour when drawing
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        pix <span style="color:#f92672">=</span> (state <span style="color:#f92672">==</span> DRAW) <span style="color:#f92672">?</span> data <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
+        pix <span style="color:#f92672">=</span> (state <span style="color:#f92672">==</span> DRAW) <span style="color:#f92672">?</span> spr_rom_data <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
     <span style="color:#66d9ef">end</span>
 
     <span style="color:#75715e">// create status signals
@@ -245,7 +248,8 @@ In this series, we explore graphics at the hardware level and get a feel for the
             IDLE:       state_next <span style="color:#f92672">=</span> start <span style="color:#f92672">?</span> START <span style="color:#f92672">:</span> IDLE;
             START:      state_next <span style="color:#f92672">=</span> AWAIT_POS;
             AWAIT_POS:  state_next <span style="color:#f92672">=</span> (sx <span style="color:#f92672">==</span> sprx) <span style="color:#f92672">?</span> DRAW <span style="color:#f92672">:</span> AWAIT_POS;
-            DRAW:       state_next <span style="color:#f92672">=</span> <span style="color:#f92672">!</span>last_pixel <span style="color:#f92672">?</span> DRAW <span style="color:#f92672">:</span> (<span style="color:#f92672">!</span>last_line <span style="color:#f92672">?</span> NEXT_LINE <span style="color:#f92672">:</span> IDLE);
+            DRAW:       state_next <span style="color:#f92672">=</span> <span style="color:#f92672">!</span>last_pixel <span style="color:#f92672">?</span> DRAW <span style="color:#f92672">:</span>
+                                     (<span style="color:#f92672">!</span>last_line <span style="color:#f92672">?</span> NEXT_LINE <span style="color:#f92672">:</span> IDLE);
             NEXT_LINE:  state_next <span style="color:#f92672">=</span> AWAIT_POS;
             <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span>    state_next <span style="color:#f92672">=</span> IDLE;
         <span style="color:#66d9ef">endcase</span>
@@ -420,9 +424,13 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/hardware-spri
             IDLE:       state_next <span style="color:#f92672">=</span> start <span style="color:#f92672">?</span> START <span style="color:#f92672">:</span> IDLE;
             START:      state_next <span style="color:#f92672">=</span> AWAIT_POS;
             AWAIT_POS:  state_next <span style="color:#f92672">=</span> (sx <span style="color:#f92672">==</span> sprx_cor) <span style="color:#f92672">?</span> DRAW <span style="color:#f92672">:</span> AWAIT_POS;
-            DRAW:       state_next <span style="color:#f92672">=</span> <span style="color:#f92672">!</span>last_pixel <span style="color:#f92672">?</span> DRAW <span style="color:#f92672">:</span> (<span style="color:#f92672">!</span>last_line <span style="color:#f92672">?</span> NEXT_LINE <span style="color:#f92672">:</span> IDLE);
-    <span style="color:#75715e">// ...
-</span></code></pre></div><p>Build the v2 designs, and you should see the F dot sprite at the very top left of the screen. You may need to adjust your VGA monitor to ensure it&rsquo;s fully visable.</p>
+            DRAW:       state_next <span style="color:#f92672">=</span> <span style="color:#f92672">!</span>last_pixel <span style="color:#f92672">?</span> DRAW <span style="color:#f92672">:</span>
+                                    (<span style="color:#f92672">!</span>last_line <span style="color:#f92672">?</span> NEXT_LINE <span style="color:#f92672">:</span> IDLE);
+            NEXT_LINE:  state_next <span style="color:#f92672">=</span> AWAIT_POS;
+            <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span>    state_next <span style="color:#f92672">=</span> IDLE;
+        <span style="color:#66d9ef">endcase</span>
+    <span style="color:#66d9ef">end</span>
+</code></pre></div><p>Build the v2 designs, and you should see the F dot sprite at the very top left of the screen. You may need to adjust your VGA monitor to ensure it&rsquo;s fully visable.</p>
 <h2 id="scale-up">Scale Up</h2>
 <p>Now we can position our sprite correctly, it&rsquo;s time to make it bigger. We make larger sprites by increasing the size of the design. However, it&rsquo;s also useful to be able to scale our sprites up when drawing them. A scaled-up sprite will be blocky but will use few resources and allows a design to work at different screen resolutions.</p>
 <p>To scale our sprite, we count additional screen pixels and lines when drawing the sprite using <code>cnt_x</code> and <code>cnt_y</code> respectively. The new module is <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/sprite_v3.sv">sprite_v3.sv</a>]</strong>:</p>
@@ -444,14 +452,17 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/hardware-spri
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> pix                <span style="color:#75715e">// pixel colour to draw
 </span><span style="color:#75715e"></span>    );
 
-    <span style="color:#66d9ef">localparam</span> BPP <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// bits per pixel
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(DEPTH)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] addr;  <span style="color:#75715e">// ROM address (pixel position)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> data;  <span style="color:#75715e">// ROM data (pixel colour)
+    <span style="color:#75715e">// sprite graphic ROM
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(DEPTH)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] spr_rom_addr;  <span style="color:#75715e">// pixel position
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> spr_rom_data;  <span style="color:#75715e">// pixel colour
 </span><span style="color:#75715e"></span>    rom_async #(
-        .WIDTH(BPP),
-        .DEPTH(DEPTH),
+        .WIDTH(<span style="color:#ae81ff">1</span>),  <span style="color:#75715e">// 1 bit per pixel
+</span><span style="color:#75715e"></span>        .DEPTH(DEPTH),
         .INIT_F(SPR_FILE)
-    ) spr_rom ( .<span style="color:#f92672">*</span> );
+    ) spr_rom (
+        .addr(spr_rom_addr),
+        .data(spr_rom_data)
+    );
 
     <span style="color:#75715e">// position within sprite
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(WIDTH)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>]  ox;
@@ -476,7 +487,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/hardware-spri
             START: <span style="color:#66d9ef">begin</span>
                 oy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
                 cnt_y <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-                addr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                spr_rom_addr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
             <span style="color:#66d9ef">end</span>
             AWAIT_POS: <span style="color:#66d9ef">begin</span>
                 ox <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
@@ -486,7 +497,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/hardware-spri
                 <span style="color:#66d9ef">if</span> (SCALE_X <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">||</span> cnt_x <span style="color:#f92672">==</span> SCALE_X<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
                     ox <span style="color:#f92672">&lt;=</span> ox <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
                     cnt_x <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-                    addr <span style="color:#f92672">&lt;=</span> addr <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+                    spr_rom_addr <span style="color:#f92672">&lt;=</span> spr_rom_addr <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
                 <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
                     cnt_x <span style="color:#f92672">&lt;=</span> cnt_x <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
                 <span style="color:#66d9ef">end</span>
@@ -497,7 +508,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/hardware-spri
                     cnt_y <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
                 <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
                     cnt_y <span style="color:#f92672">&lt;=</span> cnt_y <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-                    addr <span style="color:#f92672">&lt;=</span> addr <span style="color:#f92672">-</span> WIDTH;  <span style="color:#75715e">// go back to start of line
+                    spr_rom_addr <span style="color:#f92672">&lt;=</span> spr_rom_addr <span style="color:#f92672">-</span> WIDTH;  <span style="color:#75715e">// restart line
 </span><span style="color:#75715e"></span>                <span style="color:#66d9ef">end</span>
             <span style="color:#66d9ef">end</span>
         <span style="color:#66d9ef">endcase</span>
@@ -508,13 +519,13 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/hardware-spri
             oy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
             cnt_x <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
             cnt_y <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-            addr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            spr_rom_addr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
         <span style="color:#66d9ef">end</span>
     <span style="color:#66d9ef">end</span>
 
     <span style="color:#75715e">// output current pixel colour when drawing
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        pix <span style="color:#f92672">=</span> (state <span style="color:#f92672">==</span> DRAW) <span style="color:#f92672">?</span> data <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
+        pix <span style="color:#f92672">=</span> (state <span style="color:#f92672">==</span> DRAW) <span style="color:#f92672">?</span> spr_rom_data <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
     <span style="color:#66d9ef">end</span>
 
     <span style="color:#75715e">// create status signals and correct horizontal position
@@ -532,7 +543,8 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/hardware-spri
             IDLE:       state_next <span style="color:#f92672">=</span> start <span style="color:#f92672">?</span> START <span style="color:#f92672">:</span> IDLE;
             START:      state_next <span style="color:#f92672">=</span> AWAIT_POS;
             AWAIT_POS:  state_next <span style="color:#f92672">=</span> (sx <span style="color:#f92672">==</span> sprx_cor) <span style="color:#f92672">?</span> DRAW <span style="color:#f92672">:</span> AWAIT_POS;
-            DRAW:       state_next <span style="color:#f92672">=</span> <span style="color:#f92672">!</span>last_pixel <span style="color:#f92672">?</span> DRAW <span style="color:#f92672">:</span> (<span style="color:#f92672">!</span>last_line <span style="color:#f92672">?</span> NEXT_LINE <span style="color:#f92672">:</span> IDLE);
+            DRAW:       state_next <span style="color:#f92672">=</span> <span style="color:#f92672">!</span>last_pixel <span style="color:#f92672">?</span> DRAW <span style="color:#f92672">:</span>
+                                    (<span style="color:#f92672">!</span>last_line <span style="color:#f92672">?</span> NEXT_LINE <span style="color:#f92672">:</span> IDLE);
             NEXT_LINE:  state_next <span style="color:#f92672">=</span> AWAIT_POS;
             <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span>    state_next <span style="color:#f92672">=</span> IDLE;
         <span style="color:#66d9ef">endcase</span>
@@ -622,8 +634,8 @@ This design was common in older computers, for example, the <a href="https://en.
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [COLR_BITS<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] data_in,  <span style="color:#75715e">// data from external memory
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] pos,          <span style="color:#75715e">// sprite pixel position
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [COLR_BITS<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] pix,      <span style="color:#75715e">// pixel colour to draw
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> draw,                     <span style="color:#75715e">// signal sprite is drawing
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> done                      <span style="color:#75715e">// signal sprite drawing is complete
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> drawing,                  <span style="color:#75715e">// sprite is drawing
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> done                      <span style="color:#75715e">// sprite drawing is complete
 </span><span style="color:#75715e"></span>    );
 
     <span style="color:#75715e">// position within sprite
@@ -700,7 +712,7 @@ This design was common in older computers, for example, the <a href="https://en.
     <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
         last_pixel <span style="color:#f92672">=</span> (ox <span style="color:#f92672">==</span> WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>  <span style="color:#f92672">&amp;&amp;</span> cnt_x <span style="color:#f92672">==</span> SCALE_X<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>);
         last_line  <span style="color:#f92672">=</span> (oy <span style="color:#f92672">==</span> HEIGHT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span> <span style="color:#f92672">&amp;&amp;</span> cnt_y <span style="color:#f92672">==</span> SCALE_Y<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>);
-        draw <span style="color:#f92672">=</span> (state <span style="color:#f92672">==</span> DRAW);
+        drawing <span style="color:#f92672">=</span> (state <span style="color:#f92672">==</span> DRAW);
 
         <span style="color:#75715e">// BRAM adds an extra cycle of latency
 </span><span style="color:#75715e"></span>        <span style="color:#66d9ef">case</span> (sprx)
@@ -716,7 +728,8 @@ This design was common in older computers, for example, the <a href="https://en.
             IDLE:       state_next <span style="color:#f92672">=</span> start <span style="color:#f92672">?</span> START <span style="color:#f92672">:</span> IDLE;
             START:      state_next <span style="color:#f92672">=</span> AWAIT_POS;
             AWAIT_POS:  state_next <span style="color:#f92672">=</span> (sx <span style="color:#f92672">==</span> sprx_cor) <span style="color:#f92672">?</span> DRAW <span style="color:#f92672">:</span> AWAIT_POS;
-            DRAW:       state_next <span style="color:#f92672">=</span> <span style="color:#f92672">!</span>last_pixel <span style="color:#f92672">?</span> DRAW <span style="color:#f92672">:</span> (<span style="color:#f92672">!</span>last_line <span style="color:#f92672">?</span> NEXT_LINE <span style="color:#f92672">:</span> DONE);
+            DRAW:       state_next <span style="color:#f92672">=</span> <span style="color:#f92672">!</span>last_pixel <span style="color:#f92672">?</span> DRAW <span style="color:#f92672">:</span>
+                                    (<span style="color:#f92672">!</span>last_line <span style="color:#f92672">?</span> NEXT_LINE <span style="color:#f92672">:</span> DONE);
             NEXT_LINE:  state_next <span style="color:#f92672">=</span> AWAIT_POS;
             DONE:       state_next <span style="color:#f92672">=</span> IDLE;
             <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span>    state_next <span style="color:#f92672">=</span> IDLE;
@@ -735,7 +748,7 @@ This design was common in older computers, for example, the <a href="https://en.
     <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> sprx_cor <span style="color:#f92672">=</span> sprx <span style="color:#f92672">-</span> <span style="color:#ae81ff">2</span>;
 <span style="color:#66d9ef">endcase</span>
 </code></pre></div><h4 id="drawing--done">Drawing &amp; Done</h4>
-<p>For better control and reuse of sprite instances, we&rsquo;ve added two new signals: <code>draw</code> is high when the sprite is drawing pixels, and <code>done</code> indicates the sprite is complete.</p>
+<p>For better control and reuse of sprite instances, we&rsquo;ve added two new signals: <code>drawing</code> is high when the sprite is drawing pixels, and <code>done</code> indicates the sprite is complete.</p>
 <h3 id="a-refined-palette">A Refined Palette</h3>
 <p>Our boards have 12-bit colour output, supporting 4,096 colours. We can map our 11 sprite colours to any of these using a colour lookup table (CLUT). We populate the colour lookup table using a simple text file <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/res/hedgehog/hedgehog_palette.mem">hedgehog_palette.mem</a>]</strong>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">CCC AAA 888 874 763 651 540 330 111 F0F 000
@@ -743,13 +756,11 @@ This design was common in older computers, for example, the <a href="https://en.
 <p>The hedgehog sprite has ten drawing colours, with an additional colour <code>F0F</code> (magenta) used for transparency. These colours are 12-bit in hex format: <code>RGB</code>; the same as a <a href="https://en.wikipedia.org/wiki/Web_colors">web colour hex triplet</a>.</p>
 <h4 id="clut--display-output">CLUT &amp; Display Output</h4>
 <p>The logic for the CLUT is straightforward: we only have 11 colours, so an async ROM suffices:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// colour lookup table (ROM)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CLUT_ENTRIES <span style="color:#f92672">=</span> <span style="color:#ae81ff">11</span>;
-    <span style="color:#66d9ef">localparam</span> BPP <span style="color:#f92672">=</span> <span style="color:#ae81ff">12</span>;  <span style="color:#75715e">// bits per pixel
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [BPP<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] clut_colr;
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// colour lookup table (ROM) 11x12-bit entries
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] clut_colr;
     rom_async #(
-        .WIDTH(BPP),
-        .DEPTH(CLUT_ENTRIES),
+        .WIDTH(<span style="color:#ae81ff">12</span>),
+        .DEPTH(<span style="color:#ae81ff">11</span>),
         .INIT_F(SPR_PALETTE)
     ) clut (
         .addr(spr_pix),
@@ -765,9 +776,9 @@ This design was common in older computers, for example, the <a href="https://en.
         spr_trans <span style="color:#f92672">=</span> (spr_pix <span style="color:#f92672">==</span> SPR_TRANS);
         {red_spr, green_spr, blue_spr} <span style="color:#f92672">=</span> clut_colr;
         {red_bg,  green_bg,  blue_bg}  <span style="color:#f92672">=</span> <span style="color:#ae81ff">12&#39;h260</span>;
-        red   <span style="color:#f92672">=</span> (spr_draw <span style="color:#f92672">&amp;&amp;</span> <span style="color:#f92672">!</span>spr_trans) <span style="color:#f92672">?</span> red_spr   <span style="color:#f92672">:</span> red_bg;
-        green <span style="color:#f92672">=</span> (spr_draw <span style="color:#f92672">&amp;&amp;</span> <span style="color:#f92672">!</span>spr_trans) <span style="color:#f92672">?</span> green_spr <span style="color:#f92672">:</span> green_bg;
-        blue  <span style="color:#f92672">=</span> (spr_draw <span style="color:#f92672">&amp;&amp;</span> <span style="color:#f92672">!</span>spr_trans) <span style="color:#f92672">?</span> blue_spr  <span style="color:#f92672">:</span> blue_bg;
+        red   <span style="color:#f92672">=</span> (spr_drawing <span style="color:#f92672">&amp;&amp;</span> <span style="color:#f92672">!</span>spr_trans) <span style="color:#f92672">?</span> red_spr   <span style="color:#f92672">:</span> red_bg;
+        green <span style="color:#f92672">=</span> (spr_drawing <span style="color:#f92672">&amp;&amp;</span> <span style="color:#f92672">!</span>spr_trans) <span style="color:#f92672">?</span> green_spr <span style="color:#f92672">:</span> green_bg;
+        blue  <span style="color:#f92672">=</span> (spr_drawing <span style="color:#f92672">&amp;&amp;</span> <span style="color:#f92672">!</span>spr_trans) <span style="color:#f92672">?</span> blue_spr  <span style="color:#f92672">:</span> blue_bg;
     <span style="color:#66d9ef">end</span>
 </code></pre></div><p>We take the colour index provided by the sprite module, <code>spr_pix</code>, and use it look up the red, green, and blue components of the pixel colour. We also check to see whether the pixel colour matches the transparant colour specified in <code>SPR_TRANS</code>: we don&rsquo;t want to draw the sprite if the pixel is transparent. This version has a solid green background specified by the hex colour <code>12'h260</code>.</p>
 <h3 id="top-hedgehog">Top Hedgehog</h3>
@@ -800,7 +811,7 @@ You&rsquo;ll learn how to create your own memory files from images using <code>i
                 <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> spr_base_addr <span style="color:#f92672">&lt;=</span> spr_base_addr;
             <span style="color:#66d9ef">endcase</span>
 </code></pre></div><p>The rom address uses the sprite base address, <code>spr_base_addr</code>, to select the right image:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// sprite ROM
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// sprite graphic ROM
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [COLR_BITS<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] spr_rom_data;
     <span style="color:#66d9ef">logic</span> [SPR_ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] spr_rom_addr, spr_base_addr;
     rom_sync #(
@@ -895,10 +906,10 @@ You&rsquo;ll learn how to create your own memory files from images using <code>i
     <span style="color:#66d9ef">localparam</span> SPR_DEPTH  <span style="color:#f92672">=</span> SPR_PIXELS <span style="color:#f92672">*</span> SPR_FRAMES;
     <span style="color:#66d9ef">localparam</span> SPR_ADDRW  <span style="color:#f92672">=</span> $clog2(SPR_DEPTH);
 
-    <span style="color:#66d9ef">logic</span> spr_start, spr_draw;
+    <span style="color:#66d9ef">logic</span> spr_start, spr_drawing;
     <span style="color:#66d9ef">logic</span> [COLR_BITS<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] spr_pix;
 
-    <span style="color:#75715e">// sprite ROM
+    <span style="color:#75715e">// sprite graphic ROM
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [COLR_BITS<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] spr_rom_data;
     <span style="color:#66d9ef">logic</span> [SPR_ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] spr_rom_addr, spr_base_addr;
     rom_sync #(
@@ -963,7 +974,7 @@ You&rsquo;ll learn how to create your own memory files from images using <code>i
         .data_in(spr_rom_data),
         .pos(spr_rom_addr),
         .pix(spr_pix),
-        .draw(spr_draw),
+        .drawing(spr_drawing),
         .done()
     );
 
@@ -980,13 +991,11 @@ You&rsquo;ll learn how to create your own memory files from images using <code>i
         <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">320</span>) bg_colr <span style="color:#f92672">=</span> <span style="color:#ae81ff">12&#39;h2BF</span>;
     <span style="color:#66d9ef">end</span>
 
-    <span style="color:#75715e">// colour lookup table (ROM)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CLUT_ENTRIES <span style="color:#f92672">=</span> <span style="color:#ae81ff">11</span>;
-    <span style="color:#66d9ef">localparam</span> BPP <span style="color:#f92672">=</span> <span style="color:#ae81ff">12</span>;  <span style="color:#75715e">// bits per pixel
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [BPP<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] clut_colr;
+    <span style="color:#75715e">// colour lookup table (ROM) 11x12-bit entries
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] clut_colr;
     rom_async #(
-        .WIDTH(BPP),
-        .DEPTH(CLUT_ENTRIES),
+        .WIDTH(<span style="color:#ae81ff">12</span>),
+        .DEPTH(<span style="color:#ae81ff">11</span>),
         .INIT_F(SPR_PALETTE)
     ) clut (
         .addr(spr_pix),
@@ -1002,9 +1011,9 @@ You&rsquo;ll learn how to create your own memory files from images using <code>i
         spr_trans <span style="color:#f92672">=</span> (spr_pix <span style="color:#f92672">==</span> SPR_TRANS);
         {red_spr, green_spr, blue_spr} <span style="color:#f92672">=</span> clut_colr;
         {red_bg,  green_bg,  blue_bg}  <span style="color:#f92672">=</span> bg_colr;
-        red   <span style="color:#f92672">=</span> (spr_draw <span style="color:#f92672">&amp;&amp;</span> <span style="color:#f92672">!</span>spr_trans) <span style="color:#f92672">?</span> red_spr   <span style="color:#f92672">:</span> red_bg;
-        green <span style="color:#f92672">=</span> (spr_draw <span style="color:#f92672">&amp;&amp;</span> <span style="color:#f92672">!</span>spr_trans) <span style="color:#f92672">?</span> green_spr <span style="color:#f92672">:</span> green_bg;
-        blue  <span style="color:#f92672">=</span> (spr_draw <span style="color:#f92672">&amp;&amp;</span> <span style="color:#f92672">!</span>spr_trans) <span style="color:#f92672">?</span> blue_spr  <span style="color:#f92672">:</span> blue_bg;
+        red   <span style="color:#f92672">=</span> (spr_drawing <span style="color:#f92672">&amp;&amp;</span> <span style="color:#f92672">!</span>spr_trans) <span style="color:#f92672">?</span> red_spr   <span style="color:#f92672">:</span> red_bg;
+        green <span style="color:#f92672">=</span> (spr_drawing <span style="color:#f92672">&amp;&amp;</span> <span style="color:#f92672">!</span>spr_trans) <span style="color:#f92672">?</span> green_spr <span style="color:#f92672">:</span> green_bg;
+        blue  <span style="color:#f92672">=</span> (spr_drawing <span style="color:#f92672">&amp;&amp;</span> <span style="color:#f92672">!</span>spr_trans) <span style="color:#f92672">?</span> blue_spr  <span style="color:#f92672">:</span> blue_bg;
     <span style="color:#66d9ef">end</span>
 
     <span style="color:#75715e">// VGA output
