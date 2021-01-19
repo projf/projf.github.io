@@ -7,7 +7,7 @@
 <title>Framebuffers | Project F - FPGA Development</title>
 
 <meta property='og:title' content='Framebuffers - Project F - FPGA Development'>
-<meta property='og:description' content='Welcome back to Exploring FPGA Graphics. In the previous two parts, we worked with sprites, but as graphics become more complex, a different approach is needed. Instead of drawing directly to the screen, we draw to a framebuffer, which is read by the display controller. This post provides an introduction to framebuffers and how to scale and fade them Wolfenstein 3D style. In the next part, we&rsquo;ll use a framebuffer to visualize a simulation of life.'>
+<meta property='og:description' content='Welcome back to Exploring FPGA Graphics. In the previous two parts, we worked with sprites, but as graphics become more complex, a different approach is needed. Instead of drawing directly to the screen, we draw to a framebuffer, which is read out when required by the screen. This post provides an introduction to framebuffers and how to scale them. We&rsquo;ll also learn how to fizzlefade graphics Wolfenstein 3D style. In the next part, we&rsquo;ll use a framebuffer to visualize a simulation of life.'>
 <meta property='og:url' content='https://projectf.io/posts/framebuffers/'>
 <meta property='og:site_name' content='Project F - FPGA Development'>
 <meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/framebuffers/social-card.png'><meta property='article:published_time' content='2020-10-30T00:00:00Z'/><meta property='article:modified_time' content='2020-10-30T00:00:00Z'/><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
@@ -117,10 +117,9 @@
     <h1 class="title">Framebuffers</h1>
     
     <div class="content">
-      <p>Welcome back to <em>Exploring FPGA Graphics</em>. In the previous two parts, we worked with sprites, but as graphics become more complex, a different approach is needed. Instead of drawing directly to the screen, we draw to a framebuffer, which is read by the display controller. This post provides an introduction to framebuffers and how to scale and fade them Wolfenstein 3D style. In the <a href="/posts/life-on-screen/">next part</a>, we&rsquo;ll use a framebuffer to visualize a simulation of life.</p>
+      <p>Welcome back to <em>Exploring FPGA Graphics</em>. In the previous two parts, we worked with sprites, but as graphics become more complex, a different approach is needed. Instead of drawing directly to the screen, we draw to a framebuffer, which is read out when required by the screen. This post provides an introduction to framebuffers and how to scale them. We&rsquo;ll also learn how to fizzlefade graphics Wolfenstein 3D style. In the <a href="/posts/life-on-screen/">next part</a>, we&rsquo;ll use a framebuffer to visualize a simulation of life.</p>
 <p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We start by learning how displays work, before racing the beam with Pong, starfields and sprites, simulating life with bitmaps, drawing lines and triangles, and finally creating simple 3D models. I&rsquo;ll be writing and revising this series throughout 2020 and 2021. New to the series? Start with <a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a>.</p>
-<p><strong>Designs for iCEBreaker are not yet available pending a BRAM fix.</strong></p>
-<p><em>Updated 2021-01-09. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><em>Updated 2021-01-19. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <h3 id="series-outline">Series Outline</h3>
 <ul>
 <li><a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a> - learn how displays work and animate simple shapes</li>
@@ -143,21 +142,15 @@
 <h2 id="framebuffer">Framebuffer</h2>
 <p>A framebuffer is an in-memory bitmap that drives pixels on screen. When you write to a memory location within the framebuffer, the corresponding pixel will change on screen. Using a framebuffer provides two big benefits: we&rsquo;re free to create sophisticated graphics using whatever technique we like, and the setting of pixel colour is separated from the process driving the screen. The flexibility of a framebuffer comes at the cost of increased memory storage and latency.</p>
 <h2 id="a-small-buffer">A Small Buffer</h2>
-<p>Framebuffers require memory to hold the whole frame. To keep things simple, we want to be able to store our framebuffer in FPGA block memory (BRAM), rather than relying on external ram. The iCE40 FPGA on the iCEBreaker board has 120 Kb of block memory, so that&rsquo;s what we&rsquo;ll target for this post. You can learn more about block ram in <a href="/posts/fpga-memory-types/">FPGA Memory Types</a>.</p>
+<p>A framebuffer requires enough memory to hold the complete frame. To keep things simple, we&rsquo;re going to store our framebuffer in internal FPGA block memory (BRAM). The iCEBreaker&rsquo;s iCE40 FPGA has thirty 4kb BRAMs, for 120 kb in total, so that&rsquo;s what we&rsquo;ll target. You can learn more about block ram in <a href="/posts/fpga-memory-types/">FPGA Memory Types</a>.</p>
 <p>If we divide our 640x480 screen by four in both dimensions, we get 160x120. 160x120 is 19,200 pixels, so a monochrome framebuffer requires 18.75 kilobits of memory (19,200 = 18.75 * 1024).</p>
-<h3 id="a-small-bitmap">A Small Bitmap</h3>
-<p><img src="/img/posts/framebuffers/david-comparison.png" alt="Michelangelo&rsquo;s David" title="David is a masterpiece of Renaissance sculpture created in marble between 1501 and 1504 by the Italian artist Michelangelo."></p>
-<p>A small monochrome framebuffer calls for a striking image: I&rsquo;ve chosen <a href="https://en.wikipedia.org/wiki/David_(Michelangelo)">David by Michelangelo</a>.</p>
-<p>The version on the right is the <a href="https://commons.wikimedia.org/wiki/File:Michelangelo%27s_David_-_63_grijswaarden.png">original from Wikipedia</a>; it has 64 shades of grey. I created the middle image by reducing the original to 16 colours using img2fmem with no dithering (we will discuss this tool later in the post). The monochrome image on the left was created by <a href="https://commons.wikimedia.org/wiki/User:Gerbrant/Dithering_algorithms">Gerbrant</a> using <a href="https://en.wikipedia.org/wiki/Floyd%E2%80%93Steinberg_dithering">Floyd-Steinberg dithering</a>.</p>
-<h3 id="a-corner-of-the-screen">A Corner of the Screen</h3>
-<p>Let&rsquo;s create a top module to output our framebuffer loaded with the monochrome image of David. The Xilinx version uses a new BRAM module, <strong><a href="https://github.com/projf/projf-explore/blob/master/common/xc7/bram_sdp.sv">bram_sdp.sv</a></strong>, but is otherwise similar to other top designs we&rsquo;ve used in previous parts.</p>
+<p>We&rsquo;ll start by wiring up our usual display timings with a framebuffer based on BRAM, then draw a simple horizontal line in it to confirm everything is working.</p>
 <ul>
-<li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/framebuffers/xc7/top_david_v1.sv">xc7/top_david_v1.sv</a></strong></li>
-<li>Lattice iCE40: <em>awaiting BRAM fix</em></li>
+<li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/framebuffers/xc7/top_line.sv">xc7/top_line.sv</a></strong></li>
+<li>Lattice iCE40: <strong><a href="https://github.com/projf/projf-explore/blob/master/framebuffers/ice40/top_line.sv">ice40/top_line.sv</a></strong></li>
 </ul>
-<p><strong>top_david_v1 memory usage:</strong> 160x120x1: 1x36Kb BRAM on the XC7.</p>
 <p>The Xilinx version is shown below:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_david_v1 (
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_line (
     <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_100m,     <span style="color:#75715e">// 100 MHz clock
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_rst,      <span style="color:#75715e">// reset button (active low)
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> vga_hsync,    <span style="color:#75715e">// horizontal sync
@@ -203,30 +196,45 @@
     <span style="color:#66d9ef">localparam</span> FB_PIXELS <span style="color:#f92672">=</span> FB_WIDTH <span style="color:#f92672">*</span> FB_HEIGHT;
     <span style="color:#66d9ef">localparam</span> FB_ADDRW  <span style="color:#f92672">=</span> $clog2(FB_PIXELS);
     <span style="color:#66d9ef">localparam</span> FB_DATAW  <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// colour bits per pixel
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> FB_IMAGE  <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;david_1bit.mem&#34;</span>;
-
-    <span style="color:#66d9ef">logic</span> [FB_ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_addr_read;
-    <span style="color:#66d9ef">logic</span> [FB_DATAW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] colr;
+</span><span style="color:#75715e"></span>
+    <span style="color:#66d9ef">logic</span> fb_we;
+    <span style="color:#66d9ef">logic</span> [FB_ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_addr_write, fb_addr_read;
+    <span style="color:#66d9ef">logic</span> [FB_DATAW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_colr_write, fb_colr_read;
 
     bram_sdp #(
         .WIDTH(FB_DATAW),
-        .DEPTH(FB_PIXELS),
-        .INIT_F(FB_IMAGE)
+        .DEPTH(FB_PIXELS)
     ) framebuffer (
-        .clk_read(clk_pix),
         .clk_write(clk_pix),
-        .we(<span style="color:#ae81ff">0</span>),
-        .addr_write(),
+        .clk_read(clk_pix),
+        .we(fb_we),
+        .addr_write(fb_addr_write),
         .addr_read(fb_addr_read),
-        .data_in(),
-        .data_out(colr)
+        .data_in(fb_colr_write),
+        .data_out(fb_colr_read)
     );
 
-    <span style="color:#75715e">// flag when framebuffer is active
+    <span style="color:#75715e">// draw a horizontal line at the top of the framebuffer
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">&gt;=</span> V_RES) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// draw in blanking interval
+</span><span style="color:#75715e"></span>            <span style="color:#66d9ef">if</span> (fb_we <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">&amp;&amp;</span> fb_addr_write <span style="color:#f92672">!=</span> FB_WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
+                fb_colr_write <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                fb_we <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (fb_addr_write <span style="color:#f92672">!=</span> FB_WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
+                fb_addr_write <span style="color:#f92672">&lt;=</span> fb_addr_write <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
+                fb_colr_write <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                fb_we <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            <span style="color:#66d9ef">end</span>
+        <span style="color:#66d9ef">end</span>
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// determine when framebuffer is active for reading
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> fb_active;
     <span style="color:#66d9ef">always_comb</span> fb_active <span style="color:#f92672">=</span> (sy <span style="color:#f92672">&lt;</span> FB_HEIGHT <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">&lt;</span> FB_WIDTH);
 
-    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+    <span style="color:#75715e">// calculate framebuffer read address for output to display
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> V_RES_FULL<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span> <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">==</span> H_RES_FULL<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
             fb_addr_read <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// reset address at end of frame
 </span><span style="color:#75715e"></span>        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (fb_active) <span style="color:#66d9ef">begin</span>
@@ -238,27 +246,166 @@
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
         vga_hsync <span style="color:#f92672">&lt;=</span> hsync;
         vga_vsync <span style="color:#f92672">&lt;=</span> vsync;
-        vga_r <span style="color:#f92672">&lt;=</span> (fb_active <span style="color:#f92672">&amp;&amp;</span> colr) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
-        vga_g <span style="color:#f92672">&lt;=</span> (fb_active <span style="color:#f92672">&amp;&amp;</span> colr) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
-        vga_b <span style="color:#f92672">&lt;=</span> (fb_active <span style="color:#f92672">&amp;&amp;</span> colr) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
+        vga_r <span style="color:#f92672">&lt;=</span> (fb_active <span style="color:#f92672">&amp;&amp;</span> fb_colr_read) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
+        vga_g <span style="color:#f92672">&lt;=</span> (fb_active <span style="color:#f92672">&amp;&amp;</span> fb_colr_read) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
+        vga_b <span style="color:#f92672">&lt;=</span> (fb_active <span style="color:#f92672">&amp;&amp;</span> fb_colr_read) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
-</code></pre></div><p>Build this design and program your board. You should see the dithered image of David looking at you from the top left of your screen.</p>
+</code></pre></div><p>Build this design and you should see a white horizontal line at the top left of your screen. It&rsquo;s only 160 pixels long, so it won&rsquo;t go right across the screen. If you&rsquo;re using a VGA monitor you may need to tweak your monitor settings to ensure the line is visible.</p>
 <blockquote>
 <p><strong>Building the Designs</strong><br>
 In the <a href="https://github.com/projf/projf-explore/tree/master/framebuffers">Framebuffers</a> section of the git repo, you&rsquo;ll find the design files, a makefile for iCEBreaker, a Vivado project for Arty, and instructions for building the designs for both boards.</p>
 </blockquote>
+<h2 id="a-small-bitmap">A Small Bitmap</h2>
+<p><img src="/img/posts/framebuffers/david-comparison.png" alt="Michelangelo&rsquo;s David" title="David is a masterpiece of Renaissance sculpture created in marble between 1501 and 1504 by the Italian artist Michelangelo."></p>
+<p>Now our framebuffer wired up correctly let&rsquo;s load something into it. A small monochrome framebuffer calls for a striking image: I&rsquo;ve chosen <a href="https://en.wikipedia.org/wiki/David_(Michelangelo)">David by Michelangelo</a>.</p>
+<p>The version on the right is the <a href="https://commons.wikimedia.org/wiki/File:Michelangelo%27s_David_-_63_grijswaarden.png">original from Wikipedia</a>; it has 64 shades of grey. I created the middle image by reducing the original to 16 colours using img2fmem with no dithering (we will discuss this tool later in the post). The monochrome image on the left was created by <a href="https://commons.wikimedia.org/wiki/User:Gerbrant/Dithering_algorithms">Gerbrant</a> using <a href="https://en.wikipedia.org/wiki/Floyd%E2%80%93Steinberg_dithering">Floyd-Steinberg dithering</a>.</p>
+<p>Create a new top module to load our monochrome image of David</p>
+<ul>
+<li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/framebuffers/xc7/top_david_v1.sv">xc7/top_david_v1.sv</a></strong></li>
+<li>Lattice iCE40: <strong><a href="https://github.com/projf/projf-explore/blob/master/framebuffers/ice40/top_david_v1.sv">ice40/top_david_v1.sv</a></strong></li>
+</ul>
+<p><strong>top_david_v1 BRAM usage:</strong> 1x36Kb on XC7 and 10x4Kb on iCE40</p>
+<p>The iCE40 version is shown below:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_david_v1 (
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_12m,      <span style="color:#75715e">// 12 MHz clock
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_rst,      <span style="color:#75715e">// reset button (active high)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> dvi_clk,      <span style="color:#75715e">// DVI pixel clock
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> dvi_hsync,    <span style="color:#75715e">// DVI horizontal sync
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> dvi_vsync,    <span style="color:#75715e">// DVI vertical sync
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> dvi_de,       <span style="color:#75715e">// DVI data enable
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] dvi_r,  <span style="color:#75715e">// 4-bit DVI red
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] dvi_g,  <span style="color:#75715e">// 4-bit DVI green
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] dvi_b   <span style="color:#75715e">// 4-bit DVI blue
+</span><span style="color:#75715e"></span>    );
+
+    <span style="color:#75715e">// generate pixel clock
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> clk_pix;
+    <span style="color:#66d9ef">logic</span> clk_locked;
+    clock_gen clock_640x480 (
+       .clk(clk_12m),
+       .rst(btn_rst),
+       .clk_pix,
+       .clk_locked
+    );
+
+    <span style="color:#75715e">// display timings
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>;  <span style="color:#75715e">// screen coordinate width in bits
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx, sy;
+    <span style="color:#66d9ef">logic</span> hsync, vsync, de;
+    display_timings_480p timings_640x480 (
+        .clk_pix,
+        .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for clock lock
+</span><span style="color:#75715e"></span>        .sx,
+        .sy,
+        .hsync,
+        .vsync,
+        .de
+    );
+
+    <span style="color:#75715e">// size of screen with and without blanking
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> H_RES_FULL <span style="color:#f92672">=</span> <span style="color:#ae81ff">800</span>;
+    <span style="color:#66d9ef">localparam</span> V_RES_FULL <span style="color:#f92672">=</span> <span style="color:#ae81ff">525</span>;
+    <span style="color:#66d9ef">localparam</span> H_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">640</span>;
+    <span style="color:#66d9ef">localparam</span> V_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">480</span>;
+
+    <span style="color:#75715e">// framebuffer
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> FB_WIDTH  <span style="color:#f92672">=</span> <span style="color:#ae81ff">160</span>;
+    <span style="color:#66d9ef">localparam</span> FB_HEIGHT <span style="color:#f92672">=</span> <span style="color:#ae81ff">120</span>;
+    <span style="color:#66d9ef">localparam</span> FB_PIXELS <span style="color:#f92672">=</span> FB_WIDTH <span style="color:#f92672">*</span> FB_HEIGHT;
+    <span style="color:#66d9ef">localparam</span> FB_ADDRW  <span style="color:#f92672">=</span> $clog2(FB_PIXELS);
+    <span style="color:#66d9ef">localparam</span> FB_DATAW  <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// colour bits per pixel
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> FB_IMAGE  <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;../res/david/david_1bit.mem&#34;</span>;
+
+    <span style="color:#66d9ef">logic</span> fb_we;
+    <span style="color:#66d9ef">logic</span> [FB_ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_addr_write, fb_addr_read;
+    <span style="color:#66d9ef">logic</span> [FB_DATAW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_colr_write, fb_colr_read;
+
+    bram_sdp #(
+        .WIDTH(FB_DATAW),
+        .DEPTH(FB_PIXELS),
+        .INIT_F(FB_IMAGE)
+    ) framebuffer (
+        .clk_write(clk_pix),
+        .clk_read(clk_pix),
+        .we(fb_we),
+        .addr_write(fb_addr_write),
+        .addr_read(fb_addr_read),
+        .data_in(fb_colr_write),
+        .data_out(fb_colr_read)
+    );
+
+    <span style="color:#75715e">// draw a horizontal line at the top of the framebuffer
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">&gt;=</span> V_RES) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// draw in blanking interval
+</span><span style="color:#75715e"></span>            <span style="color:#66d9ef">if</span> (fb_we <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">&amp;&amp;</span> fb_addr_write <span style="color:#f92672">!=</span> FB_WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
+                fb_colr_write <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                fb_we <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (fb_addr_write <span style="color:#f92672">!=</span> FB_WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
+                fb_addr_write <span style="color:#f92672">&lt;=</span> fb_addr_write <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
+                fb_colr_write <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                fb_we <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            <span style="color:#66d9ef">end</span>
+        <span style="color:#66d9ef">end</span>
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// flag when framebuffer is active for display
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> fb_active;
+    <span style="color:#66d9ef">always_comb</span> fb_active <span style="color:#f92672">=</span> (sy <span style="color:#f92672">&lt;</span> FB_HEIGHT <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">&lt;</span> FB_WIDTH);
+
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> V_RES_FULL<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span> <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">==</span> H_RES_FULL<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
+            fb_addr_read <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// reset address at end of frame
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (fb_active) <span style="color:#66d9ef">begin</span>
+            fb_addr_read <span style="color:#f92672">&lt;=</span> fb_addr_read <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+        <span style="color:#66d9ef">end</span>
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] red, green, blue;  <span style="color:#75715e">// output colour
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+        red   <span style="color:#f92672">=</span> (fb_active <span style="color:#f92672">&amp;&amp;</span> fb_colr_read) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
+        green <span style="color:#f92672">=</span> (fb_active <span style="color:#f92672">&amp;&amp;</span> fb_colr_read) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
+        blue  <span style="color:#f92672">=</span> (fb_active <span style="color:#f92672">&amp;&amp;</span> fb_colr_read) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h0</span>;
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// Output DVI clock: 180° out of phase with other DVI signals
+</span><span style="color:#75715e"></span>    SB_IO #(
+        .PIN_TYPE(<span style="color:#ae81ff">6</span><span style="color:#ae81ff">&#39;b010000</span>)  <span style="color:#75715e">// PIN_OUTPUT_DDR
+</span><span style="color:#75715e"></span>    ) dvi_clk_io (
+        .PACKAGE_PIN(dvi_clk),
+        .OUTPUT_CLK(clk_pix),
+        .D_OUT_0(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),
+        .D_OUT_1(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b1</span>)
+    );
+
+    <span style="color:#75715e">// Output DVI signals
+</span><span style="color:#75715e"></span>    SB_IO #(
+        .PIN_TYPE(<span style="color:#ae81ff">6</span><span style="color:#ae81ff">&#39;b010100</span>)  <span style="color:#75715e">// PIN_OUTPUT_REGISTERED
+</span><span style="color:#75715e"></span>    ) dvi_signal_io [<span style="color:#ae81ff">14</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] (
+        .PACKAGE_PIN({dvi_hsync, dvi_vsync, dvi_de, dvi_r, dvi_g, dvi_b}),
+        .OUTPUT_CLK(clk_pix),
+        .D_OUT_0({hsync, vsync, de, red, green, blue}),
+        .D_OUT_1()
+    );
+<span style="color:#66d9ef">endmodule</span>
+</code></pre></div><p>Build this design and program your board. You should see the dithered image of David looking at you from the top left of your screen. We&rsquo;re still drawing a white line at the top of the framebuffer, so this replaces the top line of the bitmap we&rsquo;re loading.</p>
+<blockquote>
+<p><strong>iCE40: One Bit Too Many</strong><br>
+The iCE40 version uses more block ram than you might expect: 160x120 should fit into five 4kb BRAMs, but the <code>david_v1</code> design requires ten. This is because the iCE40 BRAMs are a minimum of two bits wide. When we expand the colour depth to 4-bit, the BRAM usage will be the expected twenty. Learn more in the <a href="http://media.latticesemi.com/view_document?document_id=52206">Lattice ICE Technology Library</a>.</p>
+</blockquote>
 <h2 id="casting-shade">Casting Shade</h2>
 <p>We can increase the bits assigned to each pixel to support more colours, or in the case of this image of David, more shades. Our video output is 12-bit, which means there are 16 possible shades of grey.</p>
-<p>As with the hedgehog graphic in <a href="/posts/hardware-sprites/">Hardware Sprites</a>, we load the palette from a file, <strong><a href="https://github.com/projf/projf-explore/blob/master/framebuffers/res/david/david_palette.mem">david_palette.mem</a></strong>:</p>
+<p>As with the hedgehog graphic in <a href="/posts/hardware-sprites/">Hardware Sprites</a>, we store the palette in a file: <strong><a href="https://github.com/projf/projf-explore/blob/master/framebuffers/res/david/david_palette.mem">david_palette.mem</a></strong>.</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">FFF EEE DDD CCC BBB AAA 999 888 777 666 555 444 333 222 111 000
 </code></pre></div><p><img src="/img/posts/framebuffers/david-palette.png" alt="Greyscale" title="16 shades: #FFF to #000"></p>
+<p>We load the palette file into a colour lookup table (CLUT) ROM, which is used to find the colour of each pixel for display. If you need a refresher on CLUTs, see <a href="/posts/hardware-sprites/#a-refined-palette">A Refined Palette</a>.</p>
 <p>Build the updated top module with 4-bit greyscale David:</p>
 <ul>
 <li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/framebuffers/xc7/top_david_v2.sv">xc7/top_david_v2.sv</a></strong></li>
-<li>Lattice iCE40: <em>coming soon</em></li>
+<li>Lattice iCE40: <strong><a href="https://github.com/projf/projf-explore/blob/master/framebuffers/xc7/top_david_v2.sv">xc7/top_david_v2.sv</a></strong></li>
 </ul>
-<p><strong>top_david_v2 memory usage:</strong> 160x120x4: 4x36Kb BRAM on the XC7.</p>
+<p><strong>top_david_v2 BRAM usage:</strong> 4x36Kb on XC7 and 20x4Kb on iCE40</p>
 <h3 id="warm-tones">Warm Tones</h3>
 <p>Because the palette is separate from the image, we can quickly change it. In <code>top_david_v2.sv</code>, update <code>localparam FB_PALETTE</code> to reference <code>david_palette_warm.mem</code> and rebuild.</p>
 <p>The warm palette looks like this:</p>
@@ -267,7 +414,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/framebuffers"
 <p>There is also an inverted palette, <code>david_palette_invert.mem</code>, or you can create your own.</p>
 <blockquote>
 <p><strong>Quick Aside: Palettes</strong><br>
-Wikipedia has a lovely <em><a href="https://en.wikipedia.org/wiki/List_of_color_palettes">List of color palettes</a></em> for different systems.</p>
+Wikipedia has a lovely <em><a href="https://en.wikipedia.org/wiki/List_of_color_palettes#List_of_computer_hardware_palettes">list of color palettes</a></em> for different hardware systems.</p>
 </blockquote>
 <h2 id="framebuffer-scaling">Framebuffer Scaling</h2>
 <p>Our framebuffer is too small to fill a 640x480 screen, and modern monitors don&rsquo;t support lower resolutions. To make our framebuffer fill the screen, we need to scale it up.</p>
@@ -312,7 +459,8 @@ Wikipedia has a lovely <em><a href="https://en.wikipedia.org/wiki/List_of_color_
     <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_out) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">if</span> (en_out) <span style="color:#66d9ef">begin</span>
             cnt_scale <span style="color:#f92672">&lt;=</span> (cnt_scale <span style="color:#f92672">==</span> scale_cor<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#f92672">?</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">:</span> cnt_scale <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-            <span style="color:#66d9ef">if</span> (cnt_scale <span style="color:#f92672">==</span> scale_cor<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) addr_out <span style="color:#f92672">&lt;=</span> (addr_out <span style="color:#f92672">==</span> LEN<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#f92672">?</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">:</span> addr_out <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+            <span style="color:#66d9ef">if</span> (cnt_scale <span style="color:#f92672">==</span> scale_cor<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>)
+                addr_out <span style="color:#f92672">&lt;=</span> (addr_out <span style="color:#f92672">==</span> LEN<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#f92672">?</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">:</span> addr_out <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
         <span style="color:#66d9ef">end</span>
         <span style="color:#66d9ef">if</span> (rst_out) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// reset takes precedence
 </span><span style="color:#75715e"></span>            addr_out <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
@@ -359,7 +507,7 @@ Wikipedia has a lovely <em><a href="https://en.wikipedia.org/wiki/List_of_color_
 The linebuffer module has another significant benefit: it allows the pixel clock to be different from the rest of the design. For example, you could draw on the framebuffer at 100 MHz (linebuffer data_in) and display it on a 720p60 screen with a 74.25 MHz pixel clock (linebuffer data_out). CDC is usually achieved with a FIFO, but the linebuffer does it <em>while</em> providing efficient scaling.</p>
 </blockquote>
 <h3 id="top-scaling">Top Scaling</h3>
-<p>To drive the linebuffer we need to enable and reset its data inputs and outputs at appropriate times. This extract from the top module (source link below listing), shows scaling up by four times:</p>
+<p>To drive the linebuffer we need to enable and reset its data inputs and outputs at appropriate times. This extract from the top module (source link below listing), shows vertical scaling by a factor of four:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// linebuffer (LB)
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_SCALE_V <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;               <span style="color:#75715e">// scale vertical drawing
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_SCALE_H <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;               <span style="color:#75715e">// scale horizontal drawing
@@ -428,72 +576,27 @@ The linebuffer module has another significant benefit: it allows the pixel clock
 </code></pre></div><p>Build the updated top module with scaled David:</p>
 <ul>
 <li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/framebuffers/xc7/top_david.sv">xc7/top_david.sv</a></strong></li>
-<li>Lattice iCE40: <em>coming soon</em></li>
+<li>Lattice iCE40: <strong><a href="https://github.com/projf/projf-explore/blob/master/framebuffers/ice40/top_david.sv">ice40/top_david.sv</a></strong></li>
 </ul>
-<p><strong>top_david memory usage:</strong> <code>160x120x4 + linebuffer: 4.5 x 36Kb BRAMs on the XC7.</code></p>
+<p><strong>top_david BRAM usage:</strong> 4.5x36Kb on XC7 and 23x4Kb on iCE40</p>
 <blockquote>
 <p><strong>Quick Aside: BRAM Optimization</strong><br>
-You&rsquo;d expect the linebuffer to use 1.5 BRAMs (36Kb), but because all three colour channels are the same for the greyscale palette, the linebuffer is reduced from 3x18Kb BRAMs to 1x18Kb. The warm palette does use 1.5 BRAMs for a total of 5.5.</p>
+You&rsquo;d expect the linebuffer to use 3x18Kb BRAMs (1.5x36Kb) on the Xilinx FPGA, but because all three colour channels are the same for the greyscale palette, the linebuffers are optimised from 3x18Kb BRAMs to 1x18Kb. The warm palette <em>does</em> use 1.5x36Kb BRAMs for a total of 5.5.</p>
 </blockquote>
-<h2 id="the-blue-planet">The Blue Planet</h2>
-<p><em>This next section is for the Arty (XC7) only, sorry. The iCEBreaker doesn&rsquo;t have enough BRAM for larger framebuffers. If there&rsquo;s enough interest, I&rsquo;ll consider creating a version using SPRAM.</em></p>
-<p><img src="/img/posts/framebuffers/earth.jpg" alt="Earth" title="The eastern hemisphere of Earth from space, courtesy of NASA."></p>
-<p>Our design is nice and flexible, so it&rsquo;s not hard to adapt for a larger, more colourful image. If you&rsquo;ve got an Arty board, or FPGA with at least 640 Kb of BRAM, try this image of Earth (courtesy of <a href="https://www.nasa.gov/centers/ames/news/releases/2002/02images/earthimages/earth.html">NASA</a>):</p>
-<ul>
-<li>Earth Image: <strong><a href="https://github.com/projf/projf-explore/blob/master/framebuffers/res/earth/earth.mem">earth.mem</a></strong></li>
-<li>Earth Palette: <strong><a href="https://github.com/projf/projf-explore/blob/master/framebuffers/res/earth/earth_palette.mem">earth_palette.mem</a></strong></li>
-</ul>
-<p>There are three changes required to the top module to display the Earth.</p>
-<ol>
-<li>We increase the framebuffer size (320x240) and depth (6 bits for 64 colours):</li>
-</ol>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// framebuffer
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> FB_WIDTH   <span style="color:#f92672">=</span> <span style="color:#ae81ff">320</span>;
-    <span style="color:#66d9ef">localparam</span> FB_HEIGHT  <span style="color:#f92672">=</span> <span style="color:#ae81ff">240</span>;
-    <span style="color:#66d9ef">localparam</span> FB_PIXELS  <span style="color:#f92672">=</span> FB_WIDTH <span style="color:#f92672">*</span> FB_HEIGHT;
-    <span style="color:#66d9ef">localparam</span> FB_ADDRW   <span style="color:#f92672">=</span> $clog2(FB_PIXELS);
-    <span style="color:#66d9ef">localparam</span> FB_DATAW   <span style="color:#f92672">=</span> <span style="color:#ae81ff">6</span>;  <span style="color:#75715e">// colour bits per pixel
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> FB_IMAGE   <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;earth.mem&#34;</span>;
-    <span style="color:#66d9ef">localparam</span> FB_PALETTE <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;earth_palette.mem&#34;</span>;
-</code></pre></div><ol start="2">
-<li>We reduce the linebuffer scaling factor (from 4 to 2):</li>
-</ol>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// linebuffer (LB)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_SCALE_V <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span>;               <span style="color:#75715e">// scale vertical drawing
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_SCALE_H <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span>;               <span style="color:#75715e">// scale horizontal drawing
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_LEN <span style="color:#f92672">=</span> H_RES <span style="color:#f92672">/</span> LB_SCALE_H;  <span style="color:#75715e">// line length
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_WIDTH <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;                 <span style="color:#75715e">// bits per colour channel
-</span></code></pre></div><ol start="3">
-<li>And we expand the colour lookup table to 64 entries:</li>
-</ol>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// colour lookup table (ROM) 64x12-bit entries
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] clut_colr;
-    rom_async #(
-        .WIDTH(<span style="color:#ae81ff">12</span>),
-        .DEPTH(<span style="color:#ae81ff">64</span>),
-        .INIT_F(FB_PALETTE)
-    ) clut (
-        .addr(colr_idx),
-        .data(clut_colr)
-    );
-</code></pre></div><p>Try building the top_earth module:</p>
-<ul>
-<li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/framebuffers/xc7/top_earth.sv">xc7/top_earth.sv</a></strong></li>
-<li>Lattice iCE40: <em>not available</em></li>
-</ul>
-<p><strong>top_earth memory usage:</strong> 320x240x6 + linebuffer: 19.5 x 36Kb BRAMs on the XC7.</p>
 <h2 id="creating-your-own-images">Creating Your Own Images</h2>
-<p>You can easily create your own images using <strong>img2fmem</strong>. The script is written in Python and uses the Pillow image library to perform the conversion. You can find it in the Project F <a href="https://github.com/projf/fpgatools">FPGA Tools</a> repo. Make sure your images are exactly the same size as the framebuffer you&rsquo;re using.</p>
+<p>You can easily create your own images using <strong>img2fmem</strong>. The script is written in Python and uses the Pillow image library to perform the conversion. You can find it in the Project F <a href="https://github.com/projf/fpgatools">FPGA Tools</a> repo. Make sure your images are the same dimensions as the framebuffer you&rsquo;re using.</p>
 <p>To convert an image called <code>acme.png</code> to 4-bit colour with 12-bit palette for use with <code>$readmemh</code>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">img2fmem.py acme.png <span style="color:#ae81ff">4</span> mem <span style="color:#ae81ff">12</span>
 </code></pre></div><p>For details on installation and command line options, see the <a href="https://github.com/projf/fpgatools/blob/master/README.md">img2fmem README</a>.</p>
 <h2 id="fizzle-out">Fizzle Out</h2>
-<p>So far we&rsquo;ve read from our framebuffer, but we haven&rsquo;t updated our display in any way. In <a href="/posts/fpga-ad-astra/">FPGA Ad Astra</a>, we used linear feedback shift registers (LFSRs) to create animated starfields. LFSRs have another graphical use: creating random dissolve effects, as used in <a href="https://en.wikipedia.org/wiki/Wolfenstein_3D">Wolfenstein 3D</a> and explained by Fabien Sanglard in his excellent post: <a href="https://fabiensanglard.net/fizzlefade/">Fizzlefade</a>.</p>
+<p>In <a href="/posts/fpga-ad-astra/">FPGA Ad Astra</a>, we used linear feedback shift registers (LFSRs) to create animated starfields. LFSRs have another graphical use: creating random dissolve effects, as used in <a href="https://en.wikipedia.org/wiki/Wolfenstein_3D">Wolfenstein 3D</a> and explained by Fabien Sanglard in his excellent post: <a href="https://fabiensanglard.net/fizzlefade/">Fizzlefade</a>.</p>
 <p>We can use LFSRs to dissolve our image of David using a mask. Our mask is another bitmap, but with only 1 bit per pixel. If a mask pixel is set to 0, then the framebuffer pixel colour is shown, otherwise we show red. By using a mask, rather than altering the original bitmap, we can fade the image back in again or apply other effects.</p>
+<p>As previously discussed, the iCE40 doesn&rsquo;t support 1-bit wide BRAM, so we&rsquo;ve had to reduce the horizontal resolution of the fizzle bitmap mask so the complete designs still fits into the 30 iCE40 BRAMs.</p>
 <ul>
 <li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/framebuffers/xc7/top_david_fizzle.sv">xc7/top_david_fizzle.sv</a></strong></li>
-<li>Lattice iCE40: <em>coming soon</em></li>
+<li>Lattice iCE40: <strong><a href="https://github.com/projf/projf-explore/blob/master/framebuffers/ice40/top_david_fizzle.sv">ice40/top_david_fizzle.sv</a></strong></li>
 </ul>
+<p><strong>top_david_fizzle BRAM usage:</strong> 6x36Kb on XC7 and 28x4Kb on iCE40</p>
 <p>Xilinx version shown below:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_david_fizzle (
     <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_100m,     <span style="color:#75715e">// 100 MHz clock
@@ -544,22 +647,37 @@ You&rsquo;d expect the linebuffer to use 1.5 BRAMs (36Kb), but because all three
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> FB_IMAGE   <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;david.mem&#34;</span>;
     <span style="color:#66d9ef">localparam</span> FB_PALETTE <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;david_palette.mem&#34;</span>;
 
-    <span style="color:#66d9ef">logic</span> [FB_ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_addr_read;
-    <span style="color:#66d9ef">logic</span> [FB_DATAW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] colr_idx;
+    <span style="color:#66d9ef">logic</span> fb_we;
+    <span style="color:#66d9ef">logic</span> [FB_ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_addr_write, fb_addr_read;
+    <span style="color:#66d9ef">logic</span> [FB_DATAW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_cidx_write, fb_cidx_read;
 
     bram_sdp #(
         .WIDTH(FB_DATAW),
         .DEPTH(FB_PIXELS),
         .INIT_F(FB_IMAGE)
-    ) fb_inst (
+    ) framebuffer (
         .clk_read(clk_pix),
         .clk_write(clk_pix),
-        .we(<span style="color:#ae81ff">0</span>),
-        .addr_write(),
+        .we(fb_we),
+        .addr_write(fb_addr_write),
         .addr_read(fb_addr_read),
-        .data_in(),
-        .data_out(colr_idx)
+        .data_in(fb_cidx_write),
+        .data_out(fb_cidx_read)
     );
+
+    <span style="color:#75715e">// draw a horizontal line at the top of the framebuffer
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">&gt;=</span> V_RES) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// draw in blanking interval
+</span><span style="color:#75715e"></span>            <span style="color:#66d9ef">if</span> (fb_we <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">&amp;&amp;</span> fb_addr_write <span style="color:#f92672">!=</span> FB_WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
+                fb_cidx_write <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">4&#39;h0</span>;  <span style="color:#75715e">// first palette entry (white)
+</span><span style="color:#75715e"></span>                fb_we <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (fb_addr_write <span style="color:#f92672">!=</span> FB_WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
+                fb_addr_write <span style="color:#f92672">&lt;=</span> fb_addr_write <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
+                fb_we <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            <span style="color:#66d9ef">end</span>
+        <span style="color:#66d9ef">end</span>
+    <span style="color:#66d9ef">end</span>
 
     <span style="color:#75715e">// fizzlebuffer (FZ)
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [FB_ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fz_addr_write;
@@ -571,11 +689,11 @@ You&rsquo;d expect the linebuffer to use 1.5 BRAMs (36Kb), but because all three
         .DEPTH(FB_PIXELS),
         .INIT_F(<span style="color:#e6db74">&#34;&#34;</span>)
     ) fz_inst (
-        .clk_read(clk_pix),
         .clk_write(clk_pix),
+        .clk_read(clk_pix),
         .we(fz_we),
         .addr_write(fz_addr_write),
-        .addr_read(fb_addr_read),  <span style="color:#75715e">// share read address with framebuffer
+        .addr_read(fb_addr_read),  <span style="color:#75715e">// share read address with FB
 </span><span style="color:#75715e"></span>        .data_in(fz_en_in),
         .data_out(fz_en_out)
     );
@@ -593,7 +711,7 @@ You&rsquo;d expect the linebuffer to use 1.5 BRAMs (36Kb), but because all three
         .sreg(lfsr)
     );
 
-    <span style="color:#66d9ef">localparam</span> FADE_WAIT <span style="color:#f92672">=</span> <span style="color:#ae81ff">240</span>;   <span style="color:#75715e">// wait for 240 frames before fading
+    <span style="color:#66d9ef">localparam</span> FADE_WAIT <span style="color:#f92672">=</span> <span style="color:#ae81ff">600</span>;   <span style="color:#75715e">// wait for 600 frames before fading
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> FADE_RATE <span style="color:#f92672">=</span> <span style="color:#ae81ff">3200</span>;  <span style="color:#75715e">// every 3200 pixel clocks update LFSR
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(FADE_WAIT)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_fade_wait;
     <span style="color:#66d9ef">logic</span> [$clog2(FADE_RATE)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_fade_rate;
@@ -694,7 +812,7 @@ You&rsquo;d expect the linebuffer to use 1.5 BRAMs (36Kb), but because all three
         .DEPTH(<span style="color:#ae81ff">16</span>),
         .INIT_F(FB_PALETTE)
     ) clut (
-        .addr(colr_idx),
+        .addr(fb_cidx_read),
         .data(clut_colr)
     );
 
@@ -716,13 +834,14 @@ You&rsquo;d expect the linebuffer to use 1.5 BRAMs (36Kb), but because all three
 <h2 id="explore">Explore</h2>
 <p>I hope you enjoyed this instalment of <em>Exploring FPGA Graphics</em>, but nothing beats creating your own designs. Here are a few suggestions to get you started:</p>
 <ul>
-<li>Load your own picture into the framebuffer using img2mem</li>
+<li>Load your own picture into the framebuffer using <a href="https://github.com/projf/fpgatools">img2fmem</a></li>
 <li>Cross-fade between two images</li>
 <li>Fade an image by adjusting the intensity of the palette entries</li>
-<li><a href="https://en.wikipedia.org/wiki/Edge_detection">Detect edges</a> and highlight them in another colour</li>
+<li>Try moving the image up and down the screen by chaging the initial value of <code>fb_addr_read</code></li>
 </ul>
 <h2 id="next-time">Next Time</h2>
-<p>In the next part, we&rsquo;ll implement Conway&rsquo;s Game of Life in <a href="/posts/life-on-screen/">Life on Screen</a>.</p>
+<p>In the next part, we&rsquo;ll take our framebuffer and implement Conway&rsquo;s Game of Life in <a href="/posts/life-on-screen/">Life on Screen</a>. We&rsquo;ll then move onto drawing lines and shapes in early 2021: stay tuned!</p>
+<p><em>Constructive feedback is always welcome. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 
       
       <div class="related">
