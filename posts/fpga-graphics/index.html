@@ -120,7 +120,7 @@ In this first post, we learn how computer displays work and animate simple shape
     <div class="content">
       <p>Welcome to <em>Exploring FPGA Graphics</em>. In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We start by learning how displays work, before racing the beam with Pong, starfields and sprites, simulating life with bitmaps, drawing lines and triangles, and finally creating simple 3D models. I&rsquo;ll be writing and revising this series throughout 2020 and 2021.</p>
 <p>In this first post, we learn how computer displays work and animate simple shapes with an FPGA.</p>
-<p><em>Updated 2021-01-08. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><em>Updated 2021-01-28. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <blockquote>
 <p>In all beginnings dwells a magic force<br>
 <em>Herman Hesse, Stages from <a href="https://en.wikipedia.org/wiki/The_Glass_Bead_Game">The Glass Bead Game</a></em></p>
@@ -133,10 +133,12 @@ In this first post, we learn how computer displays work and animate simple shape
 <li><a href="/posts/fpga-ad-astra/">FPGA Ad Astra</a> - demo with hardware sprites and animated starfields</li>
 <li><a href="/posts/framebuffers/">Framebuffers</a> - driving the display from a bitmap in memory</li>
 <li><a href="/posts/life-on-screen/">Life on Screen</a> - the screen comes alive with Conway&rsquo;s Game of Life</li>
+<li><a href="/posts/lines-and-triangles/">Lines and Triangles</a> - drawing lines and triangles with a framebuffer</li>
 </ul>
 <p><em>More parts to follow.</em></p>
 <h3 id="requirements">Requirements</h3>
-<p>For this series, you need an FPGA board with video output. We&rsquo;ll be working at 640x480, so pretty much any video output will work. You should be comfortable with programming your FPGA board and reasonably familiar with Verilog. We&rsquo;ll be demoing the designs with two boards:</p>
+<p>For this series, you need an FPGA board with video output. We&rsquo;ll be working at 640x480, so pretty much any video output will work. It helps to be comfortable with programming your FPGA board and reasonably familiar with Verilog.</p>
+<p>We&rsquo;ll be demoing the designs with two boards:</p>
 <ul>
 <li><strong><a href="https://docs.icebreaker-fpga.org/hardware/icebreaker/">iCEBreaker</a></strong> (Lattice iCE40) with <strong><a href="https://docs.icebreaker-fpga.org/hardware/pmod/dvi/">12-Bit DVI Pmod</a></strong></li>
 <li><strong><a href="https://reference.digilentinc.com/reference/programmable-logic/arty-a7/reference-manual">Digilent Arty A7-35T</a></strong> (Xilinx Artix-7) with <strong><a href="https://reference.digilentinc.com/reference/pmod/pmodvga/reference-manual">Pmod VGA</a></strong></li>
@@ -390,7 +392,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/fpga-graphics
 <p><img src="/img/posts/fpga-graphics/vga-square.png" alt="A Square" title="Hip to be Square"></p>
 <p>Try experimenting with your own square size, position, and colours.</p>
 <h2 id="animation">Animation</h2>
-<p>To create a simple animation, we can update the position of the square every frame. If we move the square during active drawing, we risk <strong><a href="https://en.wikipedia.org/wiki/Screen_tearing">screen tearing</a></strong>, so we create an <code>animate</code> signal that happens at the start of the blanking period.</p>
+<p>To create a simple animation, we can update the position of the square every frame. If we move the square during active drawing, we risk <strong><a href="https://en.wikipedia.org/wiki/Screen_tearing">screen tearing</a></strong>, so we create an <code>animate</code> signal that happens at the start of the vertical blanking period.</p>
 <p>We&rsquo;re going to replicate the behaviour of the video display itself, scanning across then down the screen. The square &ldquo;beam&rdquo; disappears off the edge of the screen, like the signal in the blanking interval. Try rebuilding the design with <code>top_beam</code>:</p>
 <ul>
 <li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/xc7/top_beam.sv">xc7/top_beam.sv</a></strong></li>
@@ -403,7 +405,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/fpga-graphics
     <span style="color:#66d9ef">localparam</span> H_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">640</span>;
     <span style="color:#66d9ef">localparam</span> V_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">480</span>;
 
-    <span style="color:#66d9ef">logic</span> animate;  <span style="color:#75715e">// high for one clock tick at start of blanking
+    <span style="color:#66d9ef">logic</span> animate;  <span style="color:#75715e">// high for one clock tick at start of vertical blanking
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> animate <span style="color:#f92672">=</span> (sy <span style="color:#f92672">==</span> V_RES <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>);
 
     <span style="color:#75715e">// square &#39;Q&#39; - origin at top-left
@@ -474,7 +476,6 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/fpga-graphics
 <li>Add collision detection between squares, so they bounce off each other</li>
 <li>Create a square Verilog module to avoid code duplication</li>
 </ul>
-<p>Feedback is most welcome; you can get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</p>
 <h2 id="next-time">Next Time</h2>
 <p>Next time we&rsquo;ll put your new graphics skills to work recreating the arcade classic: <a href="/posts/fpga-pong/">Pong</a>.</p>
 <p><em>Constructive feedback is always welcome. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
