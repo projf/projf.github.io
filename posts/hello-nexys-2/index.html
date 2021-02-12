@@ -159,7 +159,8 @@ NB. Linux users need to install cable drivers after running setup</li>
 <span style="color:#66d9ef">endmodule</span>
 </code></pre></div><p>In part 1, we used <code>always_comb</code> blocks. Flip-flips require a new type of block: <strong>always_ff</strong>.</p>
 <p>Our <code>always_ff</code> block has the positive edge (<code>posedge</code>) of the clock (<code>clk</code>) on its <strong>sensitivity list</strong> <code>@(...)</code>. This means the block is triggered on every rising (positive) edge of the clock.</p>
-<p>We&rsquo;re using the 100 MHz oscillator on the Nexys Video board, so we get a rising clock edge every 10 nanoseconds: this is known as the <strong>clock period</strong>. Every 10 ns our counter <code>cnt</code> increments; when it reaches its maximum value, it rolls over to 0 and repeats. How many seconds does this counter take to roll over?</p>
+<p>We&rsquo;re using the 100 MHz oscillator on the Nexys Video board, so we get a rising clock edge every 10 nanoseconds: this is known as the <strong>clock period</strong>. Every 10 ns our counter <code>cnt</code> increments; when it reaches its maximum value, it rolls over to 0 and repeats.</p>
+<p>How many seconds does this counter take to roll over?</p>
 <p>At the <em>same time</em> as our counter is being incremented, one bit of the counter is being copied to a flip-flop that maintains the LED state. Statements in an <code>always_ff</code> block happen independently and in parallel.</p>
 <blockquote>
 <p><strong>Quick Aside: Assignment</strong><br>
@@ -197,11 +198,12 @@ set_property <span style="color:#f92672">-</span>dict <span style="color:#66d9ef
     led[<span style="color:#ae81ff">2</span>] <span style="color:#f92672">&lt;=</span> cnt[<span style="color:#ae81ff">22</span>];
     led[<span style="color:#ae81ff">3</span>] <span style="color:#f92672">&lt;=</span> cnt[<span style="color:#ae81ff">20</span>];
 <span style="color:#66d9ef">end</span>
-</code></pre></div><p><em>ProTip: We use snippets to focus on what&rsquo;s changed, but the full design is available via [src].</em></p>
+</code></pre></div><p><em>NB. We use code snippets to focus on what&rsquo;s changed, but the full design is available via [src].</em></p>
 <p>Rerun bitstream generation and program your board. How often is each LED blinking?</p>
 <p><strong><code>LD3</code></strong> on our board (<strong><code>led[3]</code></strong> in Verilog) looks like it&rsquo;s on all time, but is less bright. It&rsquo;s blinking fifty times per second, so fast that your eyes hardly see the flashes. We&rsquo;ll make use of this later.</p>
 <h2 id="division-of-time">Division of Time</h2>
-<p>Earlier we said we would always use a single clock in our designs. What happens if we want to do something less than 100 million times a second? We could take a bit from a counter, but there&rsquo;s a more elegant way using a <strong>strobe</strong>. For example, to divide by three:</p>
+<p>Earlier we said we would always use a single clock in our designs. What happens if we want to do something less than 100 million times a second? We could take a bit from a counter, but there&rsquo;s a more elegant way using a <strong>strobe</strong>.</p>
+<p>For example, to divide by three:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">logic</span> stb;
 <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
 <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
@@ -293,7 +295,7 @@ set_property <span style="color:#f92672">-</span>dict <span style="color:#66d9ef
     <span style="color:#66d9ef">always_comb</span> pwm_out <span style="color:#f92672">=</span> (cnt <span style="color:#f92672">&lt;</span> duty);
 <span style="color:#66d9ef">endmodule</span>
 </code></pre></div><p><em>ProTip: If you only have one statement in a block you don&rsquo;t need <code>begin</code> and <code>end</code>.</em></p>
-<p>Note how this design makes use of an <code>always_comb</code> and an <code>always_ff</code> block. <code>pwm_out</code> only depends on its current inputs, so we use an <code>always_comb</code> block.</p>
+<p>This design makes use of an <code>always_comb</code> and an <code>always_ff</code> block. <code>pwm_out</code> only depends on its current inputs, so we use an <code>always_comb</code> block. Whereas the counter <code>cnt</code> needs to maintain state, so has to use an <code>always_ff</code> block.</p>
 <blockquote>
 <p><strong>Quick Aside: Logic Types</strong></p>
 <p><strong>Combinational logic</strong> depends on its present inputs only: it has no memory of the past.
