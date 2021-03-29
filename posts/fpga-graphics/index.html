@@ -119,7 +119,7 @@
     <div class="content">
       <p>Welcome to <em>Exploring FPGA Graphics</em>. In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how displays work, race the beam with Pong, animate starfields and sprites, paint Michelangelo&rsquo;s David, simulate life with bitmaps, draw lines and shapes, and finally render simple 3D models. Along the way, you&rsquo;ll experience a Smörgåsbord of designs and techniques, from BRAM and finite state machines to crossing clock domains and translating C algorithms into Verilog.</p>
 <p>We begin with the basics of computer displays and drawing squares in realtime.</p>
-<p><em>Updated 2021-03-28. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><em>Updated 2021-03-29. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <blockquote>
 <p>In all beginnings dwells a magic force<br>
 <em>Herman Hesse, Stages from <a href="https://en.wikipedia.org/wiki/The_Glass_Bead_Game">The Glass Bead Game</a></em></p>
@@ -143,6 +143,7 @@
 <li><strong><a href="https://docs.icebreaker-fpga.org/hardware/icebreaker/">iCEBreaker</a></strong> (Lattice iCE40) with <strong><a href="https://docs.icebreaker-fpga.org/hardware/pmod/dvi/">12-Bit DVI Pmod</a></strong></li>
 <li><strong><a href="https://reference.digilentinc.com/reference/programmable-logic/arty-a7/reference-manual">Digilent Arty A7-35T</a></strong> (Xilinx Artix-7) with <strong><a href="https://reference.digilentinc.com/reference/pmod/pmodvga/reference-manual">Pmod VGA</a></strong></li>
 </ul>
+<p><em>NB. The original Arty (without the A7) is the same as the Arty A7-35T, so you can use that too.</em></p>
 <h3 id="source">Source</h3>
 <p>The SystemVerilog designs featured in this series are available from the <a href="https://github.com/projf/projf-explore/">projf-explore</a> repo on GitHub. The designs are open source hardware under the permissive MIT licence, but this blog is subject to normal copyright restrictions.</p>
 <blockquote>
@@ -175,11 +176,11 @@ Any modern display, including <a href="https://en.wikipedia.org/wiki/Multisync_m
 </blockquote>
 <h2 id="running-to-time">Running to Time</h2>
 <p>We&rsquo;ve decided we need a pixel clock of 25.2 MHz pixel clock, but neither of our demo boards has such a clock. To reach the required frequency, we&rsquo;re going to use a <strong><a href="https://en.wikipedia.org/wiki/Phase-locked_loop">phase-locked loop</a></strong> (PLL). Almost all FPGAs include one or more PLLs, but there isn&rsquo;t a standard way to configure them in Verilog, so we have to use vendor-specific designs.</p>
-<p>We have provided implementations for Xilinx 7 Series (XC7) and Lattice iCE40; for other FPGAs, you&rsquo;ll need to consult your vendor documentation. If you can&rsquo;t reach 25.2 MHz exactly, then 25 MHz or thereabouts should be fine (but see note about CRTs, above). The iCE40 can&rsquo;t generate 25.2 MHz using the oscillators on iCEBreaker but works fine at 25.125 MHz.</p>
+<p>We have provided implementations for the Arty (XC7) and iCEBreaker (iCE40); for other FPGAs, you&rsquo;ll need to consult your vendor documentation. If you can&rsquo;t reach 25.2 MHz exactly, then 25 MHz or thereabouts should be fine (but see note about CRTs, above). The iCE40 can&rsquo;t generate 25.2 MHz using the oscillators on iCEBreaker but works fine at 25.125 MHz.</p>
 <h3 id="clock-generator-modules">Clock Generator Modules</h3>
 <ul>
-<li>Xilinx 7 Series: <strong><a href="https://github.com/projf/projf-explore/blob/master/common/xc7/clock_gen_480p.sv">xc7/clock_gen_480p.sv</a></strong></li>
-<li>Lattice iCE40: <strong><a href="https://github.com/projf/projf-explore/blob/master/common/ice40/clock_gen_480p.sv">ice40/clock_gen_480p.sv</a></strong></li>
+<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/common/xc7/clock_gen_480p.sv">xc7/clock_gen_480p.sv</a></strong></li>
+<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/common/ice40/clock_gen_480p.sv">ice40/clock_gen_480p.sv</a></strong></li>
 </ul>
 <h2 id="display-timings-module">Display Timings Module</h2>
 <p>Using our ~25 MHz pixel clock, we can generate timings for our 640x480 display. Creating display timings is straightforward: there&rsquo;s one counter for horizontal position and one for vertical. We use these counters to decide on the correct time for sync signals.</p>
@@ -227,15 +228,16 @@ Any modern display, including <a href="https://en.wikipedia.org/wiki/Multisync_m
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
 </code></pre></div><p><em>ProTip: The last assignment wins in Verilog, so the reset overrides the existing <code>sx</code> and <code>sy</code>.</em></p>
-<p><strong>sx</strong> and <strong>sy</strong> store the horizontal and vertical position; their maximum values are 800 and 525 respectively, so we need 10 bits to hold them (2<sup>10</sup> = 1024). <strong>de</strong> is <em>data enable</em>, which is low during the blanking interval: we use it to decide when to draw pixels.</p>
+<p><strong>sx</strong> and <strong>sy</strong> store the horizontal and vertical position; their maximum values are 800 and 525 respectively, so we need 10 bits to hold them (2<sup>10</sup> = 1024).</p>
+<p><strong>de</strong> is <em>data enable</em>, which is low during the blanking interval: we use it to decide when to draw pixels.</p>
 <p>Display modes vary in the polarity of their sync signals; for traditional 640x480, the polarity is negative for both <strong>hsync</strong> and <strong>vsync</strong>. Negative polarity means the voltage is mostly high, with low voltage indicating a sync signal.</p>
 <p>The following simulation shows the vertical sync starting at the 490th line (counting starts at zero):</p>
 <p><img src="/img/posts/fpga-graphics/hsync-vsync-vga.png" alt="Sync Signal Simulation" title="Simulating VGA horizontal &amp; vertical sync signals"></p>
 <h2 id="test-benches">Test Benches</h2>
 <p>You can exercise the designs with the included test benches (Xilinx only):</p>
 <ul>
-<li><strong><a href="https://github.com/projf/projf-explore/tree/master/common/xc7/clock_gen_480p_tb.sv">Clock Gen Test Bench</a></strong> (Xilinx 7 Series)</li>
-<li><strong><a href="https://github.com/projf/projf-explore/tree/master/fpga-graphics/xc7/display_timings_480p_tb.sv">Display Timings Test Bench</a></strong> (Xilinx 7 Series)</li>
+<li><strong><a href="https://github.com/projf/projf-explore/tree/master/common/xc7/clock_gen_480p_tb.sv">Clock Gen Test Bench</a></strong></li>
+<li><strong><a href="https://github.com/projf/projf-explore/tree/master/fpga-graphics/xc7/display_timings_480p_tb.sv">Display Timings Test Bench</a></strong></li>
 </ul>
 <p>Some things to check:</p>
 <ul>
@@ -250,11 +252,11 @@ Any modern display, including <a href="https://en.wikipedia.org/wiki/Multisync_m
 <p>Now we have our display signals we&rsquo;re ready to start drawing. To begin, we&rsquo;re going to keep it simple and draw a coloured square. When the screen x and y coordinates are both less than 32 we draw in orange; otherwise, we use blue. Because our colour output has 4 bits per channel, we can use a single hex digit from 0-F to represent the intensity of red, green, and blue.</p>
 <p>There are two versions of this top module, one for each demo board:</p>
 <ul>
-<li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/xc7/top_square.sv">xc7/top_square.sv</a></strong></li>
-<li>Lattice iCE40: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/ice40/top_square.sv">ice40/top_square.sv</a></strong></li>
+<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/xc7/top_square.sv">xc7/top_square.sv</a></strong></li>
+<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/ice40/top_square.sv">ice40/top_square.sv</a></strong></li>
 </ul>
 <h3 id="arty-vga">Arty VGA</h3>
-<p>Shown below is the version for Arty A7-35T (XC7) with Pmod VGA:</p>
+<p>Shown below is the version for Arty with Pmod VGA:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_square (
     <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_100m,     <span style="color:#75715e">// 100 MHz clock
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_rst,      <span style="color:#75715e">// reset button (active low)
@@ -395,8 +397,8 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/fpga-graphics
 <p>To create a simple animation, we can update the position of the square every frame. If we move the square during active drawing, we risk <strong><a href="https://en.wikipedia.org/wiki/Screen_tearing">screen tearing</a></strong>, so we create an <code>animate</code> signal that happens at the start of the vertical blanking period.</p>
 <p>We&rsquo;re going to replicate the behaviour of the video display itself, scanning across then down the screen. The square &ldquo;beam&rdquo; disappears off the edge of the screen, like the signal in the blanking interval. Try rebuilding the design with <code>top_beam</code>:</p>
 <ul>
-<li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/xc7/top_beam.sv">xc7/top_beam.sv</a></strong></li>
-<li>Lattice iCE40: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/ice40/top_beam.sv">ice40/top_beam.sv</a></strong></li>
+<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/xc7/top_beam.sv">xc7/top_beam.sv</a></strong></li>
+<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/ice40/top_beam.sv">ice40/top_beam.sv</a></strong></li>
 </ul>
 <p>The square animation logic looks like this:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// size of screen with and without blanking
@@ -435,8 +437,8 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/fpga-graphics
 <p>Now we can animate, we can start to create some interesting effects. By adding collision detection, we can bounce squares around the screen. If we create three squares: red, green, and blue, we have a simple demo. While simple, it&rsquo;s satisfying to watch the squares combine colours as they move around the screen.</p>
 <p>Try rebuilding the design with <code>top_bounce</code>:</p>
 <ul>
-<li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/xc7/top_bounce.sv">xc7/top_bounce.sv</a></strong></li>
-<li>Lattice iCE40: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/ice40/top_bounce.sv">ice40/top_bounce.sv</a></strong></li>
+<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/xc7/top_bounce.sv">xc7/top_bounce.sv</a></strong></li>
+<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/ice40/top_bounce.sv">ice40/top_bounce.sv</a></strong></li>
 </ul>
 <p><img src="/img/posts/fpga-graphics/bounce.jpg" alt="Bouncing Squares" title="Bounce!"></p>
 <h3 id="collision-detection">Collision Detection</h3>
