@@ -120,7 +120,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
     <div class="content">
       <p>Welcome back to <em>Exploring FPGA Graphics</em>. In the previous part, we recreated <a href="/posts/fpga-pong/">Pong</a>. In this part, we learn how to create colourful animated graphics with hardware sprites. Hardware sprites maintain much of the simplicity of our Pong design while offering much greater creative freedom. In the <a href="/posts/fpga-ad-astra/">next part</a>, we&rsquo;ll create a demo that gives a taste of what&rsquo;s possible with sprites.</p>
 <p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how displays work, race the beam with Pong, animate starfields and sprites, paint Michelangelo&rsquo;s David, simulate life with bitmaps, draw lines and shapes, and finally render simple 3D models. New to the series? Start with <a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a>.</p>
-<p><em>Updated 2021-01-28. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><em>Updated 2021-03-31. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <h3 id="series-outline">Series Outline</h3>
 <ul>
 <li><a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a> - learn how displays work and animate simple shapes</li>
@@ -158,7 +158,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
 1 1 0 0 0 0 1 1
 0 0 0 0 0 0 1 1
 </code></pre></div><p>We read the binary text format into FPGA memory with <code>$readmemb</code> (note the &lsquo;b&rsquo; for binary); you can see this in action in the <code>rom_async</code> module, below. If you want to know more about loading data into memory, see <a href="/posts/initialize-memory-in-verilog/">Initialize Memory in Verilog</a>.</p>
-<h2 id="simple-sprite-drawing">Simple Sprite Drawing</h2>
+<h3 id="simple-sprite-drawing">Simple Sprite Drawing</h3>
 <p>Before starting to design hardware, we should consider what steps we go through in drawing a sprite at position <code>X,Y</code> on the screen (where <code>X,Y</code> is the top left of the sprite). The screen is drawn from the top left, a line at a time, so the steps are:</p>
 <ol>
 <li>Wait for the screen to reach the vertical sprite position (<code>Y</code>)</li>
@@ -173,14 +173,14 @@ In this series, we explore graphics at the hardware level and get a feel for the
     <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,            <span style="color:#75715e">// graphic width in pixels
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> HEIGHT<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,           <span style="color:#75715e">// graphic height in pixels
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> SPR_FILE<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;&#34;</span>,        <span style="color:#75715e">// file to load sprite graphic from
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">10</span>,           <span style="color:#75715e">// screen coordinate width in bits
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>,           <span style="color:#75715e">// screen coordinate width in bits
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> DEPTH<span style="color:#f92672">=</span>WIDTH<span style="color:#f92672">*</span>HEIGHT  <span style="color:#75715e">// depth of memory array holding graphic
 </span><span style="color:#75715e"></span>    ) (
     <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,               <span style="color:#75715e">// clock
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst,               <span style="color:#75715e">// reset
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> start,             <span style="color:#75715e">// start control
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx,    <span style="color:#75715e">// horizontal screen position
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sprx,  <span style="color:#75715e">// horizontal sprite position
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx,    <span style="color:#75715e">// horizontal screen position
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sprx,  <span style="color:#75715e">// horizontal sprite position
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> pix                <span style="color:#75715e">// pixel colour to draw
 </span><span style="color:#75715e"></span>    );
 
@@ -233,9 +233,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
     <span style="color:#66d9ef">end</span>
 
     <span style="color:#75715e">// output current pixel colour when drawing
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        pix <span style="color:#f92672">=</span> (state <span style="color:#f92672">==</span> DRAW) <span style="color:#f92672">?</span> spr_rom_data <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
-    <span style="color:#66d9ef">end</span>
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> pix <span style="color:#f92672">=</span> (state <span style="color:#f92672">==</span> DRAW) <span style="color:#f92672">?</span> spr_rom_data <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
 
     <span style="color:#75715e">// create status signals
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> last_pixel, last_line;
@@ -249,7 +247,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
         <span style="color:#66d9ef">case</span>(state)
             IDLE:       state_next <span style="color:#f92672">=</span> start <span style="color:#f92672">?</span> START <span style="color:#f92672">:</span> IDLE;
             START:      state_next <span style="color:#f92672">=</span> AWAIT_POS;
-            AWAIT_POS:  state_next <span style="color:#f92672">=</span> (sx <span style="color:#f92672">==</span> sprx) <span style="color:#f92672">?</span> DRAW <span style="color:#f92672">:</span> AWAIT_POS;
+            AWAIT_POS:  state_next <span style="color:#f92672">=</span> (sx <span style="color:#f92672">==</span> sprx<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#f92672">?</span> DRAW <span style="color:#f92672">:</span> AWAIT_POS;
             DRAW:       state_next <span style="color:#f92672">=</span> <span style="color:#f92672">!</span>last_pixel <span style="color:#f92672">?</span> DRAW <span style="color:#f92672">:</span>
                                      (<span style="color:#f92672">!</span>last_line <span style="color:#f92672">?</span> NEXT_LINE <span style="color:#f92672">:</span> IDLE);
             NEXT_LINE:  state_next <span style="color:#f92672">=</span> AWAIT_POS;
@@ -257,10 +255,12 @@ In this series, we explore graphics at the hardware level and get a feel for the
         <span style="color:#66d9ef">endcase</span>
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
-</code></pre></div><p>The module does nothing until it receives a <code>start</code> signal, then it draws the sprite line-by-line.</p>
+</code></pre></div><p>The module does nothing until it receives a <code>start</code> signal, then it awaits the sprite position:</p>
+<p><code>AWAIT_POS:  state_next = (sx == sprx-1) ? DRAW : AWAIT_POS;</code></p>
+<p>We wait for the pixel <em>before</em> the start of the sprite, so that the next cycle we start drawing in the right place:</p>
 <p><code>DRAW:       state_next = !last_pixel ? DRAW : (!last_line ? NEXT_LINE : IDLE);</code></p>
 <p>In the next-state logic, we&rsquo;ve nested a conditional operator. Nested conditional operators are confusing, so best avoided. However, in this case, I think it reads naturally. If we&rsquo;re not reached the last pixel, keep drawing. If we&rsquo;ve not arrived at the final line, go to the next line. Otherwise idle.</p>
-<p>The graphic itself is held in an asynchronous ROM. An asynchronous ROM uses logic (LUTS and/or flip-flops); it&rsquo;s a good choice for a small ROM such as this <strong>[<a href="https://github.com/projf/projf-explore/blob/master/common/rom_async.sv">rom_async.sv</a>]</strong>:</p>
+<p>The graphic itself is held in an asynchronous ROM. An asynchronous ROM uses logic (LUTs); it&rsquo;s a good choice for a small ROM such as this <strong>[<a href="https://github.com/projf/projf-explore/blob/master/common/rom_async.sv">rom_async.sv</a>]</strong>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> rom_async #(
     <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,
     <span style="color:#66d9ef">parameter</span> DEPTH<span style="color:#f92672">=</span><span style="color:#ae81ff">256</span>,
@@ -282,10 +282,93 @@ In this series, we explore graphics at the hardware level and get a feel for the
 
     <span style="color:#66d9ef">always_comb</span> data <span style="color:#f92672">=</span> memory[addr];
 <span style="color:#66d9ef">endmodule</span>
-</code></pre></div><p>To see our static sprite in action, we need a top module to drive it. The main parts of the sprite top module should be familiar to you from the previous parts: it uses the same clock generator and display timings as <a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a>.</p>
+</code></pre></div><p>Note the lack of a clock: this ROM is entirely combinational. You&rsquo;ll see a synchronous ROM, using BRAM, later in this post.</p>
+<h3 id="revisiting-display-timings">Revisiting Display Timings</h3>
+<p>Didn&rsquo;t we already sort out display timings at the <a href="/posts/fpga-graphics/#display-timings">start of the series</a>?
+Yes, we did, but there are good reasons to change how we treat screen coordinates before we start drawing sprites.</p>
+<p>Take a look at the new <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/display_timings_480p.sv">display_timings_480p.sv</a>]</strong> module, then we&rsquo;ll discuss the changes:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> display_timings_480p #(
+    CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>,   <span style="color:#75715e">// signed coordinate width (bits)
+</span><span style="color:#75715e"></span>    H_RES<span style="color:#f92672">=</span><span style="color:#ae81ff">640</span>,  <span style="color:#75715e">// horizontal resolution (pixels)
+</span><span style="color:#75715e"></span>    V_RES<span style="color:#f92672">=</span><span style="color:#ae81ff">480</span>,  <span style="color:#75715e">// vertical resolution (lines)
+</span><span style="color:#75715e"></span>    H_FP<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>,    <span style="color:#75715e">// horizontal front porch
+</span><span style="color:#75715e"></span>    H_SYNC<span style="color:#f92672">=</span><span style="color:#ae81ff">96</span>,  <span style="color:#75715e">// horizontal sync
+</span><span style="color:#75715e"></span>    H_BP<span style="color:#f92672">=</span><span style="color:#ae81ff">48</span>,    <span style="color:#75715e">// horizontal back porch
+</span><span style="color:#75715e"></span>    V_FP<span style="color:#f92672">=</span><span style="color:#ae81ff">10</span>,    <span style="color:#75715e">// vertical front porch
+</span><span style="color:#75715e"></span>    V_SYNC<span style="color:#f92672">=</span><span style="color:#ae81ff">2</span>,   <span style="color:#75715e">// vertical sync
+</span><span style="color:#75715e"></span>    V_BP<span style="color:#f92672">=</span><span style="color:#ae81ff">33</span>,    <span style="color:#75715e">// vertical back porch
+</span><span style="color:#75715e"></span>    H_POL<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>,    <span style="color:#75715e">// horizontal sync polarity (0:neg, 1:pos)
+</span><span style="color:#75715e"></span>    V_POL<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>     <span style="color:#75715e">// vertical sync polarity (0:neg, 1:pos)
+</span><span style="color:#75715e"></span>    ) (
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_pix,  <span style="color:#75715e">// pixel clock
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst,      <span style="color:#75715e">// reset
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> hsync,    <span style="color:#75715e">// horizontal sync
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> vsync,    <span style="color:#75715e">// vertical sync
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> de,       <span style="color:#75715e">// data enable (low in blanking intervals)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> frame,    <span style="color:#75715e">// high at start of frame 
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> line,     <span style="color:#75715e">// high at start of active line
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx,  <span style="color:#75715e">// horizontal screen position
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sy   <span style="color:#75715e">// vertical screen position
+</span><span style="color:#75715e"></span>    );
+
+    <span style="color:#75715e">// horizontal timings
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> <span style="color:#66d9ef">signed</span> H_STA  <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">-</span> H_FP <span style="color:#f92672">-</span> H_SYNC <span style="color:#f92672">-</span> H_BP;    <span style="color:#75715e">// horizontal start
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> <span style="color:#66d9ef">signed</span> HS_STA <span style="color:#f92672">=</span> H_STA <span style="color:#f92672">+</span> H_FP;                <span style="color:#75715e">// sync start
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> <span style="color:#66d9ef">signed</span> HS_END <span style="color:#f92672">=</span> HS_STA <span style="color:#f92672">+</span> H_SYNC;             <span style="color:#75715e">// sync end
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> <span style="color:#66d9ef">signed</span> HA_STA <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;                           <span style="color:#75715e">// active start
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> <span style="color:#66d9ef">signed</span> HA_END <span style="color:#f92672">=</span> H_RES <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;                   <span style="color:#75715e">// active end
+</span><span style="color:#75715e"></span>
+    <span style="color:#75715e">// vertical timings
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> <span style="color:#66d9ef">signed</span> V_STA  <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">-</span> V_FP <span style="color:#f92672">-</span> V_SYNC <span style="color:#f92672">-</span> V_BP;    <span style="color:#75715e">// vertical start
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> <span style="color:#66d9ef">signed</span> VS_STA <span style="color:#f92672">=</span> V_STA <span style="color:#f92672">+</span> V_FP;                <span style="color:#75715e">// sync start
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> <span style="color:#66d9ef">signed</span> VS_END <span style="color:#f92672">=</span> VS_STA <span style="color:#f92672">+</span> V_SYNC;             <span style="color:#75715e">// sync end
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> <span style="color:#66d9ef">signed</span> VA_STA <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;                           <span style="color:#75715e">// active start
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> <span style="color:#66d9ef">signed</span> VA_END <span style="color:#f92672">=</span> V_RES <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;                   <span style="color:#75715e">// active end
+</span><span style="color:#75715e"></span>
+    <span style="color:#75715e">// generate horizontal and vertical syncs with correct polarity
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+        hsync <span style="color:#f92672">=</span> H_POL <span style="color:#f92672">?</span> (sx <span style="color:#f92672">&gt;</span> HS_STA <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">&lt;=</span> HS_END)
+                     <span style="color:#f92672">:</span> <span style="color:#f92672">~</span>(sx <span style="color:#f92672">&gt;</span> HS_STA <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">&lt;=</span> HS_END);
+        vsync <span style="color:#f92672">=</span> V_POL <span style="color:#f92672">?</span> (sy <span style="color:#f92672">&gt;</span> VS_STA <span style="color:#f92672">&amp;&amp;</span> sy <span style="color:#f92672">&lt;=</span> VS_END)
+                     <span style="color:#f92672">:</span> <span style="color:#f92672">~</span>(sy <span style="color:#f92672">&gt;</span> VS_STA <span style="color:#f92672">&amp;&amp;</span> sy <span style="color:#f92672">&lt;=</span> VS_END);
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// control signals
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+        de    <span style="color:#f92672">=</span> (sy <span style="color:#f92672">&gt;=</span> <span style="color:#ae81ff">0</span>      <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">&gt;=</span> <span style="color:#ae81ff">0</span>);
+        frame <span style="color:#f92672">=</span> (sy <span style="color:#f92672">==</span> V_STA  <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">==</span> H_STA);
+        line  <span style="color:#f92672">=</span> (sy <span style="color:#f92672">&gt;=</span> <span style="color:#ae81ff">0</span>      <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">==</span> H_STA);
+        <span style="color:#66d9ef">if</span> (rst) frame <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// don&#39;t assert frame in reset
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// calculate horizontal and vertical screen position
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @ (<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">if</span> (sx <span style="color:#f92672">==</span> HA_END) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// last pixel on line?
+</span><span style="color:#75715e"></span>            sx <span style="color:#f92672">&lt;=</span> H_STA;
+            sy <span style="color:#f92672">&lt;=</span> (sy <span style="color:#f92672">==</span> VA_END) <span style="color:#f92672">?</span> V_STA <span style="color:#f92672">:</span> sy <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// last line on screen?
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
+            sx <span style="color:#f92672">&lt;=</span> sx <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+        <span style="color:#66d9ef">end</span>
+        <span style="color:#66d9ef">if</span> (rst) <span style="color:#66d9ef">begin</span>
+            sx <span style="color:#f92672">&lt;=</span> H_STA;
+            sy <span style="color:#f92672">&lt;=</span> V_STA;
+        <span style="color:#66d9ef">end</span>
+    <span style="color:#66d9ef">end</span>
+<span style="color:#66d9ef">endmodule</span>
+</code></pre></div><p>The two significant changes are:</p>
+<ol>
+<li>The blanking intervals occur <em>before</em> the active drawing area</li>
+<li>The use of signed coordinates for screen position</li>
+</ol>
+<p>Imagine we want to draw a sprite at the far-left of the screen. We need to start the drawing process before the first sprite pixel, for example, to load pixels from ram. If horizontal blanking occurs at the end of the line, we need to start the sprite on the line before. If we want to draw at the top of the screen, there is no previous line, so we need to start in the previous frame. Dealing with these edge cases complicates drawing needlessly.</p>
+<p>If blanking before active area is so handy, why didn&rsquo;t we do this before? Putting the blanking interval first means the first visible pixel is no longer (0,0); for VGA, it moves to (160,45). We can add an offset to all our coordinates, which is slightly annoying, but the <a href="http://amigadev.elowar.com/read/ADCD_2.1/Hardware_Manual_guide/node0071.html">Amiga successfully used this approach</a>. However, this creates issues when handling different resolutions: the Amiga worked around this by always using low-resolution sprite coordinates.</p>
+<p>There is a better way if we&rsquo;re prepared to accept signed coordinates. We retain (0,0) as the top-left of the screen, while blanking occurs at negative coordinates. If we adopt 16-bit signed coordinates, we can handle any plausible screen size and an (X,Y) coordinate pair fits cleanly into a 32-bit word. Signed signals are a bit of a pain in Verilog, but I&rsquo;ve found the slight inconvenience more than worth it when working with sprites and framebuffers.</p>
+<p>To abstract the size of blanking intervals, I&rsquo;ve added a couple of signals for the start of the <strong>frame</strong> and active <strong>line</strong>. For example, if you&rsquo;re animating a sprite, you can move it when you receive a frame signal.</p>
+<h3 id="lets-draw">Let&rsquo;s Draw</h3>
+<p>With our new display timings in hand, it&rsquo;s time to see our static sprite in action:</p>
 <ul>
-<li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/xc7/top_sprite_v1.sv">xc7/top_sprite_v1.sv</a></strong></li>
-<li>Lattice iCE40: <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/ice40/top_sprite_v1.sv">ice40/top_sprite_v1.sv</a></strong></li>
+<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/xc7/top_sprite_v1.sv">xc7/top_sprite_v1.sv</a></strong></li>
+<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/ice40/top_sprite_v1.sv">ice40/top_sprite_v1.sv</a></strong></li>
 </ul>
 <p>iCE40 version show below:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_sprite_v1 (
@@ -303,7 +386,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
     <span style="color:#75715e">// generate pixel clock
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> clk_pix;
     <span style="color:#66d9ef">logic</span> clk_locked;
-    clock_gen clock_640x480 (
+    clock_gen_480p clock_pix_inst (
        .clk(clk_12m),
        .rst(btn_rst),
        .clk_pix,
@@ -311,24 +394,23 @@ In this series, we explore graphics at the hardware level and get a feel for the
     );
 
     <span style="color:#75715e">// display timings
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>;  <span style="color:#75715e">// screen coordinate width in bits
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx, sy;
-    <span style="color:#66d9ef">logic</span> hsync, vsync, de;
-    display_timings_480p timings_640x480 (
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> H_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">640</span>;
+    <span style="color:#66d9ef">localparam</span> V_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">480</span>;
+    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">16</span>;
+    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx, sy;
+    <span style="color:#66d9ef">logic</span> hsync, vsync;
+    <span style="color:#66d9ef">logic</span> de, line;
+    display_timings_480p display_timings_inst (
         .clk_pix,
-        .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for clock lock
+        .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for pixel clock lock
 </span><span style="color:#75715e"></span>        .sx,
         .sy,
         .hsync,
         .vsync,
-        .de
+        .de,
+        .frame(),
+        .line
     );
-
-    <span style="color:#75715e">// size of screen with and without blanking
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> H_RES_FULL <span style="color:#f92672">=</span> <span style="color:#ae81ff">800</span>;
-    <span style="color:#66d9ef">localparam</span> V_RES_FULL <span style="color:#f92672">=</span> <span style="color:#ae81ff">525</span>;
-    <span style="color:#66d9ef">localparam</span> H_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">640</span>;
-    <span style="color:#66d9ef">localparam</span> V_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">480</span>;
 
     <span style="color:#75715e">// sprite
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> SPR_WIDTH  <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span>;  <span style="color:#75715e">// width in pixels
@@ -342,9 +424,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
     <span style="color:#66d9ef">localparam</span> DRAW_Y <span style="color:#f92672">=</span> <span style="color:#ae81ff">16</span>;
 
     <span style="color:#75715e">// signal to start sprite drawing
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        spr_start <span style="color:#f92672">=</span> (sy <span style="color:#f92672">==</span> DRAW_Y <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>);
-    <span style="color:#66d9ef">end</span>
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> spr_start <span style="color:#f92672">=</span> (line <span style="color:#f92672">&amp;&amp;</span> sy <span style="color:#f92672">==</span> DRAW_Y);
 
     sprite_v1 #(
         .WIDTH(SPR_WIDTH),
@@ -387,70 +467,31 @@ In this series, we explore graphics at the hardware level and get a feel for the
         .D_OUT_1()
     );
 <span style="color:#66d9ef">endmodule</span>
-</code></pre></div><p>We start the sprite drawing with the following logic (first pixel on line <code>DRAW_Y</code>):</p>
-<p><code>spr_start = (sy == DRAW_Y &amp;&amp; sx == 0);</code></p>
+</code></pre></div><p>We start the sprite drawing with the following logic (line is high at the start of active lines):</p>
+<p><code>always_comb spr_start = (line &amp;&amp; sy == DRAW_Y);</code></p>
 <p>We pass the horizontal position of the screen, <code>sx</code>, to the sprite module, so it can wait for the correct horizontal drawing position.</p>
 <blockquote>
 <p><strong>Building the Designs</strong><br>
 In the <a href="https://github.com/projf/projf-explore/tree/master/hardware-sprites">Hardware Sprites</a> section of the git repo, you&rsquo;ll find the design files, a makefile for iCEBreaker, a Vivado project for Arty, and instructions for building the designs for both boards.</p>
 </blockquote>
 <p>Program your board, and you should see a small golden letter &lsquo;F&rsquo; and a dot towards the top left of the screen. From these tiny beginnings, mighty sprites will grow.</p>
-<h2 id="one-off">One Off</h2>
-<p>The observant amongst you might have noticed that our horizontal sprite position is off by one. The problem is our state machine waits for the screen to reach the sprite position, then it switches to drawing for the next pixel. You can see that in the next-state logic:</p>
-<p><code>AWAIT_POS:  state_next = (sx == sprx) ? DRAW : AWAIT_POS;</code></p>
-<p>The obvious thing is to wait for the screen position <code>sx</code> to be the pixel <em>before</em> the one we want to draw. However, if we want to draw at horizontal coordinate 0, the pixel before is at position 799 on the <em>line before</em>, so we need to correct both our horizontal and vertical sprite positions.</p>
-<p>Update the start signal logic in the top module; <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/xc7/top_sprite_v2.sv">xc7/top_sprite_v2.sv</a>]</strong> or <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/ice40/top_sprite_v2.sv">ice40/top_sprite_v2.sv</a>]</strong>:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// draw sprite at position
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> DRAW_X <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-    <span style="color:#66d9ef">localparam</span> DRAW_Y <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-
-    <span style="color:#75715e">// start sprite in blanking of line before first line drawn
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] draw_y_cor;  <span style="color:#75715e">// corrected for wrapping
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        draw_y_cor <span style="color:#f92672">=</span> (DRAW_Y <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) <span style="color:#f92672">?</span> V_RES_FULL <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> DRAW_Y <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;
-        spr_start <span style="color:#f92672">=</span> (sy <span style="color:#f92672">==</span> draw_y_cor <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">==</span> H_RES);
-    <span style="color:#66d9ef">end</span>
-</code></pre></div><p>And the AWAIT_POS logic in the sprite module, creating <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/sprite_v2.sv">sprite_v2.sv</a>]</strong>:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// create status signals and correct horizontal position
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> last_pixel, last_line;
-    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sprx_cor;
-    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        last_pixel <span style="color:#f92672">=</span> (ox <span style="color:#f92672">==</span> WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>);
-        last_line  <span style="color:#f92672">=</span> (oy <span style="color:#f92672">==</span> HEIGHT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>);
-        sprx_cor <span style="color:#f92672">=</span> (sprx <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) <span style="color:#f92672">?</span> H_RES_FULL <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> sprx <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;
-    <span style="color:#66d9ef">end</span>
-
-    <span style="color:#75715e">// determine next state
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        <span style="color:#66d9ef">case</span>(state)
-            IDLE:       state_next <span style="color:#f92672">=</span> start <span style="color:#f92672">?</span> START <span style="color:#f92672">:</span> IDLE;
-            START:      state_next <span style="color:#f92672">=</span> AWAIT_POS;
-            AWAIT_POS:  state_next <span style="color:#f92672">=</span> (sx <span style="color:#f92672">==</span> sprx_cor) <span style="color:#f92672">?</span> DRAW <span style="color:#f92672">:</span> AWAIT_POS;
-            DRAW:       state_next <span style="color:#f92672">=</span> <span style="color:#f92672">!</span>last_pixel <span style="color:#f92672">?</span> DRAW <span style="color:#f92672">:</span>
-                                    (<span style="color:#f92672">!</span>last_line <span style="color:#f92672">?</span> NEXT_LINE <span style="color:#f92672">:</span> IDLE);
-            NEXT_LINE:  state_next <span style="color:#f92672">=</span> AWAIT_POS;
-            <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span>    state_next <span style="color:#f92672">=</span> IDLE;
-        <span style="color:#66d9ef">endcase</span>
-    <span style="color:#66d9ef">end</span>
-</code></pre></div><p>Build the v2 designs, and you should see the F dot sprite at the very top left of the screen. You may need to adjust your VGA monitor to ensure it&rsquo;s fully visable.</p>
-<h2 id="scale-up">Scale Up</h2>
+<h2 id="scaling-up">Scaling Up</h2>
 <p>Now we can position our sprite correctly, it&rsquo;s time to make it bigger. We make larger sprites by increasing the size of the design. However, it&rsquo;s also useful to be able to scale our sprites up when drawing them. A scaled-up sprite will be blocky but will use few resources and allows a design to work at different screen resolutions.</p>
-<p>To scale our sprite, we count additional screen pixels and lines when drawing the sprite using <code>cnt_x</code> and <code>cnt_y</code> respectively. The new module is <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/sprite_v3.sv">sprite_v3.sv</a>]</strong>:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> sprite_v3 #(
+<p>To scale our sprite, we count additional screen pixels and lines when drawing the sprite using <code>cnt_x</code> and <code>cnt_y</code> respectively. The new module is <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/sprite_v2.sv">sprite_v2sv</a>]</strong>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> sprite_v2 #(
     <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,            <span style="color:#75715e">// graphic width in pixels
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> HEIGHT<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,           <span style="color:#75715e">// graphic height in pixels
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> SCALE_X<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>,          <span style="color:#75715e">// sprite width scale-factor
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> SCALE_Y<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>,          <span style="color:#75715e">// sprite height scale-factor
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> SPR_FILE<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;&#34;</span>,        <span style="color:#75715e">// file to load sprite graphic from
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">10</span>,           <span style="color:#75715e">// screen coordinate width in bits
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> H_RES_FULL<span style="color:#f92672">=</span><span style="color:#ae81ff">800</span>,     <span style="color:#75715e">// horizontal screen resolution inc. blanking
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>,           <span style="color:#75715e">// screen coordinate width in bits
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> DEPTH<span style="color:#f92672">=</span>WIDTH<span style="color:#f92672">*</span>HEIGHT  <span style="color:#75715e">// depth of memory array holding graphic
 </span><span style="color:#75715e"></span>    ) (
     <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,               <span style="color:#75715e">// clock
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst,               <span style="color:#75715e">// reset
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> start,             <span style="color:#75715e">// start control
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx,    <span style="color:#75715e">// horizontal screen position
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sprx,  <span style="color:#75715e">// horizontal sprite position
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx,    <span style="color:#75715e">// horizontal screen position
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sprx,  <span style="color:#75715e">// horizontal sprite position
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> pix                <span style="color:#75715e">// pixel colour to draw
 </span><span style="color:#75715e"></span>    );
 
@@ -526,17 +567,13 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/hardware-spri
     <span style="color:#66d9ef">end</span>
 
     <span style="color:#75715e">// output current pixel colour when drawing
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        pix <span style="color:#f92672">=</span> (state <span style="color:#f92672">==</span> DRAW) <span style="color:#f92672">?</span> spr_rom_data <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
-    <span style="color:#66d9ef">end</span>
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> pix <span style="color:#f92672">=</span> (state <span style="color:#f92672">==</span> DRAW) <span style="color:#f92672">?</span> spr_rom_data <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
 
-    <span style="color:#75715e">// create status signals and correct horizontal position
+    <span style="color:#75715e">// create status signals
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> last_pixel, last_line;
-    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sprx_cor;
     <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
         last_pixel <span style="color:#f92672">=</span> (ox <span style="color:#f92672">==</span> WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>  <span style="color:#f92672">&amp;&amp;</span> cnt_x <span style="color:#f92672">==</span> SCALE_X<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>);
         last_line  <span style="color:#f92672">=</span> (oy <span style="color:#f92672">==</span> HEIGHT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span> <span style="color:#f92672">&amp;&amp;</span> cnt_y <span style="color:#f92672">==</span> SCALE_Y<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>);
-        sprx_cor <span style="color:#f92672">=</span> (sprx <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) <span style="color:#f92672">?</span> H_RES_FULL <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> sprx <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;
     <span style="color:#66d9ef">end</span>
 
     <span style="color:#75715e">// determine next state
@@ -544,7 +581,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/hardware-spri
         <span style="color:#66d9ef">case</span>(state)
             IDLE:       state_next <span style="color:#f92672">=</span> start <span style="color:#f92672">?</span> START <span style="color:#f92672">:</span> IDLE;
             START:      state_next <span style="color:#f92672">=</span> AWAIT_POS;
-            AWAIT_POS:  state_next <span style="color:#f92672">=</span> (sx <span style="color:#f92672">==</span> sprx_cor) <span style="color:#f92672">?</span> DRAW <span style="color:#f92672">:</span> AWAIT_POS;
+            AWAIT_POS:  state_next <span style="color:#f92672">=</span> (sx <span style="color:#f92672">==</span> sprx<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#f92672">?</span> DRAW <span style="color:#f92672">:</span> AWAIT_POS;
             DRAW:       state_next <span style="color:#f92672">=</span> <span style="color:#f92672">!</span>last_pixel <span style="color:#f92672">?</span> DRAW <span style="color:#f92672">:</span>
                                     (<span style="color:#f92672">!</span>last_line <span style="color:#f92672">?</span> NEXT_LINE <span style="color:#f92672">:</span> IDLE);
             NEXT_LINE:  state_next <span style="color:#f92672">=</span> AWAIT_POS;
@@ -554,10 +591,10 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/hardware-spri
 <span style="color:#66d9ef">endmodule</span>
 </code></pre></div><p>We can then drive this with a small change to our top module:</p>
 <ul>
-<li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/xc7/top_sprite_v3.sv">xc7/top_sprite_v3.sv</a></strong></li>
-<li>Lattice iCE40: <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/ice40/top_sprite_v3.sv">ice40/top_sprite_v3.sv</a></strong></li>
+<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/xc7/top_sprite_v2.sv">xc7/top_sprite_v2.sv</a></strong></li>
+<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/ice40/top_sprite_v2.sv">ice40/top_sprite_v2.sv</a></strong></li>
 </ul>
-<p>Build the v3 design with scaling. This design has hard-coded scale parameters, <code>SCALE_X</code> and <code>SCALE_Y</code>, but these could easily be made inputs to the module to allow for changes at run time.</p>
+<p>Build the v2 design with scaling. This design has hard-coded scale parameters, <code>SCALE_X</code> and <code>SCALE_Y</code>, but these could easily be made module inputs to allow for changes at run time.</p>
 <p><img src="/img/posts/hardware-sprites/letter-f-720p.png" alt="Letter F" title="Letter F: FPGA Capture"></p>
 <h2 id="motion">Motion</h2>
 <p>It&rsquo;s time we got our sprites moving. Now we have our basic sprite working, I&rsquo;m going to use a new design, which I&rsquo;m charitably calling a flying saucer:</p>
@@ -575,23 +612,23 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/hardware-spri
 <p>To make it easy to build your own design I&rsquo;ve added an empty sprite with the name <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/res/simple/user.mem">user.mem</a>]</strong>. If you replace this file in <code>res/simple/</code> with your own design it will automatically be included in projects and makefiles. See the <a href="https://github.com/projf/projf-explore/tree/master/hardware-sprites">Hardware Sprites</a> section of the git repo for build instructions.</p>
 <p>To move our sprite, I&rsquo;ve borrowed the horizontal bouncing logic from our <a href="/posts/fpga-graphics/">first part</a>, yet again, to create:</p>
 <ul>
-<li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/xc7/top_sprite_v3a.sv">xc7/top_sprite_v3a.sv</a></strong></li>
-<li>Lattice iCE40: <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/ice40/top_sprite_v3a.sv">ice40/top_sprite_v3a.sv</a></strong></li>
+<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/xc7/top_sprite_v2a.sv">xc7/top_sprite_v2a.sv</a></strong></li>
+<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/ice40/top_sprite_v2a.sv">ice40/top_sprite_v2a.sv</a></strong></li>
 </ul>
-<p>Build this version of the project. You should see your sprite bounce back and forth across the screen. If you created your own sprite, remember to update the sprite filename, <code>SPR_FILE</code>, in <code>top_sprite_v3a.sv</code>. You can also tweak the sprite height, width, and scale as you like.</p>
+<p>Build this version of the project. You should see your sprite bounce back and forth across the screen. If you created your own sprite, remember to update the sprite filename, <code>SPR_FILE</code>, in <code>top_sprite_v2a.sv</code>. You can also tweak the sprite height, width, and scale as you like.</p>
 <h2 id="colourful">Colourful?</h2>
 <p>The introduction promised &ldquo;colourful animated graphics&rdquo;: it&rsquo;s time to make good on this by increasing our colour depth. Rather than continue to inflict my drawing skills on you, I&rsquo;m using the adorable hedgehog from the Amiga platformer, <a href="https://www.lemonamiga.com/games/details.php?id=1023">Superfrog</a>.</p>
 <p><img src="/img/posts/hardware-sprites/hedgehog-enlarged.png" alt="Hedgehog" title="Hedgehog"></p>
-<p>This graphic is 32x20 pixels in size, so has 640 pixels. The original Amiga game uses 32 colours, of which the hedgehog uses ten, plus one transparent colour. To allow for 11 colours we need four bits per pixel.</p>
+<p>The hedgehog graphic is 32x20, so has a total of 640 pixels. The original Amiga game uses 32 colours, of which the hedgehog uses ten, plus one transparent colour. To allow for 11 colours we need four bits per pixel.</p>
 <p>The memory requirement for this sprite is: <code>32 x 20 x 4 = 2,560 or 2.5 kilobits</code>.</p>
-<p>The memory file is similar to that for our monochrome sprites, but instead of pixels being <code>0</code> or <code>1</code>, they&rsquo;re <code>0</code> to <code>F</code>. I use a tool called <a href="https://github.com/projf/fpgatools">img2fmem</a> to convert a PNG of the image to this text format: <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/res/hedgehog/hedgehog.mem">hedgehog.mem</a></strong>. To read this hex text data into memory we use <code>$readmemh</code> (note the &lsquo;h&rsquo; for hex).</p>
+<p>The memory initialization file is similar to our monochrome sprites, but instead of pixels being <code>0</code> or <code>1</code>, they&rsquo;re <code>0</code> to <code>F</code>. I use a tool called <a href="https://github.com/projf/fpgatools">img2fmem</a> (discussed later) to convert the sprite image to <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/res/hedgehog/hedgehog.mem">hedgehog.mem</a>]</strong>. To read this hex text data into memory we use <code>$readmemh</code> (note the &lsquo;h&rsquo; for hex).</p>
 <blockquote>
 <p><strong>Quick Aside: Indexed Colour</strong><br>
-This design was common in older computers, for example, the <a href="https://en.wikipedia.org/wiki/Original_Chip_Set">original Amiga chipset</a> supported 32 colours from a possible 4,096: very similar to our design! The GIF and PNG formats still make use of this approach to squeeze the best quality out of 256-colour images.</p>
+This design was common in older computers, for example, the <a href="https://en.wikipedia.org/wiki/Original_Chip_Set">original Amiga chipset</a> supported 32 colours from a possible 4,096: very similar to our design! The GIF and PNG formats still use this approach to squeeze the best quality out of 256-colour images.</p>
 </blockquote>
 <h3 id="more-memory">More Memory</h3>
-<p>If we&rsquo;re going to make larger sprites with more colour bits, we&rsquo;re going to need to rethink our memory design. An async ROM suffices for small designs but is a resource hog and timing disaster for larger sprites. FPGAs include block ram (BRAM), which is ideal for memories of a few hundred bits to a few tens of kilobits.</p>
-<p>Our sprites designs don&rsquo;t change at runtime, so we can create a ROM using block RAM. The ROM takes a clock and address as input, and outputs the requested data the <em>following</em> clock cycle. This extra latency has implications for correct positioning of our sprite, which we&rsquo;ll discuss shortly. Check out <a href="/posts/fpga-memory-types/">FPGA Memory Types</a> to learn more about BRAM and other memory.</p>
+<p>If we&rsquo;re going to use larger sprites, we need to rethink our memory design. An async ROM suffices for small designs but is a resource hog and timing disaster for larger sprites. FPGAs include block ram (BRAM), which is ideal for memories of a few hundred bits to a few tens of kilobits.</p>
+<p>Our sprites designs don&rsquo;t change at runtime, so we can create a ROM using BRAM. The ROM takes a clock and address as input, and outputs the requested data the <em>following</em> clock cycle. This extra latency has implications for correct positioning of our sprite, which we&rsquo;ll discuss shortly. Check out <a href="/posts/fpga-memory-types/">FPGA Memory Types</a> to learn more about BRAM and other memory.</p>
 <p>Synchronous ROM using BRAM <strong>[<a href="https://github.com/projf/projf-explore/blob/master/common/rom_sync.sv">rom_sync.sv</a>]</strong>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> rom_sync #(
     <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,
@@ -617,22 +654,21 @@ This design was common in older computers, for example, the <a href="https://en.
         data <span style="color:#f92672">&lt;=</span> memory[addr];
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
-</code></pre></div><p>Once you&rsquo;ve created the appropriate memory module, we can create the final sprite module for this part <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/sprite.sv">sprite.sv</a>]</strong>:</p>
+</code></pre></div><p>Once you&rsquo;ve created the appropriate memory module, we can create our final sprite module <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/sprite.sv">sprite.sv</a>]</strong>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> sprite #(
     <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,         <span style="color:#75715e">// graphic width in pixels
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> HEIGHT<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,        <span style="color:#75715e">// graphic height in pixels
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> SCALE_X<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>,       <span style="color:#75715e">// sprite width scale-factor
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> SCALE_Y<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>,       <span style="color:#75715e">// sprite height scale-factor
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> COLR_BITS<span style="color:#f92672">=</span><span style="color:#ae81ff">4</span>,     <span style="color:#75715e">// bits per pixel (2^4=16 colours)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">10</span>,        <span style="color:#75715e">// screen coordinate width in bits
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> H_RES_FULL<span style="color:#f92672">=</span><span style="color:#ae81ff">800</span>,  <span style="color:#75715e">// horizontal screen resolution inc. blanking
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>,        <span style="color:#75715e">// screen coordinate width in bits
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> ADDRW<span style="color:#f92672">=</span><span style="color:#ae81ff">6</span>          <span style="color:#75715e">// width of graphic memory address bus
 </span><span style="color:#75715e"></span>    ) (
     <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,                      <span style="color:#75715e">// clock
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst,                      <span style="color:#75715e">// reset
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> start,                    <span style="color:#75715e">// start control
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx,           <span style="color:#75715e">// horizontal screen position
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sprx,         <span style="color:#75715e">// horizontal sprite position
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx,    <span style="color:#75715e">// horizontal screen position
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sprx,  <span style="color:#75715e">// horizontal sprite position
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [COLR_BITS<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] data_in,  <span style="color:#75715e">// data from external memory
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] pos,          <span style="color:#75715e">// sprite pixel position
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [COLR_BITS<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] pix,      <span style="color:#75715e">// pixel colour to draw
@@ -704,24 +740,14 @@ This design was common in older computers, for example, the <a href="https://en.
     <span style="color:#66d9ef">end</span>
 
     <span style="color:#75715e">// output current pixel colour when drawing
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        pix <span style="color:#f92672">=</span> (state <span style="color:#f92672">==</span> DRAW) <span style="color:#f92672">?</span> data_in <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
-    <span style="color:#66d9ef">end</span>
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> pix <span style="color:#f92672">=</span> (state <span style="color:#f92672">==</span> DRAW) <span style="color:#f92672">?</span> data_in <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
 
-    <span style="color:#75715e">// create status signals and correct horizontal position
+    <span style="color:#75715e">// create status signals
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> last_pixel, last_line;
-    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sprx_cor;
     <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
         last_pixel <span style="color:#f92672">=</span> (ox <span style="color:#f92672">==</span> WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>  <span style="color:#f92672">&amp;&amp;</span> cnt_x <span style="color:#f92672">==</span> SCALE_X<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>);
         last_line  <span style="color:#f92672">=</span> (oy <span style="color:#f92672">==</span> HEIGHT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span> <span style="color:#f92672">&amp;&amp;</span> cnt_y <span style="color:#f92672">==</span> SCALE_Y<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>);
         drawing <span style="color:#f92672">=</span> (state <span style="color:#f92672">==</span> DRAW);
-
-        <span style="color:#75715e">// BRAM adds an extra cycle of latency
-</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">case</span> (sprx)
-            <span style="color:#ae81ff">0</span><span style="color:#f92672">:</span> sprx_cor <span style="color:#f92672">=</span> H_RES_FULL <span style="color:#f92672">-</span> <span style="color:#ae81ff">2</span>;
-            <span style="color:#ae81ff">1</span><span style="color:#f92672">:</span> sprx_cor <span style="color:#f92672">=</span> H_RES_FULL <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;
-            <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> sprx_cor <span style="color:#f92672">=</span> sprx <span style="color:#f92672">-</span> <span style="color:#ae81ff">2</span>;
-        <span style="color:#66d9ef">endcase</span>
     <span style="color:#66d9ef">end</span>
 
     <span style="color:#75715e">// determine next state
@@ -729,8 +755,8 @@ This design was common in older computers, for example, the <a href="https://en.
         <span style="color:#66d9ef">case</span>(state)
             IDLE:       state_next <span style="color:#f92672">=</span> start <span style="color:#f92672">?</span> START <span style="color:#f92672">:</span> IDLE;
             START:      state_next <span style="color:#f92672">=</span> AWAIT_POS;
-            AWAIT_POS:  state_next <span style="color:#f92672">=</span> (sx <span style="color:#f92672">==</span> sprx_cor) <span style="color:#f92672">?</span> DRAW <span style="color:#f92672">:</span> AWAIT_POS;
-            DRAW:       state_next <span style="color:#f92672">=</span> <span style="color:#f92672">!</span>last_pixel <span style="color:#f92672">?</span> DRAW <span style="color:#f92672">:</span>
+            AWAIT_POS:  state_next <span style="color:#f92672">=</span> (sx <span style="color:#f92672">==</span> sprx<span style="color:#f92672">-</span><span style="color:#ae81ff">2</span>) <span style="color:#f92672">?</span> DRAW <span style="color:#f92672">:</span> AWAIT_POS;  <span style="color:#75715e">// BRAM
+</span><span style="color:#75715e"></span>            DRAW:       state_next <span style="color:#f92672">=</span> <span style="color:#f92672">!</span>last_pixel <span style="color:#f92672">?</span> DRAW <span style="color:#f92672">:</span>
                                     (<span style="color:#f92672">!</span>last_line <span style="color:#f92672">?</span> NEXT_LINE <span style="color:#f92672">:</span> DONE);
             NEXT_LINE:  state_next <span style="color:#f92672">=</span> AWAIT_POS;
             DONE:       state_next <span style="color:#f92672">=</span> IDLE;
@@ -738,18 +764,12 @@ This design was common in older computers, for example, the <a href="https://en.
         <span style="color:#66d9ef">endcase</span>
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
-</code></pre></div><p>There are several significant changes to the sprite module compared to v3:</p>
+</code></pre></div><p>There are three changes of note:</p>
 <h4 id="external-memory">External Memory</h4>
-<p>We&rsquo;ve moved the memory interface outside the sprite module. The sprite module sends the desired position using the <code>pos</code> output and receives the pixel data on the <code>data_in</code> input. In the <a href="/posts/fpga-ad-astra/">next part</a>, we&rsquo;ll take this a step further; multiple sprites will share one memory interface.</p>
+<p>We&rsquo;ve moved the memory interface outside the sprite module. The sprite module sends the desired position using the <code>pos</code> output and receives the pixel data on the <code>data_in</code> input. In the <a href="/posts/fpga-ad-astra/">next part</a>, we&rsquo;ll take this a step further: multiple sprites will share one memory interface.</p>
 <h4 id="latency">Latency</h4>
-<p>The block ram adds an additional cycle of latency, so we need to subtract two from the horizontal position. This complicates the wrapping a little, so we use a case statement to handle it:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#75715e">// BRAM adds an extra cycle of latency
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">case</span> (sprx)
-    <span style="color:#ae81ff">0</span><span style="color:#f92672">:</span> sprx_cor <span style="color:#f92672">=</span> H_RES_FULL <span style="color:#f92672">-</span> <span style="color:#ae81ff">2</span>;
-    <span style="color:#ae81ff">1</span><span style="color:#f92672">:</span> sprx_cor <span style="color:#f92672">=</span> H_RES_FULL <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;
-    <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> sprx_cor <span style="color:#f92672">=</span> sprx <span style="color:#f92672">-</span> <span style="color:#ae81ff">2</span>;
-<span style="color:#66d9ef">endcase</span>
-</code></pre></div><h4 id="drawing--done">Drawing &amp; Done</h4>
+<p>The block ram adds an additional cycle of latency, so we need to subtract two from the horizontal position in <code>AWAIT_POS</code>.</p>
+<h4 id="drawing--done">Drawing &amp; Done</h4>
 <p>For better control and reuse of sprite instances, we&rsquo;ve added two new signals: <code>drawing</code> is high when the sprite is drawing pixels, and <code>done</code> indicates the sprite is complete.</p>
 <h3 id="a-refined-palette">A Refined Palette</h3>
 <p>Our boards have 12-bit colour output, supporting 4,096 colours. We can map our 11 sprite colours to any of these using a colour lookup table (CLUT). We populate the colour lookup table using a simple text file <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/res/hedgehog/hedgehog_palette.mem">hedgehog_palette.mem</a>]</strong>:</p>
@@ -786,8 +806,8 @@ This design was common in older computers, for example, the <a href="https://en.
 <h3 id="top-hedgehog">Top Hedgehog</h3>
 <p>We&rsquo;re now ready to draw our hedgehog using a new top module:</p>
 <ul>
-<li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/xc7/top_hedgehog_v1.sv">xc7/top_hedgehog_v1.sv</a></strong></li>
-<li>Lattice iCE40: <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/ice40/top_hedgehog_v1.sv">ice40/top_hedgehog_v1.sv</a></strong></li>
+<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/xc7/top_hedgehog_v1.sv">xc7/top_hedgehog_v1.sv</a></strong></li>
+<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/ice40/top_hedgehog_v1.sv">ice40/top_hedgehog_v1.sv</a></strong></li>
 </ul>
 <h2 id="animation">Animation</h2>
 <p>Our hedgehog looks like it&rsquo;s on ice. To complete our sprite design we need to add animation support so the hedgehog can move its legs. The required change is surprisingly small; we just need to load all three hedgehog images into memory and add offset the memory position to choose which image to display.</p>
@@ -839,15 +859,15 @@ You&rsquo;ll learn how to create your own memory files from images using <code>i
         <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">320</span>) bg_colr <span style="color:#f92672">=</span> <span style="color:#ae81ff">12&#39;h2BF</span>;
     <span style="color:#66d9ef">end</span>
 </code></pre></div><p>We move our hedgehog down the screen to walk on the ground:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">        <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>clk_locked) <span style="color:#66d9ef">begin</span>
-            sprx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-            spry <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">240</span>;
-        <span style="color:#66d9ef">end</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>clk_locked) <span style="color:#66d9ef">begin</span>
+        sprx <span style="color:#f92672">&lt;=</span> H_RES;
+        spry <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">240</span>;
+    <span style="color:#66d9ef">end</span>
 </code></pre></div><p><img src="/img/posts/hardware-sprites/hedgehog-720p.png" alt="Hedgehog walking under the sky" title="Hedgehog: FPGA Capture"></p>
 <p>Our completed top module animates the hedgehog at approximently four frames per second:</p>
 <ul>
-<li>Xilinx XC7: <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/xc7/top_hedgehog.sv">xc7/top_hedgehog.sv</a></strong></li>
-<li>Lattice iCE40: <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/ice40/top_hedgehog.sv">ice40/top_hedgehog.sv</a></strong></li>
+<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/xc7/top_hedgehog.sv">xc7/top_hedgehog.sv</a></strong></li>
+<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/ice40/top_hedgehog.sv">ice40/top_hedgehog.sv</a></strong></li>
 </ul>
 <p>Xilinx version shown below:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_hedgehog (
@@ -863,7 +883,7 @@ You&rsquo;ll learn how to create your own memory files from images using <code>i
     <span style="color:#75715e">// generate pixel clock
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> clk_pix;
     <span style="color:#66d9ef">logic</span> clk_locked;
-    clock_gen clock_640x480 (
+    clock_gen_480p clock_pix_inst (
        .clk(clk_100m),
        .rst(<span style="color:#f92672">!</span>btn_rst),  <span style="color:#75715e">// reset button is active low
 </span><span style="color:#75715e"></span>       .clk_pix,
@@ -871,27 +891,23 @@ You&rsquo;ll learn how to create your own memory files from images using <code>i
     );
 
     <span style="color:#75715e">// display timings
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>;  <span style="color:#75715e">// screen coordinate width in bits
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx, sy;
-    <span style="color:#66d9ef">logic</span> hsync, vsync, de;
-    display_timings_480p timings_640x480 (
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> H_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">640</span>;
+    <span style="color:#66d9ef">localparam</span> V_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">480</span>;
+    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">16</span>;
+    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx, sy;
+    <span style="color:#66d9ef">logic</span> hsync, vsync;
+    <span style="color:#66d9ef">logic</span> de, frame, line;
+    display_timings_480p display_timings_inst (
         .clk_pix,
-        .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for clock lock
+        .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for pixel clock lock
 </span><span style="color:#75715e"></span>        .sx,
         .sy,
         .hsync,
         .vsync,
-        .de
+        .de,
+        .frame,
+        .line
     );
-
-    <span style="color:#75715e">// size of screen with and without blanking
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> H_RES_FULL <span style="color:#f92672">=</span> <span style="color:#ae81ff">800</span>;
-    <span style="color:#66d9ef">localparam</span> V_RES_FULL <span style="color:#f92672">=</span> <span style="color:#ae81ff">525</span>;
-    <span style="color:#66d9ef">localparam</span> H_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">640</span>;
-    <span style="color:#66d9ef">localparam</span> V_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">480</span>;
-
-    <span style="color:#66d9ef">logic</span> animate;  <span style="color:#75715e">// high for one clock tick at start of vertical blanking
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> animate <span style="color:#f92672">=</span> (sy <span style="color:#f92672">==</span> V_RES <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>);
 
     <span style="color:#75715e">// sprite
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> SPR_WIDTH    <span style="color:#f92672">=</span> <span style="color:#ae81ff">32</span>;   <span style="color:#75715e">// width in pixels
@@ -927,12 +943,12 @@ You&rsquo;ll learn how to create your own memory files from images using <code>i
     <span style="color:#75715e">// draw sprite at position
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> SPR_SPEED_X <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span>;
     <span style="color:#66d9ef">localparam</span> SPR_SPEED_Y <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sprx, spry;
+    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sprx, spry;
 
     <span style="color:#75715e">// sprite frame selector
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">5</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_anim;  <span style="color:#75715e">// count from 0-63
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
-        <span style="color:#66d9ef">if</span> (animate) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">if</span> (frame) <span style="color:#66d9ef">begin</span>
             <span style="color:#75715e">// select sprite frame
 </span><span style="color:#75715e"></span>            cnt_anim <span style="color:#f92672">&lt;=</span> cnt_anim <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
             <span style="color:#66d9ef">case</span> (cnt_anim)
@@ -943,22 +959,17 @@ You&rsquo;ll learn how to create your own memory files from images using <code>i
                 <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> spr_base_addr <span style="color:#f92672">&lt;=</span> spr_base_addr;
             <span style="color:#66d9ef">endcase</span>
 
-            <span style="color:#75715e">// walk right-to-left (correct position for screen width)
-</span><span style="color:#75715e"></span>            sprx <span style="color:#f92672">&lt;=</span> (sprx <span style="color:#f92672">&gt;</span> SPR_SPEED_X) <span style="color:#f92672">?</span> sprx <span style="color:#f92672">-</span> SPR_SPEED_X <span style="color:#f92672">:</span>
-                                           H_RES_FULL <span style="color:#f92672">-</span> (SPR_SPEED_X <span style="color:#f92672">-</span> sprx);
+            <span style="color:#75715e">// walk right-to-left: -132 covers sprite width and within blanking
+</span><span style="color:#75715e"></span>            sprx <span style="color:#f92672">&lt;=</span> (sprx <span style="color:#f92672">&gt;</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">132</span>) <span style="color:#f92672">?</span> sprx <span style="color:#f92672">-</span> SPR_SPEED_X <span style="color:#f92672">:</span> H_RES;
         <span style="color:#66d9ef">end</span>
         <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>clk_locked) <span style="color:#66d9ef">begin</span>
-            sprx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            sprx <span style="color:#f92672">&lt;=</span> H_RES;
             spry <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">240</span>;
         <span style="color:#66d9ef">end</span>
     <span style="color:#66d9ef">end</span>
 
-    <span style="color:#75715e">// start sprite in blanking of line before first line drawn
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] spry_cor;  <span style="color:#75715e">// corrected for wrapping
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        spry_cor <span style="color:#f92672">=</span> (spry <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) <span style="color:#f92672">?</span> V_RES_FULL <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> spry <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;
-        spr_start <span style="color:#f92672">=</span> (sy <span style="color:#f92672">==</span> spry_cor <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">==</span> H_RES);
-    <span style="color:#66d9ef">end</span>
+    <span style="color:#75715e">// signal to start sprite drawing
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> spr_start <span style="color:#f92672">=</span> (line <span style="color:#f92672">&amp;&amp;</span> sy <span style="color:#f92672">==</span> spry);
 
     sprite #(
         .WIDTH(SPR_WIDTH),
