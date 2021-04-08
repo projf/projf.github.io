@@ -118,8 +118,8 @@
     
     <div class="content">
       <p>Welcome to <em>Exploring FPGA Graphics</em>. In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how displays work, race the beam with Pong, animate starfields and sprites, paint Michelangelo&rsquo;s David, simulate life with bitmaps, draw lines and shapes, and finally render simple 3D models. Along the way, you&rsquo;ll experience a Smörgåsbord of designs and techniques, from BRAM and finite state machines to crossing clock domains and translating C algorithms into Verilog.</p>
-<p>We begin with the basics of computer displays and drawing squares in realtime.</p>
-<p><em>Updated 2021-04-07. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p>We begin with the basics of computer displays and animating shapes in real-time.</p>
+<p><em>Updated 2021-04-08. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <blockquote>
 <p>In all beginnings dwells a magic force<br>
 <em>Herman Hesse, Stages from <a href="https://en.wikipedia.org/wiki/The_Glass_Bead_Game">The Glass Bead Game</a></em></p>
@@ -144,23 +144,25 @@
 <li><strong><a href="https://reference.digilentinc.com/reference/programmable-logic/arty-a7/reference-manual">Digilent Arty A7-35T</a></strong> (Xilinx Artix-7) with <strong><a href="https://reference.digilentinc.com/reference/pmod/pmodvga/reference-manual">Pmod VGA</a></strong></li>
 </ul>
 <p>Neither of these boards has built-in video, but it&rsquo;s easy to add with VGA or DVI Pmod.</p>
-<p><em>NB. The original Arty (without the A7) is the same as the Arty A7-35T, so you can use that too.</em></p>
+<p><em>NB. The original Arty (without the A7) is the same as the Arty A7-35T for our purposes.</em></p>
 <p><img src="/img/posts/fpga-graphics/arty-icebreaker.jpg" alt="iCEBreaker and Arty Dev Boards" title="iCEBreaker with DVI Pmod, Arty with Pmod VGA, "></p>
 <h3 id="source">Source</h3>
-<p>The SystemVerilog designs featured in this series are available from the <a href="https://github.com/projf/projf-explore/">projf-explore</a> repo on GitHub. The designs are open source hardware under the permissive MIT licence, but this blog is subject to normal copyright restrictions.</p>
+<p>All the SystemVerilog designs featured in this series are available from the <a href="https://github.com/projf/projf-explore/">projf-explore</a> git repo under the open-source MIT licence: build on them to your heart&rsquo;s content. The rest of the blog content is subject to standard copyright restrictions: don&rsquo;t republish it without permission.</p>
 <blockquote>
-<p><strong>Quick Aside: SystemVerilog?!</strong><br>
-We&rsquo;ll be using a few choice features from SystemVerilog to make Verilog a little more pleasant (no laughing at the back). If you&rsquo;re familiar with Verilog, you&rsquo;ll have no trouble. All the designs in this series are tested with Yosys and Xilinx Vivado.</p>
+<p><strong>SystemVerilog?!</strong><br>
+We&rsquo;ll use a few choice features from SystemVerilog to make Verilog a little more pleasant (no laughing at the back). If you&rsquo;re familiar with Verilog, you&rsquo;ll have no trouble. All the designs in this series are tested with Yosys and Vivado.</p>
 </blockquote>
 <h2 id="space-and-time">Space and Time</h2>
-<p>The screen you&rsquo;re looking at is a little universe with its own rules of space and time.</p>
-<p>Looking at a screen from afar, you see a smooth two-dimensional image. Look more closely, and you see many individual blocks: these are <strong>pixels</strong>, made up of red, green, and blue components. A typical high-definition image is 1920 pixels across and 1080 lines down: over 2 million pixels in total. Even a 640x480 image has over 300,000 pixels. The need to handle so much information so quickly is a big part of the challenge of working with graphics at a hardware level.</p>
-<p>A VGA cable has five main signals: red, green, blue, horizontal sync, and vertical sync. There are no addressing signals to tell the screen where to draw pixels; the secret is time, defined by the sync signals. The red, green, and blue wires carry the colour of each pixel in turn. Each pixel lasts a fixed length of time; when the display receives a <strong>horizontal sync</strong>, it starts a new line; when it receives a <strong>vertical sync</strong>, it begins a new frame. Showing many frames in quick succession provides the illusion of a moving image.</p>
-<p>The sync signals are part of <strong>blanking</strong> intervals. Originally designed to allow an electron gun to move to the next line or top of the screen, blanking intervals have been retained and repurposed in contemporary displays: HDMI uses them to transmit audio. The blanking interval has three parts: <strong>front porch</strong>, <strong>sync</strong>, and <strong>back porch</strong>.</p>
-<p><img src="/img/posts/fpga-graphics/display-timings.png" alt="Display Timings" title="Display Timings"></p>
+<p>A screen is a miniature universe with its own rules of space and time.</p>
+<p>Seem from afar, a screen shows a smooth two-dimensional image. Up close, it breaks up into many individual blocks of primary colour: red, green, and blue. We hide this complexity behind the abstract idea of a <strong>pixel</strong>: the smallest part of the screen we can control. A typical HD screen is 1920 by 1080 pixels: 2 million pixels in total. Even an ancient 640x480 VGA screen has more than 300,000 pixels.</p>
+<p>To create the illusion of movement, a screen must be redrawn many times every second. A 60 Hz <strong>refresh rate</strong> is typical of computer screens in 2021. At 60 Hz, a  1920x1080 screen is drawing 124 million pixels every second! The need to quickly handle so much data is a big part of the challenge of working with graphics at a hardware level. Ever wondered why you don&rsquo;t see many microcontrollers hooked up to TVs?</p>
+<p>Display connectors and cabling vary, but VGA, HDMI, and DisplayPort have a shared data design. There are three channels for colour, usually red, green, and blue, and there are horizontal and vertical sync signals. There may also be audio and configuration data, but that&rsquo;s not important right now.</p>
+<p>The red, green, and blue channels carry the colour of each pixel in turn. A screen begins a new line when it receives a <strong>horizontal sync</strong> and a new frame on a <strong>vertical sync</strong>. The sync signals are part of <strong>blanking</strong> intervals. Blanking intervals exist to allow time for the electron gun in cathode ray tubes (CRTs) to move to the following line (horizontal retrace) or top of the screen (vertical retrace). Modern digital displays retained blanking intervals, repurposing them to transmit audio and other data.</p>
+<p><img src="/img/posts/fpga-graphics/raster-scan.png" alt="Raster scan on a CRT Monitor" title="Display Timings"></p>
+<p><em>Illustration by Ian Harvey in the public domain from <a href="https://commons.wikimedia.org/wiki/File:Raster-scan.svg">Wikimedia Commons</a>.</em></p>
 <h2 id="display-timings">Display Timings</h2>
-<p>In this series, we&rsquo;re going to use <strong>640x480</strong> as our display resolution. Almost all displays support 640x480, and its low resource requirements make it simple to work with on small FPGAs. All the same principles apply at higher resolutions, such as 1280x720 or 4K.</p>
-<p>We&rsquo;ll use traditional horizontal and vertical timings, based on the original VGA monitor and adapter:</p>
+<p>In this series, we&rsquo;re going to use <strong>640x480 at 60Hz</strong>. Almost all displays support 640x480, and its low resource requirements make it simple to work with on small FPGAs. The same principles apply at higher resolutions, such as 1280x720 and 4K.</p>
+<p>We&rsquo;ll use traditional horizontal and vertical timings based on the original VGA standard:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">    640x480 Timings      HOR    VER
     -------------------------------
     Active Pixels        640    480
@@ -171,14 +173,16 @@ We&rsquo;ll be using a few choice features from SystemVerilog to make Verilog a 
     Total Pixels         800    525
     Sync Polarity        neg    neg
 </code></pre></div><p><em>Learn more from <a href="/posts/video-timings-vga-720p-1080p/">Video Timings: VGA, SVGA, 720p, 1080p</a>.</em></p>
-<p>Taking blanking into account, we have a total of 800x525 pixels. A typical LCD refreshes 60 times a second, so the number of pixels per second is <code>800 x 525 x 60 = 25,200,000</code>, which equates to a <strong>pixel clock</strong> of 25.2 MHz.</p>
+<p>The blanking interval has three parts: <strong>front porch</strong>, <strong>sync</strong>, and <strong>back porch</strong>. The front porch occurs before the sync signal, the back porch after. Taking blanking into account, we have a total of 800x525 pixels. A typical LCD refreshes 60 times a second, so the number of pixels per second is <code>800 x 525 x 60 = 25,200,000</code>, which equates to a <strong>pixel clock</strong> of 25.2 MHz.</p>
+<p>If the different parts of the display timings were made visible, they&rsquo;d look something like this:</p>
+<p><img src="/img/posts/fpga-graphics/display-timings.png" alt="Display Timings" title="Display Timings"></p>
 <blockquote>
 <p><strong>CAUTION: CRT Monitors</strong><br>
-Any modern display, including <a href="https://en.wikipedia.org/wiki/Multisync_monitor">multisync CRTs</a>, should be fine with a 25.2 or 25 MHz pixel clock. Fixed-frequency CRTs, such as the original IBM 85xx series, could be damaged by an out-of-spec signal. Use these designs at your own risk.</p>
+Modern displays, including <a href="https://en.wikipedia.org/wiki/Multisync_monitor">multisync CRTs</a>, should be fine with a 25.2 or 25 MHz pixel clock. Fixed-frequency CRTs, such as the original IBM 85xx series, could be damaged by an out-of-spec signal. Use these designs at your own risk.</p>
 </blockquote>
 <h2 id="running-to-time">Running to Time</h2>
-<p>We&rsquo;ve decided we need a pixel clock of 25.2 MHz pixel clock, but neither of our demo boards has such a clock. To reach the required frequency, we&rsquo;re going to use a <strong><a href="https://en.wikipedia.org/wiki/Phase-locked_loop">phase-locked loop</a></strong> (PLL). Almost all FPGAs include one or more PLLs, but there isn&rsquo;t a standard way to configure them in Verilog, so we have to use vendor-specific designs.</p>
-<p>We have provided implementations for the Arty (XC7) and iCEBreaker (iCE40); for other FPGAs, you&rsquo;ll need to consult your vendor documentation. If you can&rsquo;t reach 25.2 MHz exactly, then 25 MHz or thereabouts should be fine (but see note about CRTs, above). The iCE40 can&rsquo;t generate 25.2 MHz using the oscillators on iCEBreaker but works fine at 25.125 MHz.</p>
+<p>We&rsquo;ve decided we need a 25.2 MHz pixel clock, but neither of our demo boards includes such a clock. To reach the required frequency, we&rsquo;re going to use a <strong><a href="https://en.wikipedia.org/wiki/Phase-locked_loop">phase-locked loop</a></strong> (PLL). Almost all FPGAs include one or more PLLs, but there isn&rsquo;t a standard way to configure them in Verilog, so we have to use vendor-specific designs.</p>
+<p>We have provided implementations for the Arty (XC7) and iCEBreaker (iCE40); for other FPGAs, you&rsquo;ll need to consult your vendor documentation. If you can&rsquo;t reach 25.2 MHz exactly, then 25 MHz or thereabouts should be fine. The iCE40 can&rsquo;t generate 25.2 MHz using the oscillators on iCEBreaker but works fine at 25.125 MHz.</p>
 <h3 id="clock-generator-modules">Clock Generator Modules</h3>
 <ul>
 <li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/common/xc7/clock_gen_480p.sv">xc7/clock_gen_480p.sv</a></strong></li>
@@ -230,10 +234,10 @@ Any modern display, including <a href="https://en.wikipedia.org/wiki/Multisync_m
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
 </code></pre></div><p><em>ProTip: The last assignment wins in Verilog, so the reset overrides the existing <code>sx</code> and <code>sy</code>.</em></p>
-<p><strong>sx</strong> and <strong>sy</strong> store the horizontal and vertical position; their maximum values are 800 and 525 respectively, so we need 10 bits to hold them (2<sup>10</sup> = 1024).</p>
+<p><strong>sx</strong> and <strong>sy</strong> store the horizontal and vertical position; their maximum values are 800 and 525, respectively, so we need 10 bits to hold them (2<sup>10</sup> = 1024).</p>
 <p><strong>de</strong> is <em>data enable</em>, which is low during the blanking interval: we use it to decide when to draw pixels.</p>
-<p>Display modes vary in the polarity of their sync signals; for traditional 640x480, the polarity is negative for both <strong>hsync</strong> and <strong>vsync</strong>. Negative polarity means the voltage is mostly high, with low voltage indicating a sync signal.</p>
-<p>The following simulation shows the vertical sync starting at the 490th line (counting starts at zero):</p>
+<p>Display modes vary in their sync polarity; for traditional 640x480, the polarity is negative for both <strong>hsync</strong> and <strong>vsync</strong>. Negative polarity means the voltage is normally high, with low voltage indicating a sync.</p>
+<p>The following simulation shows the vertical sync starting at line 489; it&rsquo;s low for two lines as expected from our display timings. Note the horizontal sync at the end of every line.</p>
 <p><img src="/img/posts/fpga-graphics/hsync-vsync-vga.png" alt="Sync Signal Simulation" title="Simulating VGA horizontal &amp; vertical sync signals"></p>
 <h2 id="test-benches">Test Benches</h2>
 <p>You can exercise the designs with the included test benches (Xilinx only):</p>
@@ -250,15 +254,20 @@ Any modern display, including <a href="https://en.wikipedia.org/wiki/Multisync_m
 <li>What is the maximum values of <code>sx</code> and <code>sy</code> when <code>de</code> is low?</li>
 </ul>
 <p><em>You can find instructions for running the simulation in the source <a href="https://github.com/projf/projf-explore/tree/master/fpga-graphics">README</a>.</em></p>
-<h2 id="top-display">Top Display</h2>
-<p>Now we have our display signals we&rsquo;re ready to start drawing. To begin, we&rsquo;re going to keep it simple and draw a coloured square. When the screen x and y coordinates are both less than 32 we draw in orange; otherwise, we use blue. Because our colour output has 4 bits per channel, we can use a single hex digit from 0-F to represent the intensity of red, green, and blue.</p>
-<p>There are two versions of this top module, one for each demo board:</p>
+<h2 id="driving-a-display">Driving a Display</h2>
+<p>Now we have our pixel clock and display signals, we&rsquo;re ready to drive a display. The following diagram shows the basic architecture, with the three Verilog modules and their key signals:</p>
+<p><img src="/img/posts/fpga-graphics/driving-a-display.png" alt="Driving a Display" title="Board oscillator in... video out"></p>
+<h3 id="square-one">Square One</h3>
+<p>We&rsquo;ll keep things simple for the first outing of our display logic: let’s draw a square.
+When the screen coordinates, <code>sx</code> and <code>sy</code>, are both less than 32, we draw orange; otherwise, we draw blue.</p>
+<p>There are two versions of the square top module, one for each demo board:</p>
 <ul>
 <li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/xc7/top_square.sv">xc7/top_square.sv</a></strong></li>
 <li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/ice40/top_square.sv">ice40/top_square.sv</a></strong></li>
 </ul>
+<p>We&rsquo;ll review both of them in turn then explain how to build the designs for your board.</p>
 <h3 id="arty-vga">Arty VGA</h3>
-<p>Shown below is the version for Arty with Pmod VGA:</p>
+<p>Take a look at the VGA output of the Arty square module, below. For each colour, we check whether we&rsquo;re in the blanking interval (when de is 0). If we are in the blanking interval, we set the colour intensity to zero. Otherwise, we look at the value of <code>q_draw</code>: if true, we set the pixel to orange; if false, we set it to blue. The colour intensity must be zero in the blanking interval; otherwise, your display may be garbled or misaligned. We want the output signals to be registered and in sync with each other, so we use an <code>always_ff</code> with all five output signals.</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_square (
     <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_100m,     <span style="color:#75715e">// 100 MHz clock
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_rst,      <span style="color:#75715e">// reset button (active low)
@@ -306,9 +315,13 @@ Any modern display, including <a href="https://en.wikipedia.org/wiki/Multisync_m
         vga_b <span style="color:#f92672">&lt;=</span> <span style="color:#f92672">!</span>de <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h0</span> <span style="color:#f92672">:</span> (q_draw <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h0</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;hF</span>);
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
-</code></pre></div><p>Take a look at the VGA output section of the top module. For each colour, we check whether we&rsquo;re in the blanking interval (when de is 0). If we are in the blanking interval, we set the colour intensity to zero. Otherwise, we look at the value of <code>q_draw</code>: if true, we set the pixel to orange, if false we set it to blue. The colour intensity must be zero in the blanking interval; otherwise, your display may be garbled or misaligned. We want the output signals to be registered, and in sync with each other, so we use an <code>always_ff</code> with all five output signals.</p>
+</code></pre></div><blockquote>
+<p><strong>Representing Colour</strong><br>
+The colour output is 12-bit, which is 4 bits per colour channel.<br>
+We use a single hex digit from <code>0-F</code> to represent the intensity of red, green, and blue.</p>
+</blockquote>
 <h3 id="icebreaker-dvi">iCEBreaker DVI</h3>
-<p>The version for iCE40 DVI is similar, but the DVI Pmod requires the data enable, <code>de</code>, and pixel clock, <code>clk_pix</code>, too. The <a href="https://www.ti.com/product/TFP410">TFP410</a> chip on the DVI Pmod takes our colour and sync signals and encodes them into DVI using <a href="https://en.wikipedia.org/wiki/Transition-minimized_differential_signaling">Transition-minimized differential signalling</a> (TMDS).</p>
+<p>The iCE40 DVI implementation is similar, but the DVI output requires data enable, <code>de</code>, and pixel clock, <code>clk_pix</code>, too. The <a href="https://www.ti.com/product/TFP410">TFP410</a> chip on the DVI Pmod takes our colour and sync signals and encodes them into DVI using <a href="https://en.wikipedia.org/wiki/Transition-minimized_differential_signaling">Transition-minimized differential signalling</a> (TMDS).</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_square (
     <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_12m,      <span style="color:#75715e">// 12 MHz clock
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_rst,      <span style="color:#75715e">// reset button (active high)
@@ -378,25 +391,34 @@ Any modern display, including <a href="https://en.wikipedia.org/wiki/Multisync_m
     );
 <span style="color:#66d9ef">endmodule</span>
 </code></pre></div><blockquote>
-<p><strong>Quick Aside: SB_IO</strong><br>
-To output the DVI signals correctly, we use the <strong>SB_IO</strong> primitive. Using SB_IO with registered output ensures all our signals are in sync when they leave the FPGA. By having the DVI clock 180 degrees out of phase, the TFP410 will sample the middle of the colour values. You can learn more about Lattice iCE primitives from the <a href="http://media.latticesemi.com/view_document?document_id=52206">Lattice ICE Technology Library</a>.</p>
+<p><strong>Lattice SB_IO</strong><br>
+The SB_IO primitive (with registered outputs) ensures our DVI signals are in sync when they leave the FPGA. The DVI clock is 180 degrees out of phase, the TFP410 will sample the middle of the colour values. You can learn more about iCE primitives from the <a href="http://media.latticesemi.com/view_document?document_id=52206">Lattice ICE Technology Library</a>.</p>
 </blockquote>
 <h2 id="constraints">Constraints</h2>
-<p>Combine the <code>top_square</code>, <code>display_timings</code>, and <code>clock_gen</code> modules with suitable constraints, and you&rsquo;re ready to drive a display. The constraints map the pins on the FPGA to signals in our design:</p>
+<p>Before building the design, we need board constraints. The constraints map the pins on the FPGA to the signals in our design. For example, we need to know which FPGA pin is connected to the oscillator. The Arty constraints use Xilinx&rsquo;s XDC format, which is written in Tcl.</p>
+<p>Take a look at the constraints for your board:</p>
 <ul>
 <li>Arty Constraints: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/xc7/arty.xdc">arty.xdc</a></strong></li>
 <li>iCEBreaker Constraints: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/ice40/icebreaker.pcf">icebreaker.pcf</a></strong></li>
 </ul>
-<blockquote>
-<p><strong>Building the Designs</strong><br>
-In the <a href="https://github.com/projf/projf-explore/tree/master/fpga-graphics">Exploring FPGA Graphics</a> section of the git repo, you&rsquo;ll find the design files, a makefile for iCEBreaker, a Vivado project for Arty, and instructions for building the designs for both boards.</p>
-</blockquote>
-<h2 id="let-there-be-pixels">Let there be Pixels</h2>
-<p>Once you&rsquo;ve programmed your board, you should see something like this (colours #0088FF and #FF8800):</p>
-<p><img src="/img/posts/fpga-graphics/vga-square.png" alt="A Square" title="Hip to be Square"></p>
+<h2 id="building">Building</h2>
+<p>Every part of <em>FPGA Graphics</em> includes a <a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/README.md">README</a> with build instructions. For this first part, I have included the basic instructions to get you started. If you need help with your board or tools, I recommend the <a href="https://forum.digilentinc.com/">Digilent Forum</a> for Arty and <a href="https://1bitsquared.com/pages/chat">1BitSquared Discord</a> for iCEBreaker.</p>
+<h3 id="arty">Arty</h3>
+<p>We build Arty designs using Xilinx Vivado. To create a Vivado project, clone the <a href="https://github.com/projf/projf-explore">projf-explore repo</a> from GitHub. Then, start Vivado and run the following in the Tcl Console:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-tcl" data-lang="tcl">cd projf-explore<span style="color:#f92672">/</span>fpga-graphics<span style="color:#f92672">/</span>xc7<span style="color:#f92672">/</span>vivado
+source .<span style="color:#f92672">/</span>create_project.tcl
+</code></pre></div><h3 id="icebreaker">iCEBreaker</h3>
+<p>We build iCEBreaker designs with the open-source toolchain of <a href="http://www.clifford.at/yosys/">Yosys</a>, <a href="https://github.com/YosysHQ/nextpnr">nextpnr</a>, and <a href="http://www.clifford.at/icestorm/">IceStorm Tools</a>. If you don&rsquo;t already have these tools see the <a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/README.md">README</a>.</p>
+<p>For example, to build and program <code>top_bounce</code>; clone the <a href="https://github.com/projf/projf-explore">projf-explore repo</a>, then in a shell:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">cd projf-explore/fpga-graphics/ice40
+make top_bounce
+iceprog top_bounce.bin
+</code></pre></div><h2 id="hip-to-be-square">Hip to be Square</h2>
+<p>Once you&rsquo;ve programmed your board, you should see something like this:</p>
+<p><img src="/img/posts/fpga-graphics/vga-square.png" alt="A Square" title="Orange and blue; what a lovely combination!"></p>
 <p>Try experimenting with your own square size, position, and colours.</p>
 <h2 id="animation">Animation</h2>
-<p>To create a simple animation, we can update the position of the square every frame. If we move the square during active drawing, we risk <strong><a href="https://en.wikipedia.org/wiki/Screen_tearing">screen tearing</a></strong>, so we create an <code>animate</code> signal that happens at the start of the vertical blanking period.</p>
+<p>To create a simple animation, we can update the position of the square every frame. If we move the square during active drawing, we risk <strong><a href="https://en.wikipedia.org/wiki/Screen_tearing">screen tearing</a></strong>, so we create an <code>animate</code> signal at the start of the vertical blanking period.</p>
 <p>We&rsquo;re going to replicate the behaviour of the video display itself, scanning across then down the screen. The square &ldquo;beam&rdquo; disappears off the edge of the screen, like the signal in the blanking interval. Try rebuilding the design with <code>top_beam</code>:</p>
 <ul>
 <li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/xc7/top_beam.sv">xc7/top_beam.sv</a></strong></li>
@@ -436,7 +458,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/fpga-graphics
               <span style="color:#f92672">&amp;&amp;</span> (sy <span style="color:#f92672">&gt;=</span> qy) <span style="color:#f92672">&amp;&amp;</span> (sy <span style="color:#f92672">&lt;</span> qy <span style="color:#f92672">+</span> Q_SIZE);
     <span style="color:#66d9ef">end</span>
 </code></pre></div><h2 id="bounce">Bounce!</h2>
-<p>Now we can animate, we can start to create some interesting effects. By adding collision detection, we can bounce squares around the screen. If we create three squares: red, green, and blue, we have a simple demo. While simple, it&rsquo;s satisfying to watch the squares combine colours as they move around the screen.</p>
+<p>Now we can animate, we can start to create some interesting effects. By adding collision detection, we can bounce squares around the screen. If we draw three squares: red, green, and blue, we have a simple demo. While simple, it&rsquo;s satisfying to watch the squares combine colours as they move around the screen.</p>
 <p>Try rebuilding the design with <code>top_bounce</code>:</p>
 <ul>
 <li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/xc7/top_bounce.sv">xc7/top_bounce.sv</a></strong></li>
@@ -465,7 +487,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/fpga-graphics
 <li>What needs to change to make the left and right edge collision tests symmetrical?</li>
 <li>Why do we need to account for the speed of the square?</li>
 </ol>
-<p>At first blush it seems we can simplify this to the following, with a single position update for all situations:</p>
+<p>At first blush, it seems we can simplify this to the following, with a single position update for all situations:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// questionable collision design
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">if</span> (q1x <span style="color:#f92672">&gt;=</span> H_RES <span style="color:#f92672">-</span> (Q1_SIZE <span style="color:#f92672">+</span> q1s)) q1dx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
     <span style="color:#66d9ef">if</span> (q1x <span style="color:#f92672">&lt;</span> q1s) q1dx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
@@ -476,7 +498,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/fpga-graphics
 <p>I hope you enjoyed the first instalment of <em>Exploring FPGA Graphics</em>. Nothing beats creating your own designs; here are a few suggestions to get you started:</p>
 <ul>
 <li>Try drawing some <a href="https://en.wikipedia.org/wiki/Gallery_of_sovereign_state_flags">country flags</a> (many are composed of rectangular shapes)</li>
-<li>Animate the size of the squares, so they grow and shrink</li>
+<li>Animate the size of the squares so they grow and shrink</li>
 <li>Add collision detection between squares, so they bounce off each other</li>
 <li>Create a square Verilog module to avoid code duplication</li>
 </ul>
