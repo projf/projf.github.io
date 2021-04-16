@@ -119,7 +119,7 @@
     <div class="content">
       <p>Welcome to <em>Exploring FPGA Graphics</em>. In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how displays work, race the beam with Pong, animate starfields and sprites, paint Michelangelo&rsquo;s David, simulate life with bitmaps, draw lines and shapes, and finally render simple 3D models. Along the way, you&rsquo;ll experience a Smörgåsbord of designs and techniques, from BRAM and finite state machines to crossing clock domains and translating C algorithms into Verilog.</p>
 <p>We begin with the basics of computer displays and animating shapes in real-time.</p>
-<p><em>Updated 2021-04-08. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><em>Updated 2021-04-16. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <blockquote>
 <p>In all beginnings dwells a magic force<br>
 <em>Herman Hesse, Stages from <a href="https://en.wikipedia.org/wiki/The_Glass_Bead_Game">The Glass Bead Game</a></em></p>
@@ -154,15 +154,14 @@ We&rsquo;ll use a few choice features from SystemVerilog to make Verilog a littl
 </blockquote>
 <h2 id="space-and-time">Space and Time</h2>
 <p>A screen is a miniature universe with its own rules of space and time.</p>
-<p>Seem from afar, a screen shows a smooth two-dimensional image. Up close, it breaks up into many individual blocks of primary colour: red, green, and blue. We hide this complexity behind the abstract idea of a <strong>pixel</strong>: the smallest part of the screen we can control. A typical HD screen is 1920 by 1080 pixels: 2 million pixels in total. Even an ancient 640x480 VGA screen has more than 300,000 pixels.</p>
+<p>Seem from afar, a screen shows a smooth two-dimensional image. Up close, it breaks up into many individual blocks of primary colour: red, green, and blue. We hide this complexity behind the abstract idea of a <strong>pixel</strong>: the smallest part of the screen we can control. A typical HD screen is 1920 by 1080: 2 million pixels in total. Even an ancient 640x480 VGA screen has more than 300,000 pixels.</p>
 <p>To create the illusion of movement, a screen must be redrawn many times every second. A 60 Hz <strong>refresh rate</strong> is typical of computer screens in 2021. At 60 Hz, a  1920x1080 screen is drawing 124 million pixels every second! The need to quickly handle so much data is a big part of the challenge of working with graphics at a hardware level. Ever wondered why you don&rsquo;t see many microcontrollers hooked up to TVs?</p>
 <p>Display connectors and cabling vary, but VGA, HDMI, and DisplayPort have a shared data design. There are three channels for colour, usually red, green, and blue, and there are horizontal and vertical sync signals. There may also be audio and configuration data, but that&rsquo;s not important right now.</p>
 <p>The red, green, and blue channels carry the colour of each pixel in turn. A screen begins a new line when it receives a <strong>horizontal sync</strong> and a new frame on a <strong>vertical sync</strong>. The sync signals are part of <strong>blanking</strong> intervals. Blanking intervals exist to allow time for the electron gun in cathode ray tubes (CRTs) to move to the following line (horizontal retrace) or top of the screen (vertical retrace). Modern digital displays retained blanking intervals, repurposing them to transmit audio and other data.</p>
-<p><img src="/img/posts/fpga-graphics/raster-scan.png" alt="Raster scan on a CRT Monitor" title="Display Timings"></p>
-<p><em>Illustration by Ian Harvey in the public domain from <a href="https://commons.wikimedia.org/wiki/File:Raster-scan.svg">Wikimedia Commons</a>.</em></p>
+<p><img src="/img/posts/fpga-graphics/raster-scan.png" alt="Raster scan on a CRT Monitor" title="CRT raster scan by Ian Harvey in the public domain from https://commons.wikimedia.org/wiki/File:Raster-scan.svg"></p>
 <h2 id="display-timings">Display Timings</h2>
 <p>In this series, we&rsquo;re going to use <strong>640x480 at 60Hz</strong>. Almost all displays support 640x480, and its low resource requirements make it simple to work with on small FPGAs. The same principles apply at higher resolutions, such as 1280x720 and 4K.</p>
-<p>We&rsquo;ll use traditional horizontal and vertical timings based on the original VGA standard:</p>
+<p>We&rsquo;ll use traditional horizontal and vertical timings based on the original VGA specification:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">    640x480 Timings      HOR    VER
     -------------------------------
     Active Pixels        640    480
@@ -233,7 +232,7 @@ Modern displays, including <a href="https://en.wikipedia.org/wiki/Multisync_moni
         <span style="color:#66d9ef">end</span>
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
-</code></pre></div><p><em>ProTip: The last assignment wins in Verilog, so the reset overrides the existing <code>sx</code> and <code>sy</code>.</em></p>
+</code></pre></div><p><em>ProTip: The last assignment wins in Verilog, so the reset overrides existing values for <code>sx</code> and <code>sy</code>.</em></p>
 <p><strong>sx</strong> and <strong>sy</strong> store the horizontal and vertical position; their maximum values are 800 and 525, respectively, so we need 10 bits to hold them (2<sup>10</sup> = 1024).</p>
 <p><strong>de</strong> is <em>data enable</em>, which is low during the blanking interval: we use it to decide when to draw pixels.</p>
 <p>Display modes vary in their sync polarity; for traditional 640x480, the polarity is negative for both <strong>hsync</strong> and <strong>vsync</strong>. Negative polarity means the voltage is normally high, with low voltage indicating a sync.</p>
@@ -392,7 +391,7 @@ We use a single hex digit from <code>0-F</code> to represent the intensity of re
 <span style="color:#66d9ef">endmodule</span>
 </code></pre></div><blockquote>
 <p><strong>Lattice SB_IO</strong><br>
-The SB_IO primitive (with registered outputs) ensures our DVI signals are in sync when they leave the FPGA. The DVI clock is 180 degrees out of phase, the TFP410 will sample the middle of the colour values. You can learn more about iCE primitives from the <a href="http://media.latticesemi.com/view_document?document_id=52206">Lattice ICE Technology Library</a>.</p>
+The SB_IO primitive (with registered outputs) ensures our DVI signals are in sync when they leave the FPGA. The DVI clock is 180 degrees out of phase, so the TFP410 will sample the middle of the colour values. You can learn more about iCE primitives from the <a href="http://media.latticesemi.com/view_document?document_id=52206">Lattice ICE Technology Library</a>.</p>
 </blockquote>
 <h2 id="constraints">Constraints</h2>
 <p>Before building the design, we need board constraints. The constraints map the pins on the FPGA to the signals in our design. For example, we need to know which FPGA pin is connected to the oscillator. The Arty constraints use Xilinx&rsquo;s XDC format, which is written in Tcl.</p>
@@ -402,7 +401,7 @@ The SB_IO primitive (with registered outputs) ensures our DVI signals are in syn
 <li>iCEBreaker Constraints: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/ice40/icebreaker.pcf">icebreaker.pcf</a></strong></li>
 </ul>
 <h2 id="building">Building</h2>
-<p>Every part of <em>FPGA Graphics</em> includes a <a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/README.md">README</a> with build instructions. For this first part, I have included the basic instructions to get you started. If you need help with your board or tools, I recommend the <a href="https://forum.digilentinc.com/">Digilent Forum</a> for Arty and <a href="https://1bitsquared.com/pages/chat">1BitSquared Discord</a> for iCEBreaker.</p>
+<p>Every part of <em>FPGA Graphics</em> includes a <a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/README.md">README</a> with build instructions. I have included the basic instructions in this post to get you started. If you need help with your board or tools, I recommend the <a href="https://forum.digilentinc.com/">Digilent Forum</a> for Arty and <a href="https://1bitsquared.com/pages/chat">1BitSquared Discord</a> for iCEBreaker.</p>
 <h3 id="arty">Arty</h3>
 <p>We build Arty designs using Xilinx Vivado. To create a Vivado project, clone the <a href="https://github.com/projf/projf-explore">projf-explore repo</a> from GitHub. Then, start Vivado and run the following in the Tcl Console:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-tcl" data-lang="tcl">cd projf-explore<span style="color:#f92672">/</span>fpga-graphics<span style="color:#f92672">/</span>xc7<span style="color:#f92672">/</span>vivado
