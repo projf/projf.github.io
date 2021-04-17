@@ -120,7 +120,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
     <div class="content">
       <p>Welcome back to <em>Exploring FPGA Graphics</em>. It&rsquo;s time to turn our attention to drawing. Most modern computer graphics come down to drawing triangles and colouring them in. So, it seems fitting to begin our tour of drawing with triangles and the straight lines that form them. This post will implement Bresenham&rsquo;s line algorithm in Verilog, creating lines, triangles, and even a cube (our first sort-of-3D graphic).</p>
 <p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how displays work, race the beam with Pong, animate starfields and sprites, paint Michelangelo&rsquo;s David, simulate life with bitmaps, draw lines and shapes, and finally render simple 3D models. New to the series? Start with <a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a>.</p>
-<p><em>Updated 2021-04-07. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><em>Updated 2021-04-17. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <h3 id="series-outline">Series Outline</h3>
 <ul>
 <li><a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a> - learn how displays work and animate simple shapes</li>
@@ -141,7 +141,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
 <li><strong><a href="https://reference.digilentinc.com/reference/programmable-logic/arty-a7/reference-manual">Digilent Arty A7-35T</a></strong> (Xilinx Artix-7) with <strong><a href="https://reference.digilentinc.com/reference/pmod/pmodvga/reference-manual">Pmod VGA</a></strong></li>
 </ul>
 <h3 id="source">Source</h3>
-<p>All the SystemVerilog designs featured in this series are available from the <a href="https://github.com/projf/projf-explore/">projf-explore</a> git repo under the open-source MIT licence: build on them to your heart&rsquo;s content. The rest of the blog content is subject to standard copyright restrictions: don&rsquo;t republish it without permission.</p>
+<p>The SystemVerilog designs featured in this series are available from the <a href="https://github.com/projf/projf-explore/">projf-explore</a> git repo under the open-source MIT licence: build on them to your heart&rsquo;s content. The rest of the blog content is subject to standard copyright restrictions: don&rsquo;t republish it without permission.</p>
 <h2 id="an-address-for-every-pixel">An Address for Every Pixel</h2>
 <p>Let&rsquo;s start by reminding ourselves how a framebuffer works. A framebuffer memory location backs every pixel on the screen. To update a pixel, we convert its coordinates into a memory address and write the colour to that address.</p>
 <p>For this post, we&rsquo;ll be using:</p>
@@ -253,7 +253,7 @@ FA0  // 1 - orange
 <span style="color:#66d9ef">end</span>
 </code></pre></div><p>The two blocking assignments to <code>derr</code> happen one after the other. Alternatively, we could have calculated <code>next_err</code> in our <code>always_comb</code> block and assigned it to <code>err</code> in our <code>always_ff</code>; I tried this approach, but it used more LUTs.</p>
 <p>Note how we&rsquo;ve also eliminated the need for <code>e2</code>, replacing it with <code>2*err</code> in our comparisons.</p>
-<p>Our initial line drawing module looks like this:</p>
+<p>Our first attempt at a line drawing module:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> draw_line #(<span style="color:#66d9ef">parameter</span> CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">10</span>) (  <span style="color:#75715e">// framebuffer coord width in bits
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,             <span style="color:#75715e">// clock
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst,             <span style="color:#75715e">// reset
@@ -293,6 +293,7 @@ FA0  // 1 - orange
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> drawing <span style="color:#f92672">=</span> in_progress;
 
     <span style="color:#66d9ef">enum</span> {IDLE, DRAW} state;  <span style="color:#75715e">// we&#39;re either idle or drawing
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">initial</span> state <span style="color:#f92672">=</span> IDLE;  <span style="color:#75715e">// needed for Yosys
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">case</span> (state)
             DRAW: <span style="color:#66d9ef">begin</span>
@@ -412,7 +413,8 @@ FA0  // 1 - orange
     <span style="color:#66d9ef">end</span>
 
     <span style="color:#66d9ef">enum</span> {IDLE, INIT, DRAW} state;
-    <span style="color:#66d9ef">always</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
+    <span style="color:#66d9ef">initial</span> state <span style="color:#f92672">=</span> IDLE;  <span style="color:#75715e">// needed for Yosys
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">case</span> (state)
             DRAW: <span style="color:#66d9ef">begin</span>
                 <span style="color:#66d9ef">if</span> (oe) <span style="color:#66d9ef">begin</span>
@@ -452,7 +454,7 @@ FA0  // 1 - orange
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
 </code></pre></div><p>The pixel to draw is output as <code>(x,y)</code> and the line coordinates are input as <code>(x0,y0)</code> and <code>(x1,y1)</code>. A high <code>start</code> signal begins drawing, and drawing completion is marked by <code>done</code>. An output enable signal, <code>oe</code>, allows you to pause drawing, handy for multiplexing memory access or slowing down the action to make it visible.</p>
-<p>There&rsquo;s a test bench you can use to exercise the module for Xilinx: <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lines-and-triangles/xc7/draw_line_tb.sv">xc7/draw_line_tb.sv</a>]</strong>.</p>
+<p>There&rsquo;s a test bench you can use to exercise the module with Vivado: <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lines-and-triangles/xc7/draw_line_tb.sv">xc7/draw_line_tb.sv</a>]</strong>.</p>
 <p>We test several sorts of lines: steep and not steep, drawn upwards, downwards, left to right, and right to left, as well as points, and the longest possible horizontal, vertical, and diagonal lines. A steep line is one in which the vertical change is larger than the horizontal.</p>
 <h3 id="top-of-the-line">Top of the Line</h3>
 <p>It&rsquo;s time to get drawing with actual hardware.</p>
@@ -488,12 +490,10 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/lines-and-tri
     );
 
     <span style="color:#75715e">// display timings
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> H_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">640</span>;
-    <span style="color:#66d9ef">localparam</span> V_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">480</span>;
-    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">16</span>;
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">16</span>;
     <span style="color:#66d9ef">logic</span> hsync, vsync;
     <span style="color:#66d9ef">logic</span> de, frame, line;
-    display_timings_480p display_timings_inst (
+    display_timings_480p #(.CORDW(CORDW)) display_timings_inst (
         .clk_pix,
         .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for pixel clock lock
 </span><span style="color:#75715e"></span>        .sx(),
@@ -506,7 +506,8 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/lines-and-tri
     );
 
     <span style="color:#66d9ef">logic</span> frame_sys;  <span style="color:#75715e">// start of new frame in system clock domain
-</span><span style="color:#75715e"></span>    xd xd_frame (.clk_i(clk_pix), .clk_o(clk_100m), .i(frame), .o(frame_sys));
+</span><span style="color:#75715e"></span>    xd xd_frame (.clk_i(clk_pix), .clk_o(clk_100m),
+                 .rst_i(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>), .rst_o(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>), .i(frame), .o(frame_sys));
 
     <span style="color:#75715e">// framebuffer (FB)
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> FB_WIDTH   <span style="color:#f92672">=</span> <span style="color:#ae81ff">320</span>;
@@ -532,7 +533,9 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/lines-and-tri
         .F_PALETTE(FB_PALETTE)
     ) fb_inst (
         .clk_sys(clk_100m),
-        .clk_pix(clk_pix),
+        .clk_pix,
+        .rst_sys(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),
+        .rst_pix(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),
         .de,
         .frame,
         .line,
@@ -636,12 +639,10 @@ On the Arty, we&rsquo;re drawing at 100 MHz with plenty of timing slack.</p>
     );
 
     <span style="color:#75715e">// display timings
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> H_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">640</span>;
-    <span style="color:#66d9ef">localparam</span> V_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">480</span>;
-    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">16</span>;
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">16</span>;
     <span style="color:#66d9ef">logic</span> hsync, vsync;
     <span style="color:#66d9ef">logic</span> de, frame, line;
-    display_timings_480p display_timings_inst (
+    display_timings_480p #(.CORDW(CORDW)) display_timings_inst (
         .clk_pix,
         .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for pixel clock lock
 </span><span style="color:#75715e"></span>        .sx(),
@@ -678,6 +679,8 @@ On the Arty, we&rsquo;re drawing at 100 MHz with plenty of timing slack.</p>
     ) fb_inst (
         .clk_sys(clk_pix),
         .clk_pix(clk_pix),
+        .rst_sys(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),
+        .rst_pix(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),
         .de,
         .frame,
         .line,
@@ -834,8 +837,6 @@ On the Arty, we&rsquo;re drawing at 100 MHz with plenty of timing slack.</p>
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> done             <span style="color:#75715e">// triangle complete (high for one tick)
 </span><span style="color:#75715e"></span>    );
 
-    <span style="color:#66d9ef">enum</span> {IDLE, INIT, DRAW} state;
-
     <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] line_id;  <span style="color:#75715e">// current line (0, 1, or 2)
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> line_start;     <span style="color:#75715e">// start drawing line
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> line_done;      <span style="color:#75715e">// finished drawing current line?
@@ -844,7 +845,9 @@ On the Arty, we&rsquo;re drawing at 100 MHz with plenty of timing slack.</p>
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lx0, ly0;  <span style="color:#75715e">// point 0 position
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lx1, ly1;  <span style="color:#75715e">// point 1 position
 </span><span style="color:#75715e"></span>
-    <span style="color:#66d9ef">always</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
+    <span style="color:#66d9ef">enum</span> {IDLE, INIT, DRAW} state;
+    <span style="color:#66d9ef">initial</span> state <span style="color:#f92672">=</span> IDLE;  <span style="color:#75715e">// needed for Yosys
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
         line_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
         <span style="color:#66d9ef">case</span> (state)
             INIT: <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// register coordinates
@@ -904,7 +907,7 @@ On the Arty, we&rsquo;re drawing at 100 MHz with plenty of timing slack.</p>
         .done(line_done)
     );
 <span style="color:#66d9ef">endmodule</span>
-</code></pre></div><p>There&rsquo;s a test bench you can use to exercise the module for Xilinx: <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lines-and-triangles/xc7/draw_triangle_tb.sv">xc7/draw_triangle_tb.sv</a>]</strong>.</p>
+</code></pre></div><p>There&rsquo;s a test bench you can use to exercise the module with Vivado: <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lines-and-triangles/xc7/draw_triangle_tb.sv">xc7/draw_triangle_tb.sv</a>]</strong>.</p>
 <p>We can tweak our existing top module to draw a few triangles:</p>
 <ul>
 <li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/lines-and-triangles/xc7/top_triangles.sv">xc7/top_triangles.sv</a></strong></li>
@@ -932,18 +935,14 @@ On the Arty, we&rsquo;re drawing at 100 MHz with plenty of timing slack.</p>
     );
 
     <span style="color:#75715e">// display timings
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> H_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">640</span>;
-    <span style="color:#66d9ef">localparam</span> V_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">480</span>;
-    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">16</span>;
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">16</span>;
     <span style="color:#66d9ef">logic</span> hsync, vsync;
     <span style="color:#66d9ef">logic</span> de, frame, line;
-    display_timings_480p display_timings_inst (
+    display_timings_480p #(.CORDW(CORDW)) display_timings_inst (
         .clk_pix,
         .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for pixel clock lock
-</span><span style="color:#75715e"></span>        <span style="color:#75715e">/* verilator lint_off PINCONNECTEMPTY */</span>
-        .sx(),
+</span><span style="color:#75715e"></span>        .sx(),
         .sy(),
-        <span style="color:#75715e">/* verilator lint_on PINCONNECTEMPTY */</span>
         .hsync,
         .vsync,
         .de,
@@ -952,7 +951,8 @@ On the Arty, we&rsquo;re drawing at 100 MHz with plenty of timing slack.</p>
     );
 
     <span style="color:#66d9ef">logic</span> frame_sys;  <span style="color:#75715e">// start of new frame in system clock domain
-</span><span style="color:#75715e"></span>    xd xd_frame (.clk_i(clk_pix), .clk_o(clk_100m), .i(frame), .o(frame_sys));
+</span><span style="color:#75715e"></span>    xd xd_frame (.clk_i(clk_pix), .clk_o(clk_100m),
+                 .rst_i(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>), .rst_o(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>), .i(frame), .o(frame_sys));
 
     <span style="color:#75715e">// framebuffer (FB)
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> FB_WIDTH   <span style="color:#f92672">=</span> <span style="color:#ae81ff">320</span>;
@@ -978,7 +978,9 @@ On the Arty, we&rsquo;re drawing at 100 MHz with plenty of timing slack.</p>
         .F_PALETTE(FB_PALETTE)
     ) fb_inst (
         .clk_sys(clk_100m),
-        .clk_pix(clk_pix),
+        .clk_pix,
+        .rst_sys(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),
+        .rst_pix(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),
         .de,
         .frame,
         .line,
@@ -986,9 +988,7 @@ On the Arty, we&rsquo;re drawing at 100 MHz with plenty of timing slack.</p>
         .x(fbx),
         .y(fby),
         .cidx(fb_cidx),
-        <span style="color:#75715e">/* verilator lint_off PINCONNECTEMPTY */</span>
         .clip(),
-        <span style="color:#75715e">/* verilator lint_on PINCONNECTEMPTY */</span>
         .red(fb_red),
         .green(fb_green),
         .blue(fb_blue)

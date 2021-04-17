@@ -119,8 +119,8 @@
     <div class="content">
       <p>Welcome back to <em>Exploring FPGA Graphics</em>. In the previous two parts, we worked with sprites, but another approach is needed as graphics become more complex. Instead of drawing directly to the screen, we draw to a framebuffer, which is read out to the screen. This post provides an introduction to framebuffers and how to scale them up. We&rsquo;ll also learn how to fizzlefade graphics Wolfenstein 3D style. In the <a href="/posts/life-on-screen/">next part</a>, we&rsquo;ll use a framebuffer to visualize a simulation of life.</p>
 <p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how displays work, race the beam with Pong, animate starfields and sprites, paint Michelangelo&rsquo;s David, simulate life with bitmaps, draw lines and shapes, and finally render simple 3D models. New to the series? Start with <a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a>.</p>
-<p><em>Updated 2021-04-06. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
-<p><strong>April 2021: Updates in progress. Includes new framebuffer module.</strong></p>
+<p><em>Updated 2021-04-17. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><strong>April 2021: Includes new framebuffer module design; further explanation will be added soon.</strong></p>
 <h3 id="series-outline">Series Outline</h3>
 <ul>
 <li><a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a> - learn how displays work and animate simple shapes</li>
@@ -141,7 +141,7 @@
 <li><strong><a href="https://reference.digilentinc.com/reference/programmable-logic/arty-a7/reference-manual">Digilent Arty A7-35T</a></strong> (Xilinx Artix-7) with <strong><a href="https://reference.digilentinc.com/reference/pmod/pmodvga/reference-manual">Pmod VGA</a></strong></li>
 </ul>
 <h3 id="source">Source</h3>
-<p>All the SystemVerilog designs featured in this series are available from the <a href="https://github.com/projf/projf-explore/">projf-explore</a> git repo under the open-source MIT licence: build on them to your heart&rsquo;s content. The rest of the blog content is subject to standard copyright restrictions: don&rsquo;t republish it without permission.</p>
+<p>The SystemVerilog designs featured in this series are available from the <a href="https://github.com/projf/projf-explore/">projf-explore</a> git repo under the open-source MIT licence: build on them to your heart&rsquo;s content. The rest of the blog content is subject to standard copyright restrictions: don&rsquo;t republish it without permission.</p>
 <h2 id="framebuffer">Framebuffer</h2>
 <p>A framebuffer is an in-memory bitmap that drives pixels on the screen. When you write to a memory location within the framebuffer, the corresponding pixel will change on the screen. Using a framebuffer provides two big benefits: we&rsquo;re free to create sophisticated graphics using whatever technique we like, and the setting of pixel colour is separated from the process of driving the screen. The flexibility of a framebuffer comes at the cost of increased memory storage and latency.</p>
 <h2 id="a-small-buffer">A Small Buffer</h2>
@@ -174,13 +174,11 @@
     );
 
     <span style="color:#75715e">// display timings
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> H_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">640</span>;
-    <span style="color:#66d9ef">localparam</span> V_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">480</span>;
-    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">16</span>;
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">16</span>;
     <span style="color:#66d9ef">logic</span> hsync, vsync;
     <span style="color:#66d9ef">logic</span> frame;
     <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx, sy;
-    display_timings_480p display_timings_inst (
+    display_timings_480p #(.CORDW(CORDW)) display_timings_inst (
         .clk_pix,
         .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for pixel clock lock
 </span><span style="color:#75715e"></span>        .sx,
@@ -219,7 +217,8 @@
     <span style="color:#75715e">// draw line across middle of framebuffer
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(FB_WIDTH)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_draw;
     <span style="color:#66d9ef">enum</span> {IDLE, DRAW, DONE} state;
-    <span style="color:#66d9ef">always</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+    <span style="color:#66d9ef">initial</span> state <span style="color:#f92672">=</span> IDLE;  <span style="color:#75715e">// needed for Yosys
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">case</span> (state)
             DRAW:
                 <span style="color:#66d9ef">if</span> (cnt_draw <span style="color:#f92672">&lt;</span> FB_WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
@@ -312,13 +311,11 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/framebuffers"
     );
 
     <span style="color:#75715e">// display timings
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> H_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">640</span>;
-    <span style="color:#66d9ef">localparam</span> V_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">480</span>;
-    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">16</span>;
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">16</span>;
     <span style="color:#66d9ef">logic</span> hsync, vsync;
     <span style="color:#66d9ef">logic</span> de, frame;
     <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx, sy;
-    display_timings_480p display_timings_inst (
+    display_timings_480p #(.CORDW(CORDW)) display_timings_inst (
         .clk_pix,
         .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for pixel clock lock
 </span><span style="color:#75715e"></span>        .sx,
@@ -359,7 +356,8 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/framebuffers"
     <span style="color:#75715e">// draw box around framebuffer
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(FB_WIDTH)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_draw;
     <span style="color:#66d9ef">enum</span> {IDLE, TOP, RIGHT, BOTTOM, LEFT, DONE} state;
-    <span style="color:#66d9ef">always</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+    <span style="color:#66d9ef">initial</span> state <span style="color:#f92672">=</span> IDLE;  <span style="color:#75715e">// needed for Yosys
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">case</span> (state)
             TOP:
                 <span style="color:#66d9ef">if</span> (cnt_draw <span style="color:#f92672">&lt;</span> FB_WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
@@ -469,7 +467,7 @@ The iCE40 version uses more block ram than you might expect: 160x120 should fit 
 <p>We load the palette file into a colour lookup table (CLUT) ROM, which is used to find the colour of each pixel for display. If you need a refresher on CLUTs, see <a href="/posts/hardware-sprites/#a-refined-palette">A Refined Palette</a>.</p>
 <h3 id="fizzle-out">Fizzle Out</h3>
 <p>In <a href="/posts/fpga-ad-astra/">FPGA Ad Astra</a>, we used linear feedback shift registers (LFSRs) to create animated starfields. LFSRs have another graphical use: creating random dissolve effects, as used in <a href="https://en.wikipedia.org/wiki/Wolfenstein_3D">Wolfenstein 3D</a> and explained by Fabien Sanglard in his excellent post: <a href="https://fabiensanglard.net/fizzlefade/">Fizzlefade</a>.</p>
-<p>We&rsquo;ll apply the fizzlefade to David to disolve our image to black after a delay.</p>
+<p>We&rsquo;ll apply the fizzlefade to David to dissolve our image to black after a delay.</p>
 <p>The fizzle logic is show below. Most of the logic is for delaying and controlling the fade rate.</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// fizzlefade!
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> lfsr_en;
@@ -569,6 +567,8 @@ However, iCE40UP5K has only one PLL, so you can only generate one clock.</p>
 </span><span style="color:#75715e"></span>    ) (
     <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_in,    <span style="color:#75715e">// input clock
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_out,   <span style="color:#75715e">// output clock
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst_in,    <span style="color:#75715e">// reset (clk_in)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst_out,   <span style="color:#75715e">// reset (clk_out)
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> data_req,  <span style="color:#75715e">// request input data (clk_in)
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> en_in,     <span style="color:#75715e">// enable input (clk_in)
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> en_out,    <span style="color:#75715e">// enable output (clk_out)
@@ -581,8 +581,8 @@ However, iCE40UP5K has only one PLL, so you can only generate one clock.</p>
     <span style="color:#75715e">// output data to display
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(LEN)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] addr_out;        <span style="color:#75715e">// output address (pixel counter)
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(SCALE)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_v, cnt_h;  <span style="color:#75715e">// scale counters
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> set_end  <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// line set end
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> get_data <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// fresh data needed
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> set_end;   <span style="color:#75715e">// line set end
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> get_data;  <span style="color:#75715e">// fresh data needed
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_out) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">if</span> (frame) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// reset addr and counters at frame start
 </span><span style="color:#75715e"></span>            addr_out <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
@@ -601,18 +601,26 @@ However, iCE40UP5K has only one PLL, so you can only generate one clock.</p>
                 <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> addr_out <span style="color:#f92672">&lt;=</span> addr_out <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
             <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> cnt_h <span style="color:#f92672">&lt;=</span> cnt_h <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
         <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (get_data) set_end <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+        <span style="color:#66d9ef">if</span> (rst_out) <span style="color:#66d9ef">begin</span>
+            addr_out <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            cnt_h <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            cnt_v <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            set_end <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+        <span style="color:#66d9ef">end</span>
     <span style="color:#66d9ef">end</span>
 
     <span style="color:#75715e">// request new data on at end of line set (needs to be in clk_in domain)
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> get_data <span style="color:#f92672">=</span> (line <span style="color:#f92672">&amp;&amp;</span> set_end);
-    xd xd_req (.clk_i(clk_out), .clk_o(clk_in), .i(get_data), .o(data_req));
+    xd xd_req (.clk_i(clk_out), .clk_o(clk_in),
+               .rst_i(rst_out), .rst_o(rst_in), .i(get_data), .o(data_req));
 
     <span style="color:#75715e">// read data in
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(LEN)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] addr_in <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(LEN)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] addr_in;
     <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_in) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">if</span> (en_in) addr_in <span style="color:#f92672">&lt;=</span> (addr_in <span style="color:#f92672">==</span> LEN<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#f92672">?</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">:</span> addr_in <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
         <span style="color:#66d9ef">if</span> (data_req) addr_in <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// reset addr_in when we request new data
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">end</span>
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (rst_in) addr_in <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+    <span style="color:#66d9ef">end</span>
 
     <span style="color:#75715e">// channel 0
 </span><span style="color:#75715e"></span>    bram_sdp #(.WIDTH(WIDTH), .DEPTH(LEN)) ch0 (
@@ -647,26 +655,31 @@ However, iCE40UP5K has only one PLL, so you can only generate one clock.</p>
         .data_out(dout_2)
     );
 <span style="color:#66d9ef">endmodule</span>
-</code></pre></div><h3 id="crossing-the-streams">Crossing the Streams</h3>
+</code></pre></div><p>There&rsquo;s a test bench you can use to exercise the module with Vivado: <strong>[<a href="https://github.com/projf/projf-explore/blob/master/framebuffers/xc7/linebuffer_tb.sv">xc7/linebuffer_tb.sv</a>]</strong>.</p>
+<h3 id="crossing-the-streams">Crossing the Streams</h3>
 <p>When the output (<strong>clk_out</strong> domain) finishes with a line of data, it needs to signal the input (<strong>clk_in</strong> domain) to provide another line. We could use a pair of flip-flops to cross domains, but that could fail if the destination domain is of lower frequency. We could use a BRAM, but using a whole BRAM to move one bit of data is wasteful. Instead, we use a simple trick to safely send a pulse of data between two domains, irrespective of their frequencies.</p>
 <p>Add the <strong>[<a href="https://github.com/projf/projf-explore/blob/master/common/xd.sv">xd.sv</a>]</strong> module:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> xd (
     <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_i,  <span style="color:#75715e">//  input clock: source domain
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_o,  <span style="color:#75715e">// output clock: destination domain
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst_i,  <span style="color:#75715e">// reset (source domain)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst_o,  <span style="color:#75715e">// reset (destination domain)
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> i,      <span style="color:#75715e">//  input pulse: source domain
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> o       <span style="color:#75715e">// output pulse: destination domain
 </span><span style="color:#75715e"></span>    );
 
     <span style="color:#75715e">// toggle reg when pulse received in source domain
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> toggle_i <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>;  <span style="color:#75715e">// initial value needed for simulation
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_i) <span style="color:#66d9ef">begin</span>
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> toggle_i;
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_i) <span style="color:#66d9ef">begin</span>
         toggle_i <span style="color:#f92672">&lt;=</span> toggle_i <span style="color:#f92672">^</span> i;
+        <span style="color:#66d9ef">if</span> (rst_i) toggle_i <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>;
     <span style="color:#66d9ef">end</span>
 
     <span style="color:#75715e">// cross to destination domain via shift reg
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] shr_o <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;b0</span>;
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] shr_o;
     <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_o) <span style="color:#66d9ef">begin</span>
         shr_o <span style="color:#f92672">&lt;=</span> {shr_o[<span style="color:#ae81ff">2</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>], toggle_i};
+        <span style="color:#66d9ef">if</span> (rst_o) shr_o <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;b0</span>;
     <span style="color:#66d9ef">end</span>
 
     <span style="color:#75715e">// output pulse when transition occurs
@@ -677,6 +690,7 @@ However, iCE40UP5K has only one PLL, so you can only generate one clock.</p>
 </code></pre></div><p>Before you rush to add new clock domains to your designs with <code>xd.sv</code>, you need to be aware of a significant limitation: this only works for isolated pulses of one clock cycle. This module is ideal for sending well-spaced events but can&rsquo;t be used to send arbitrary data from one clock domain to another: use BRAM or a proper FIFO for that. Thanks to <a href="https://www.fpga4fun.com/CrossClockDomain.html">fpga4fun</a> for this approach to CDC.</p>
 <p>The following simulation shows what happens if you try to abuse this approach. Note how the final two-cycle pulse becomes two separate pulses when sent from slow to fast but disappears altogether when sent from fast to slow. You have been warned!</p>
 <p><img src="/img/posts/framebuffers/xd-sim.png" alt="xd module simulation" title="Where did my pulses go?"></p>
+<p>There&rsquo;s a test bench you can use to exercise the module with Vivado: <strong>[<a href="https://github.com/projf/projf-explore/blob/master/common/xc7/xd_tb.sv">common/xc7/xd_tb.sv</a>]</strong>.</p>
 <h3 id="framebuffer-module">Framebuffer Module</h3>
 <p>The linebuffer doesn&rsquo;t know anything about the framebuffer design. This is deliberate. We want the freedom to store our framebuffer however we like or even push data into the linebuffer from other sources. This post will use BRAM to create a simple framebuffer module that drives the linebuffer for us.</p>
 <p>Add the framebuffer module - <strong>[<a href="https://github.com/projf/projf-explore/blob/master/framebuffers/framebuffer.sv">framebuffer.sv</a>]</strong>:</p>
@@ -692,6 +706,8 @@ However, iCE40UP5K has only one PLL, so you can only generate one clock.</p>
 </span><span style="color:#75715e"></span>    ) (
     <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_sys,    <span style="color:#75715e">// system clock
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_pix,    <span style="color:#75715e">// pixel clock
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst_sys,    <span style="color:#75715e">// reset (clk_sys)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst_pix,    <span style="color:#75715e">// reset (clk_pix)
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> de,         <span style="color:#75715e">// data enable for display (clk_pix)
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> frame,      <span style="color:#75715e">// start a new frame (clk_pix)
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> line,       <span style="color:#75715e">// start a new screen line (clk_pix)
@@ -706,7 +722,8 @@ However, iCE40UP5K has only one PLL, so you can only generate one clock.</p>
 </span><span style="color:#75715e"></span>    );
 
     <span style="color:#66d9ef">logic</span> frame_sys;  <span style="color:#75715e">// start of new frame in system clock domain
-</span><span style="color:#75715e"></span>    xd xd_frame (.clk_i(clk_pix), .clk_o(clk_sys), .i(frame), .o(frame_sys));
+</span><span style="color:#75715e"></span>    xd xd_frame (.clk_i(clk_pix), .clk_o(clk_sys),
+                 .rst_i(rst_pix), .rst_o(rst_sys), .i(frame), .o(frame_sys));
 
     <span style="color:#75715e">// framebuffer (FB)
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> FB_PIXELS <span style="color:#f92672">=</span> WIDTH <span style="color:#f92672">*</span> HEIGHT;
@@ -718,28 +735,22 @@ However, iCE40UP5K has only one PLL, so you can only generate one clock.</p>
     <span style="color:#66d9ef">logic</span> [FB_DATAW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_cidx_read, fb_cidx_read_p1;
 
     <span style="color:#75715e">// calculate write address from pixel coordinates (two stage: mul then add)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x_add;
-    <span style="color:#66d9ef">logic</span> [FB_ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] pix_addr_line;
-    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_sys) <span style="color:#66d9ef">begin</span>
-        <span style="color:#66d9ef">if</span> (y <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">||</span> y <span style="color:#f92672">&gt;=</span> HEIGHT <span style="color:#f92672">||</span> x <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">||</span> x <span style="color:#f92672">&gt;=</span> WIDTH) <span style="color:#66d9ef">begin</span>
-            clip <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-            pix_addr_line <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-            x_add <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
-            clip <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-            pix_addr_line <span style="color:#f92672">&lt;=</span> WIDTH <span style="color:#f92672">*</span> y;
-            x_add <span style="color:#f92672">&lt;=</span> x;  <span style="color:#75715e">// save x for next stage
-</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">end</span>
-        fb_addr_write <span style="color:#f92672">&lt;=</span> pix_addr_line <span style="color:#f92672">+</span> x_add;
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x_add;     <span style="color:#75715e">// pixel position on line
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [FB_ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_addr_line;  <span style="color:#75715e">// address of line for writing
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_sys) <span style="color:#66d9ef">begin</span>
+        fb_addr_line <span style="color:#f92672">&lt;=</span> WIDTH <span style="color:#f92672">*</span> y;  <span style="color:#75715e">// write address 1st stage
+</span><span style="color:#75715e"></span>        x_add <span style="color:#f92672">&lt;=</span> x;  <span style="color:#75715e">// save x for write address 2nd stage
+</span><span style="color:#75715e"></span>        fb_addr_write <span style="color:#f92672">&lt;=</span> fb_addr_line <span style="color:#f92672">+</span> x_add;
     <span style="color:#66d9ef">end</span>
 
-    <span style="color:#75715e">// write to pixel address (delay to match address calculation)
+    <span style="color:#75715e">// draw colour and write enable (delay to match address calculation)
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> fb_we, we_in_p1;
     <span style="color:#66d9ef">logic</span> [FB_DATAW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_cidx_write, cidx_in_p1;
     <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_sys) <span style="color:#66d9ef">begin</span>
         we_in_p1 <span style="color:#f92672">&lt;=</span> we;
-        cidx_in_p1 <span style="color:#f92672">&lt;=</span> cidx;
-        fb_we <span style="color:#f92672">&lt;=</span> (clip <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) <span style="color:#f92672">?</span> we_in_p1 <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// write enable if not clipped
+        cidx_in_p1 <span style="color:#f92672">&lt;=</span> cidx;  <span style="color:#75715e">// draw colour
+</span><span style="color:#75715e"></span>        clip <span style="color:#f92672">&lt;=</span> (y <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">||</span> y <span style="color:#f92672">&gt;=</span> HEIGHT <span style="color:#f92672">||</span> x <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">||</span> x <span style="color:#f92672">&gt;=</span> WIDTH);  <span style="color:#75715e">// clipped?
+</span><span style="color:#75715e"></span>        fb_we <span style="color:#f92672">&lt;=</span> (clip) <span style="color:#f92672">?</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">:</span> we_in_p1;  <span style="color:#75715e">// write enable if not clipped
 </span><span style="color:#75715e"></span>        fb_cidx_write <span style="color:#f92672">&lt;=</span> cidx_in_p1;
     <span style="color:#66d9ef">end</span>
 
@@ -767,24 +778,33 @@ However, iCE40UP5K has only one PLL, so you can only generate one clock.</p>
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> lb_data_req;  <span style="color:#75715e">// LB requesting data
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(LB_LEN<span style="color:#f92672">+</span><span style="color:#ae81ff">1</span>)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_h;  <span style="color:#75715e">// count pixels in line to read
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_sys) <span style="color:#66d9ef">begin</span>
-        <span style="color:#66d9ef">if</span> (lb_data_req) <span style="color:#66d9ef">begin</span>
-            cnt_h <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// start new line
-</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (cnt_h <span style="color:#f92672">&lt;</span> LB_LEN) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// advance to start of next line
-</span><span style="color:#75715e"></span>            cnt_h <span style="color:#f92672">&lt;=</span> cnt_h <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-            fb_addr_read <span style="color:#f92672">&lt;=</span> fb_addr_read <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-        <span style="color:#66d9ef">end</span>
+        <span style="color:#66d9ef">if</span> (fb_addr_read <span style="color:#f92672">&lt;</span> FB_PIXELS<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
+            <span style="color:#66d9ef">if</span> (lb_data_req) <span style="color:#66d9ef">begin</span>
+                cnt_h <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// start new line
+</span><span style="color:#75715e"></span>            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (cnt_h <span style="color:#f92672">&lt;</span> LB_LEN) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// advance to start of next line
+</span><span style="color:#75715e"></span>                cnt_h <span style="color:#f92672">&lt;=</span> cnt_h <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+                fb_addr_read <span style="color:#f92672">&lt;=</span> fb_addr_read <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+            <span style="color:#66d9ef">end</span>
+        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> cnt_h <span style="color:#f92672">&lt;=</span> LB_LEN;
         <span style="color:#66d9ef">if</span> (frame_sys) fb_addr_read <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// new frame
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">end</span>
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (rst_sys) <span style="color:#66d9ef">begin</span>
+            fb_addr_read <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            cnt_h <span style="color:#f92672">&lt;=</span> LB_LEN;  <span style="color:#75715e">// don&#39;t start reading after reset
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">end</span>
+    <span style="color:#66d9ef">end</span>
 
     <span style="color:#75715e">// LB enable (not corrected for latency)
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> lb_en_in, lb_en_out;
-    <span style="color:#66d9ef">always_comb</span> lb_en_in  <span style="color:#f92672">=</span> (cnt_h <span style="color:#f92672">&lt;</span> LB_LEN);
+    <span style="color:#66d9ef">always_comb</span> lb_en_in  <span style="color:#f92672">=</span> cnt_h <span style="color:#f92672">&lt;</span> LB_LEN;
     <span style="color:#66d9ef">always_comb</span> lb_en_out <span style="color:#f92672">=</span> de;
 
     <span style="color:#75715e">// LB enable in: address calc and CLUT reg add three cycles of latency
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LAT <span style="color:#f92672">=</span> <span style="color:#ae81ff">3</span>;  <span style="color:#75715e">// write latency
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [LAT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lb_en_in_sr;
-    <span style="color:#66d9ef">always</span> @(<span style="color:#66d9ef">posedge</span> clk_sys) lb_en_in_sr <span style="color:#f92672">&lt;=</span> {lb_en_in, lb_en_in_sr[LAT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">1</span>]};
+    <span style="color:#66d9ef">always</span> @(<span style="color:#66d9ef">posedge</span> clk_sys) <span style="color:#66d9ef">begin</span>
+        lb_en_in_sr <span style="color:#f92672">&lt;=</span> {lb_en_in, lb_en_in_sr[LAT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">1</span>]};
+        <span style="color:#66d9ef">if</span> (rst_sys) lb_en_in_sr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+    <span style="color:#66d9ef">end</span>
 
     <span style="color:#75715e">// LB colour channels
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [LB_BPC<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lb_in_0,  lb_in_1,  lb_in_2;
@@ -797,6 +817,8 @@ However, iCE40UP5K has only one PLL, so you can only generate one clock.</p>
 </span><span style="color:#75715e"></span>        ) lb_inst (
         .clk_in(clk_sys),        <span style="color:#75715e">// input clock
 </span><span style="color:#75715e"></span>        .clk_out(clk_pix),       <span style="color:#75715e">// output clock
+</span><span style="color:#75715e"></span>        .rst_in(rst_sys),        <span style="color:#75715e">// reset (clk_in)
+</span><span style="color:#75715e"></span>        .rst_out(rst_pix),       <span style="color:#75715e">// reset (clk_out)
 </span><span style="color:#75715e"></span>        .data_req(lb_data_req),  <span style="color:#75715e">// request input data (clk_in)
 </span><span style="color:#75715e"></span>        .en_in(lb_en_in_sr[<span style="color:#ae81ff">0</span>]),  <span style="color:#75715e">// enable input (clk_in)
 </span><span style="color:#75715e"></span>        .en_out(lb_en_out),      <span style="color:#75715e">// enable output (clk_out)
@@ -838,7 +860,8 @@ However, iCE40UP5K has only one PLL, so you can only generate one clock.</p>
         blue  <span style="color:#f92672">=</span> lb_en_out_p1 <span style="color:#f92672">?</span> lb_out_0 <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
-</code></pre></div><p><em>explanation of framebuffer module will be added shortly</em></p>
+</code></pre></div><p>There&rsquo;s a test bench you can use to exercise the module with Vivado: <strong>[<a href="https://github.com/projf/projf-explore/blob/master/framebuffers/xc7/framebuffer_tb.sv">xc7/framebuffer_tb.sv</a>]</strong>.</p>
+<p><em>explanation of framebuffer module will be added shortly</em></p>
 <p>Build the updated top module with the new framebuffer module:</p>
 <ul>
 <li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/framebuffers/xc7/top_david.sv">xc7/top_david.sv</a></strong></li>
@@ -867,12 +890,10 @@ However, iCE40UP5K has only one PLL, so you can only generate one clock.</p>
     );
 
     <span style="color:#75715e">// display timings
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> H_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">640</span>;
-    <span style="color:#66d9ef">localparam</span> V_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">480</span>;
-    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">16</span>;
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">16</span>;
     <span style="color:#66d9ef">logic</span> hsync, vsync;
     <span style="color:#66d9ef">logic</span> de, frame, line;
-    display_timings_480p display_timings_inst (
+    display_timings_480p #(.CORDW(CORDW)) display_timings_inst (
         .clk_pix,
         .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for pixel clock lock
 </span><span style="color:#75715e"></span>        .sx(),
@@ -883,6 +904,10 @@ However, iCE40UP5K has only one PLL, so you can only generate one clock.</p>
         .frame,
         .line
     );
+
+    <span style="color:#66d9ef">logic</span> frame_sys;  <span style="color:#75715e">// start of new frame in system clock domain
+</span><span style="color:#75715e"></span>    xd xd_frame (.clk_i(clk_pix), .clk_o(clk_100m),
+                 .rst_i(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>), .rst_o(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>), .i(frame), .o(frame_sys));
 
     <span style="color:#75715e">// framebuffer (FB)
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> FB_WIDTH   <span style="color:#f92672">=</span> <span style="color:#ae81ff">160</span>;
@@ -908,7 +933,9 @@ However, iCE40UP5K has only one PLL, so you can only generate one clock.</p>
         .F_PALETTE(FB_PALETTE)
     ) fb_inst (
         .clk_sys(clk_100m),
-        .clk_pix(clk_pix),
+        .clk_pix,
+        .rst_sys(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),
+        .rst_pix(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),
         .de,
         .frame,
         .line,
@@ -924,7 +951,8 @@ However, iCE40UP5K has only one PLL, so you can only generate one clock.</p>
 
     <span style="color:#75715e">// draw box around framebuffer
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">enum</span> {IDLE, TOP, RIGHT, BOTTOM, LEFT, DONE} state;
-    <span style="color:#66d9ef">always</span> @(<span style="color:#66d9ef">posedge</span> clk_100m) <span style="color:#66d9ef">begin</span>
+    <span style="color:#66d9ef">initial</span> state <span style="color:#f92672">=</span> IDLE;  <span style="color:#75715e">// needed for Yosys
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always</span> @(<span style="color:#66d9ef">posedge</span> clk_100m) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">case</span> (state)
             TOP:
                 <span style="color:#66d9ef">if</span> (fbx <span style="color:#f92672">&lt;</span> FB_WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
@@ -954,7 +982,7 @@ However, iCE40UP5K has only one PLL, so you can only generate one clock.</p>
                     state <span style="color:#f92672">&lt;=</span> DONE;
                 <span style="color:#66d9ef">end</span>
             IDLE:
-                <span style="color:#66d9ef">if</span> (frame) <span style="color:#66d9ef">begin</span>
+                <span style="color:#66d9ef">if</span> (frame_sys) <span style="color:#66d9ef">begin</span>
                     fbx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
                     fby <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
                     fb_cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">4&#39;h0</span>;  <span style="color:#75715e">// palette index
