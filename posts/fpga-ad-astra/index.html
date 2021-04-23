@@ -119,18 +119,18 @@ In this series, we explore graphics at the hardware level and get a feel for the
     
     <div class="content">
       <p>Welcome back to <em>Exploring FPGA Graphics</em>. In the previous part we learnt how to create <a href="/posts/hardware-sprites/">hardware sprites</a>. In this fourth part, we create a demo by combining our knowledge of sprites with animated starfields.</p>
-<p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how displays work, race the beam with Pong, animate starfields and sprites, paint Michelangelo&rsquo;s David, simulate life with bitmaps, draw lines and shapes, and finally render simple 3D models. New to the series? Start with <a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a>.</p>
+<p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how displays work, race the beam with Pong, animate starfields and sprites, paint Michelangelo&rsquo;s David, simulate life with bitmaps, draw lines and shapes, and finally render simple 3D models. New to the series? Start with <a href="/posts/fpga-graphics/">FPGA Graphics</a>.</p>
 <p><em>Updated 2021-04-23. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <h3 id="series-outline">Series Outline</h3>
 <ul>
-<li><a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a> - learn how displays work and animate simple shapes</li>
+<li><a href="/posts/fpga-graphics/">FPGA Graphics</a> - learn how displays work and animate simple shapes</li>
 <li><a href="/posts/fpga-pong/">Pong</a> - race the beam to create the arcade classic</li>
 <li><a href="/posts/hardware-sprites/">Hardware Sprites</a> - fast, colourful, graphics with minimal resources</li>
 <li>Ad Astra (this post) - demo with hardware sprites and animated starfields</li>
 <li><a href="/posts/framebuffers/">Framebuffers</a> - driving the display from a bitmap in memory</li>
 <li><a href="/posts/life-on-screen/">Life on Screen</a> - the screen comes alive with Conway&rsquo;s Game of Life</li>
 <li><a href="/posts/lines-and-triangles/">Lines and Triangles</a> - drawing lines and triangles with a framebuffer</li>
-<li><a href="/posts/fpga-shapes/">Shapes</a> - filling and animating shapes</li>
+<li><a href="/posts/fpga-shapes/">2D Shapes</a> - filling and animating shapes</li>
 <li>Simple 3D - models and wireframe rendering (draft coming soon)</li>
 </ul>
 <h3 id="requirements">Requirements</h3>
@@ -184,7 +184,7 @@ Computer Space had an amazing fibreglass cabinet. You can see more photos at <a 
         <span style="color:#66d9ef">if</span> (rst) sreg <span style="color:#f92672">&lt;=</span> SEED;
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
-</code></pre></div><p>We use a simple top module to drive it, based on the design we used in <a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a>.</p>
+</code></pre></div><p>We use a simple top module to drive it, based on the design we used in <a href="/posts/fpga-graphics/">FPGA Graphics</a>.</p>
 <ul>
 <li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/ad-astra/xc7/top_lfsr.sv">xc7/top_lfsr.sv</a></strong></li>
 <li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/ad-astra/ice40/top_lfsr.sv">ice40/top_lfsr.sv</a></strong></li>
@@ -193,7 +193,7 @@ Computer Space had an amazing fibreglass cabinet. You can see more photos at <a 
 <p><strong>Building the Designs</strong><br>
 In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/ad-astra">FPGA Ad Astra</a> section of the git repo, you&rsquo;ll find the design files, a makefile for iCEBreaker, a Vivado project for Arty, and instructions for building the designs for both boards.</p>
 </blockquote>
-<p>Shown below is the LSFR top module for iCE40:</p>
+<p>Shown below is the LSFR top module for iCEBreaker:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_lfsr (
     <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_12m,      <span style="color:#75715e">// 12 MHz clock
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_rst,      <span style="color:#75715e">// reset button (active high)
@@ -217,13 +217,11 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/ad-a
     );
 
     <span style="color:#75715e">// display timings
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> H_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">640</span>;
-    <span style="color:#66d9ef">localparam</span> V_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">480</span>;
-    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">16</span>;
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">16</span>;
     <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx, sy;
     <span style="color:#66d9ef">logic</span> hsync, vsync;
     <span style="color:#66d9ef">logic</span> de;
-    display_timings_480p display_timings_inst (
+    display_timings_480p #(.CORDW(CORDW)) display_timings_inst (
         .clk_pix,
         .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for pixel clock lock
 </span><span style="color:#75715e"></span>        .sx,
@@ -438,7 +436,8 @@ You can easily create your own font version with different characters: check out
 </span><span style="color:#75715e"></span>        NEXT_LINE,  <span style="color:#75715e">// prepare for next sprite line
 </span><span style="color:#75715e"></span>        DONE        <span style="color:#75715e">// set done signal
 </span><span style="color:#75715e"></span>    } state, state_next;
-
+    <span style="color:#66d9ef">initial</span> state <span style="color:#f92672">=</span> IDLE;  <span style="color:#75715e">// needed for Yosys
+</span><span style="color:#75715e"></span>
     <span style="color:#66d9ef">integer</span> i;  <span style="color:#75715e">// for bit reversal in READ_MEM
 </span><span style="color:#75715e"></span>
     <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
@@ -556,13 +555,11 @@ You can easily create your own font version with different characters: check out
     );
 
     <span style="color:#75715e">// display timings
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> H_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">640</span>;
-    <span style="color:#66d9ef">localparam</span> V_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">480</span>;
-    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">16</span>;
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">16</span>;
     <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx, sy;
     <span style="color:#66d9ef">logic</span> hsync, vsync;
     <span style="color:#66d9ef">logic</span> de, line;
-    display_timings_480p display_timings_inst (
+    display_timings_480p #(.CORDW(CORDW)) display_timings_inst (
         .clk_pix,
         .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for pixel clock lock
 </span><span style="color:#75715e"></span>        .sx,
@@ -733,7 +730,9 @@ You can easily create your own font version with different characters: check out
 <li>Use the code points to calculate the glyph address (two cycles later)</li>
 </ol>
 <p>We use for loops and offset the times relative to the start of the blanking interval:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// greeting ROM address
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">integer</span> i;  <span style="color:#75715e">// for looping over sprite signals
+</span><span style="color:#75715e"></span>
+    <span style="color:#75715e">// greeting ROM address
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(G_ROM_DEPTH)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] msg_start;
     <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
         greet_rom_addr <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
@@ -806,7 +805,6 @@ You can easily create your own font version with different characters: check out
 <li>Greetings - Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/ad-astra/xc7/top_greet.sv">xc7/top_greet.sv</a></strong></li>
 <li>Greetings - iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/ad-astra/ice40/top_greet.sv">ice40/top_greet.sv</a></strong></li>
 </ul>
-<p><em>NB. The iCEBreaker version doesn&rsquo;t quite meet timing, but still works. See issue <a href="https://github.com/projf/projf-explore/issues/32">#32</a>.</em></p>
 <p><img src="/img/posts/fpga-ad-astra/fpga-ad-astra.png" alt="FPGA Ad Astra" title="To the stars!"></p>
 <h2 id="explore">Explore</h2>
 <p>I hope you enjoyed this instalment of <em>Exploring FPGA Graphics</em>, but nothing beats creating your own designs. Here are a few suggestions to get you started:</p>
@@ -827,7 +825,7 @@ You can easily create your own font version with different characters: check out
 <h3>Similar articles:</h3>
 <ul>
 	
-	<li><a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a></li>
+	<li><a href="/posts/fpga-graphics/">FPGA Graphics</a></li>
 	
 	<li><a href="/posts/hello-arty-2/">Hello Arty - Part 2</a></li>
 	

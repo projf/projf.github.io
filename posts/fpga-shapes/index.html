@@ -4,9 +4,9 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 
-<title>Shapes | Project F - FPGA Development</title>
+<title>2D Shapes | Project F - FPGA Development</title>
 
-<meta property='og:title' content='Shapes - Project F - FPGA Development'>
+<meta property='og:title' content='2D Shapes - Project F - FPGA Development'>
 <meta property='og:description' content='Welcome back to Exploring FPGA Graphics. This time we&rsquo;re going to build on our work in lines and triangles by drawing more shapes and filling them in before using our framebuffer to animate them.
 In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how displays work, race the beam with Pong, animate starfields and sprites, paint Michelangelo&rsquo;s David, simulate life with bitmaps, draw lines and shapes, and finally render simple 3D models.'>
 <meta property='og:url' content='https://projectf.io/posts/fpga-shapes/'>
@@ -115,23 +115,23 @@ In this series, we explore graphics at the hardware level and get a feel for the
       
     </div>
     <h2 class="subtitle is-6">17 March 2021</h2>
-    <h1 class="title">Shapes</h1>
+    <h1 class="title">2D Shapes</h1>
     
     <div class="content">
       <p>Welcome back to <em>Exploring FPGA Graphics</em>. This time we&rsquo;re going to build on our work in <a href="/posts/lines-and-triangles/">lines and triangles</a> by drawing more shapes and filling them in before using our framebuffer to animate them.</p>
-<p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how displays work, race the beam with Pong, animate starfields and sprites, paint Michelangelo&rsquo;s David, simulate life with bitmaps, draw lines and shapes, and finally render simple 3D models. New to the series? Start with <a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a>.</p>
+<p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how displays work, race the beam with Pong, animate starfields and sprites, paint Michelangelo&rsquo;s David, simulate life with bitmaps, draw lines and shapes, and finally render simple 3D models. New to the series? Start with <a href="/posts/fpga-graphics/">FPGA Graphics</a>.</p>
 <p><strong>April 2021: Draft post - designs for iCEBreaker and filled triangles will be added soon.</strong></p>
 <p><em>Updated 2021-04-23. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <h3 id="series-outline">Series Outline</h3>
 <ul>
-<li><a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a> - learn how displays work and animate simple shapes</li>
+<li><a href="/posts/fpga-graphics/">FPGA Graphics</a> - learn how displays work and animate simple shapes</li>
 <li><a href="/posts/fpga-pong/">Pong</a> - race the beam to create the arcade classic</li>
 <li><a href="/posts/hardware-sprites/">Hardware Sprites</a> - fast, colourful, graphics with minimal resources</li>
 <li><a href="/posts/fpga-ad-astra/">Ad Astra</a> - demo with hardware sprites and animated starfields</li>
 <li><a href="/posts/framebuffers/">Framebuffers</a> - driving the display from a bitmap in memory</li>
 <li><a href="/posts/life-on-screen/">Life on Screen</a> - the screen comes alive with Conway&rsquo;s Game of Life</li>
 <li><a href="/posts/lines-and-triangles/">Lines and Triangles</a> - drawing lines and triangles with a framebuffer</li>
-<li>Shapes (this post) - filling and animating shapes</li>
+<li>2D Shapes (this post) - filling and animating shapes</li>
 <li>Simple 3D - models and wireframe rendering (draft coming soon)</li>
 </ul>
 <h3 id="requirements">Requirements</h3>
@@ -145,7 +145,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
 <p>The SystemVerilog designs featured in this series are available from the <a href="https://github.com/projf/projf-explore/">projf-explore</a> git repo under the open-source MIT licence: build on them to your heart&rsquo;s content. The rest of the blog content is subject to standard copyright restrictions: don&rsquo;t republish it without permission.</p>
 <h2 id="the-rectangle">The Rectangle</h2>
 <p>Let&rsquo;s kick things off by creating a module for rectangle drawing; this is similar to the <a href="/posts/lines-and-triangles/#the-triangle">triangle</a> and provides a helpful stepping stone to drawing filled shapes.</p>
-<p>Create module <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/fpga-shapes/draw_rectangle.sv">draw_rectangle.sv</a>]</strong>:</p>
+<p>Create module <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/2d-shapes/draw_rectangle.sv">draw_rectangle.sv</a>]</strong>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> draw_rectangle #(<span style="color:#66d9ef">parameter</span> CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>) (  <span style="color:#75715e">// signed coordinate width
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,             <span style="color:#75715e">// clock
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst,             <span style="color:#75715e">// reset
@@ -237,7 +237,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
 </code></pre></div><p>This module has similar I/O and state machine to <code>draw_triangle</code>, but a rectangle only needs two pairs of coordinates to define it.</p>
 <p>To demo our rectangle drawing, we&rsquo;re going to draw a series of rectangles inside each other using each colour (except black). The top module is similar to the one we used in the previous part to draw <a href="/posts/lines-and-triangles/">lines and triangles</a>:</p>
 <ul>
-<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/fpga-shapes/xc7/top_rectangles.sv">xc7/top_rectangles.sv</a></strong></li>
+<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/2d-shapes/xc7/top_rectangles.sv">xc7/top_rectangles.sv</a></strong></li>
 <li>iCEBreaker (iCE40): <em>not yet available</em></li>
 </ul>
 <blockquote>
@@ -408,7 +408,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/fpga
 <span style="color:#66d9ef">endmodule</span>
 </code></pre></div><h2 id="filled-rectangle">Filled Rectangle</h2>
 <p>For a filled rectangle, we keep drawing horizontal lines in the right position until the shape is complete:</p>
-<p>Create module <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/fpga-shapes/draw_rectangle_fill.sv">draw_rectangle_fill.sv</a>]</strong>:</p>
+<p>Create module <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/2d-shapes/draw_rectangle_fill.sv">draw_rectangle_fill.sv</a>]</strong>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> draw_rectangle_fill #(<span style="color:#66d9ef">parameter</span> CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>) (  <span style="color:#75715e">// signed coordinate width
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,             <span style="color:#75715e">// clock
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst,             <span style="color:#75715e">// reset
@@ -497,91 +497,11 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/fpga
 <span style="color:#66d9ef">endmodule</span>
 </code></pre></div><p>For a simple demo of overlapping squares using the filled rectangle module, create a new top module:</p>
 <ul>
-<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/fpga-shapes/xc7/top_rectangles_fill.sv">xc7/top_rectangles_fill.sv</a></strong></li>
+<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/2d-shapes/xc7/top_rectangles_fill.sv">xc7/top_rectangles_fill.sv</a></strong></li>
 <li>iCEBreaker (iCE40): <em>not yet available</em></li>
 </ul>
-<p>The Arty version of <code>top_rectangles</code> looks like this:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_rectangles_fill (
-    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_100m,     <span style="color:#75715e">// 100 MHz clock
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_rst,      <span style="color:#75715e">// reset button (active low)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> vga_hsync,    <span style="color:#75715e">// horizontal sync
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> vga_vsync,    <span style="color:#75715e">// vertical sync
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vga_r,  <span style="color:#75715e">// 4-bit VGA red
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vga_g,  <span style="color:#75715e">// 4-bit VGA green
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vga_b   <span style="color:#75715e">// 4-bit VGA blue
-</span><span style="color:#75715e"></span>    );
-
-    <span style="color:#75715e">// generate pixel clock
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> clk_pix;
-    <span style="color:#66d9ef">logic</span> clk_locked;
-    clock_gen_480p clock_pix_inst (
-       .clk(clk_100m),
-       .rst(<span style="color:#f92672">!</span>btn_rst),  <span style="color:#75715e">// reset button is active low
-</span><span style="color:#75715e"></span>       .clk_pix,
-       .clk_locked
-    );
-
-    <span style="color:#75715e">// display timings
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">16</span>;
-    <span style="color:#66d9ef">logic</span> hsync, vsync;
-    <span style="color:#66d9ef">logic</span> de, frame, line;
-    display_timings_480p #(.CORDW(CORDW)) display_timings_inst (
-        .clk_pix,
-        .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for pixel clock lock
-</span><span style="color:#75715e"></span>        .sx(),
-        .sy(),
-        .hsync,
-        .vsync,
-        .de,
-        .frame,
-        .line
-    );
-
-    <span style="color:#66d9ef">logic</span> frame_sys;  <span style="color:#75715e">// start of new frame in system clock domain
-</span><span style="color:#75715e"></span>    xd xd_frame (.clk_i(clk_pix), .clk_o(clk_100m),
-                 .rst_i(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>), .rst_o(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>), .i(frame), .o(frame_sys));
-
-    <span style="color:#75715e">// framebuffer (FB)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> FB_WIDTH   <span style="color:#f92672">=</span> <span style="color:#ae81ff">320</span>;
-    <span style="color:#66d9ef">localparam</span> FB_HEIGHT  <span style="color:#f92672">=</span> <span style="color:#ae81ff">240</span>;
-    <span style="color:#66d9ef">localparam</span> FB_CIDXW   <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;
-    <span style="color:#66d9ef">localparam</span> FB_CHANW   <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;
-    <span style="color:#66d9ef">localparam</span> FB_SCALE   <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span>;
-    <span style="color:#66d9ef">localparam</span> FB_IMAGE   <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;&#34;</span>;
-    <span style="color:#66d9ef">localparam</span> FB_PALETTE <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;16_colr_4bit_palette.mem&#34;</span>;
-
-    <span style="color:#66d9ef">logic</span> fb_we;
-    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fbx, fby;  <span style="color:#75715e">// framebuffer coordinates
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [FB_CIDXW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_cidx;
-    <span style="color:#66d9ef">logic</span> [FB_CHANW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_red, fb_green, fb_blue;  <span style="color:#75715e">// colours for display
-</span><span style="color:#75715e"></span>
-    framebuffer #(
-        .WIDTH(FB_WIDTH),
-        .HEIGHT(FB_HEIGHT),
-        .CIDXW(FB_CIDXW),
-        .CHANW(FB_CHANW),
-        .SCALE(FB_SCALE),
-        .F_IMAGE(FB_IMAGE),
-        .F_PALETTE(FB_PALETTE)
-    ) fb_inst (
-        .clk_sys(clk_100m),
-        .clk_pix,
-        .rst_sys(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),
-        .rst_pix(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),
-        .de,
-        .frame,
-        .line,
-        .we(fb_we),
-        .x(fbx),
-        .y(fby),
-        .cidx(fb_cidx),
-        .clip(),
-        .red(fb_red),
-        .green(fb_green),
-        .blue(fb_blue)
-    );
-
-    <span style="color:#75715e">// draw filled rectangles in framebuffer
+<p>The Arty version of filled rectangles looks like this:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// draw filled rectangles in framebuffer
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> SHAPE_CNT<span style="color:#f92672">=</span><span style="color:#ae81ff">15</span>;  <span style="color:#75715e">// number of shapes to draw
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] shape_id;  <span style="color:#75715e">// shape identifier
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] rx0, ry0, rx1, ry1;  <span style="color:#75715e">// shape coords
@@ -629,32 +549,12 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/fpga
         .drawing,
         .done(draw_done)
     );
-
-    <span style="color:#75715e">// write to framebuffer when drawing
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> fb_we <span style="color:#f92672">=</span> drawing;
-
-    <span style="color:#75715e">// reading from FB takes one cycle: delay display signals to match
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> hsync_p1, vsync_p1;
-    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
-        hsync_p1 <span style="color:#f92672">&lt;=</span> hsync;
-        vsync_p1 <span style="color:#f92672">&lt;=</span> vsync;
-    <span style="color:#66d9ef">end</span>
-
-    <span style="color:#75715e">// VGA output
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
-        vga_hsync <span style="color:#f92672">&lt;=</span> hsync_p1;
-        vga_vsync <span style="color:#f92672">&lt;=</span> vsync_p1;
-        vga_r <span style="color:#f92672">&lt;=</span> fb_red;
-        vga_g <span style="color:#f92672">&lt;=</span> fb_green;
-        vga_b <span style="color:#f92672">&lt;=</span> fb_blue;
-    <span style="color:#66d9ef">end</span>
-<span style="color:#66d9ef">endmodule</span>
 </code></pre></div><h2 id="filled-triangle">Filled Triangle</h2>
 <p><em>Design in progress</em></p>
 <h2 id="blazing-a-trail">Blazing a Trail</h2>
 <p>Back at the start of the series, we <a href="/posts/fpga-graphics/">animated bouncing squares</a>; now we&rsquo;re going to do it with a framebuffer.</p>
 <ul>
-<li>Arty (XC7): <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/fpga-shapes/xc7/top_fb_bounce_v1.sv">top_fb_bounce_v1.sv</a>]</strong></li>
+<li>Arty (XC7): <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/2d-shapes/xc7/top_fb_bounce_v1.sv">top_fb_bounce_v1.sv</a>]</strong></li>
 <li>iCEBreaker (iCE40): <em>not yet available</em></li>
 </ul>
 <p>Our framebuffer remembers all the square we&rsquo;ve drawn, so the screen gradually fills with striped colour. While this is a fun effect, it&rsquo;s not usually what you want.</p>
@@ -668,7 +568,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/fpga
 <h2 id="double-buffering">Double Buffering</h2>
 <p>We can&rsquo;t draw in a framebuffer while the display controller reads it; otherwise we&rsquo;ll get <a href="https://en.wikipedia.org/wiki/Screen_tearing">tearing</a>. We could limit ourselves to drawing in the vertical blanking interval, but even for 640x480 with its generous blanking, we&rsquo;d only be able to draw for less than 10% of the time. And we still need time to clear the framebuffer every frame, which takes a considerable time, even at 320x180.</p>
 <p>To draw all the time, we can double our framebuffer: drawing in one half while the display controller read from the other one. That way, we can be drawing all the time and avoid screen tearing. The only downsides are the need for twice the memory and the extra frame of latency.</p>
-<p>Add the framebuffer module with double buffering - <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/fpga-shapes/framebuffer_db.sv">framebuffer_db.sv</a>]</strong>:</p>
+<p>Add the framebuffer module with double buffering - <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lib/display/framebuffer_db.sv">framebuffer_db.sv</a>]</strong>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> framebuffer_db #(
     <span style="color:#66d9ef">parameter</span> CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>,      <span style="color:#75715e">// signed coordinate width (bits)
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">160</span>,     <span style="color:#75715e">// width of framebuffer in pixels
@@ -870,19 +770,19 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/fpga
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
 </code></pre></div><p>This double-buffered design is only 30 lines longer than the <a href="/posts/framebuffers/#framebuffer-module">original framebuffer module</a>.</p>
-<p>There&rsquo;s a test bench you can use to exercise the module with Vivado: <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/fpga-shapes/xc7/framebuffer_db_tb.sv">xc7/framebuffer_db_tb.sv</a>]</strong>.</p>
+<p>There&rsquo;s a test bench you can use to exercise the module with Vivado: <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lib/display/xc7/framebuffer_db_tb.sv">xc7/framebuffer_db_tb.sv</a>]</strong>.</p>
 <p><em>Details of the changes will be added shortly.</em></p>
 <h3 id="hip-to-be-square-redux">Hip to be Square Redux</h3>
 <p>We can cleanly animate a square using our new double-buffered framebuffer:</p>
 <ul>
-<li>Arty (XC7): <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/fpga-shapes/xc7/top_fb_bounce.sv">top_fb_bounce.sv</a>]</strong></li>
+<li>Arty (XC7): <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/2d-shapes/xc7/top_fb_bounce.sv">top_fb_bounce.sv</a>]</strong></li>
 <li>iCEBreaker (iCE40): <em>not yet available</em></li>
 </ul>
 <p>That seems like a lot of work to replicate what we did in a few lines back at the start of the series, but drawing shapes in a framebuffer is far more versatile.</p>
 <h2 id="tunnel-vision">Tunnel Vision</h2>
 <p>Using our new framebuffer and a few animated rectangles, we can create the illusion of flying down a tunnel:</p>
 <ul>
-<li>Arty (XC7): <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/fpga-shapes/xc7/top_tunnel.sv">top_tunnel.sv</a>]</strong></li>
+<li>Arty (XC7): <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/2d-shapes/xc7/top_tunnel.sv">top_tunnel.sv</a>]</strong></li>
 <li>iCEBreaker (iCE40): <em>not yet available</em></li>
 </ul>
 <p>The Arty version of the tunnel looks like this:</p>

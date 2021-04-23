@@ -119,18 +119,18 @@ In this series, we explore graphics at the hardware level and get a feel for the
     
     <div class="content">
       <p>Welcome back to <em>Exploring FPGA Graphics</em>. In the previous part, we got an <a href="/posts/fpga-graphics/">introduction to FPGA graphics</a>; now we&rsquo;re ready to put our graphical skills to work recreating the arcade classic: Pong.</p>
-<p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how displays work, race the beam with Pong, animate starfields and sprites, paint Michelangelo&rsquo;s David, simulate life with bitmaps, draw lines and shapes, and finally render simple 3D models. New to the series? Start with <a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a>.</p>
+<p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how displays work, race the beam with Pong, animate starfields and sprites, paint Michelangelo&rsquo;s David, simulate life with bitmaps, draw lines and shapes, and finally render simple 3D models. New to the series? Start with <a href="/posts/fpga-graphics/">FPGA Graphics</a>.</p>
 <p><em>Updated 2021-04-23. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <h3 id="series-outline">Series Outline</h3>
 <ul>
-<li><a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a> - learn how displays work and animate simple shapes</li>
+<li><a href="/posts/fpga-graphics/">FPGA Graphics</a> - learn how displays work and animate simple shapes</li>
 <li>Pong (this post) - race the beam to create the arcade classic</li>
 <li><a href="/posts/hardware-sprites/">Hardware Sprites</a> - fast, colourful, graphics with minimal resources</li>
 <li><a href="/posts/fpga-ad-astra/">Ad Astra</a> - demo with hardware sprites and animated starfields</li>
 <li><a href="/posts/framebuffers/">Framebuffers</a> - driving the display from a bitmap in memory</li>
 <li><a href="/posts/life-on-screen/">Life on Screen</a> - the screen comes alive with Conway&rsquo;s Game of Life</li>
 <li><a href="/posts/lines-and-triangles/">Lines and Triangles</a> - drawing lines and triangles with a framebuffer</li>
-<li><a href="/posts/fpga-shapes/">Shapes</a> - filling and animating shapes</li>
+<li><a href="/posts/fpga-shapes/">2D Shapes</a> - filling and animating shapes</li>
 <li>Simple 3D - models and wireframe rendering (draft coming soon)</li>
 </ul>
 <h3 id="requirements">Requirements</h3>
@@ -148,7 +148,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
 <p>Pong may not have been the first computer game, but it has an excellent claim to being the first to break into public consciousness on release in 1972. Originally an arcade cabinet, it was quickly adapted for play at home with a television. If you&rsquo;d like to learn more about the early history of Atari, including Pong, I recommend <em><a href="https://mitpress.mit.edu/books/racing-beam">Racing the Beam</a></em> by Nick Montfort and Ian Bogost.</p>
 <p>If you&rsquo;re unfamiliar with Pong gameplay, check out this <a href="https://www.youtube.com/watch?v=it0sf4CMDeM">Pong video</a> on YouTube.</p>
 <h2 id="a-square-ball">A Square Ball</h2>
-<p>Pong uses a square ball, so we can reuse our design from <a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a>. We&rsquo;re going to start off looking at the Arty (Xilinx) version, but links to designs for both boards can be found below the source listing.</p>
+<p>Pong uses a square ball, so we can reuse our design from <a href="/posts/fpga-graphics/">FPGA Graphics</a>. We&rsquo;re going to start off looking at the Arty (Xilinx) version, but links to designs for both boards can be found below the source listing.</p>
 <p>We generate our pixel clock and display timings, then set up a ball and update its position once per frame. For now the ball bounces off all four sides of the screen.</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_pong_v1 (
     <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_100m,     <span style="color:#75715e">// 100 MHz clock
@@ -174,7 +174,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>;  <span style="color:#75715e">// screen coordinate width in bits
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx, sy;
     <span style="color:#66d9ef">logic</span> hsync, vsync, de;
-    display_timings_480p display_timings_inst (
+    simple_display_timings_480p display_timings_inst (
         .clk_pix,
         .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for clock lock
 </span><span style="color:#75715e"></span>        .sx,
@@ -239,7 +239,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
 <span style="color:#66d9ef">endmodule</span>
 </code></pre></div><h3 id="pong-v1">Pong v1</h3>
 <p>Build the first version of pong and test it with your board.</p>
-<p>We use the same display controller and clock generator as <a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a>:</p>
+<p>We use the same display controller and clock generator as <a href="/posts/fpga-graphics/">FPGA Graphics</a>:</p>
 <ul>
 <li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/pong/xc7/top_pong_v1.sv">xc7/top_pong_v1.sv</a></strong></li>
 <li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/pong/ice40/top_pong_v1.sv">ice40/top_pong_v1.sv</a></strong></li>
@@ -329,6 +329,16 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/pong
 </span><span style="color:#75715e"></span>                dx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
                 bx <span style="color:#f92672">&lt;=</span> bx <span style="color:#f92672">+</span> spx;
             <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> bx <span style="color:#f92672">&lt;=</span> (dx) <span style="color:#f92672">?</span> bx <span style="color:#f92672">-</span> spx <span style="color:#f92672">:</span> bx <span style="color:#f92672">+</span> spx;
+
+            <span style="color:#66d9ef">if</span> (by <span style="color:#f92672">&gt;=</span> V_RES <span style="color:#f92672">-</span> (spy <span style="color:#f92672">+</span> B_SIZE)) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// bottom edge
+</span><span style="color:#75715e"></span>                dy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                by <span style="color:#f92672">&lt;=</span> by <span style="color:#f92672">-</span> spy;
+            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (by <span style="color:#f92672">&lt;</span> spy) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// top edge
+</span><span style="color:#75715e"></span>                dy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                by <span style="color:#f92672">&lt;=</span> by <span style="color:#f92672">+</span> spy;
+            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> by <span style="color:#f92672">&lt;=</span> (dy) <span style="color:#f92672">?</span> by <span style="color:#f92672">-</span> spy <span style="color:#f92672">:</span> by <span style="color:#f92672">+</span> spy;
+        <span style="color:#66d9ef">end</span>
+    <span style="color:#66d9ef">end</span>
 </code></pre></div><p>We can also speed up the ball and paddles by editing the following values:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] spx <span style="color:#f92672">=</span> <span style="color:#ae81ff">6</span>;  <span style="color:#75715e">// horizontal speed
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] spy <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;  <span style="color:#75715e">// vertical speed
@@ -363,7 +373,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/pong
 <li>BTN1 - control</li>
 <li>BTN3 - up</li>
 </ul>
-<p>To safely use buttons in our design, we need to debounce them. Debouncing ensures we get a single, clean, transition from button presses. The debounce module looks like this <strong>[<a href="https://github.com/projf/projf-explore/blob/master/common/debounce.sv">debounce.sv</a>]</strong>:</p>
+<p>To safely use buttons in our design, we need to debounce them. Debouncing ensures we get a single, clean, transition from button presses. The debounce module looks like this <strong>[<a href="https://github.com/projf/projf-explore/blob/master/common/essential/debounce.sv">debounce.sv</a>]</strong>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> debounce (
     <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,   <span style="color:#75715e">// clock
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> in,    <span style="color:#75715e">// signal input
@@ -414,8 +424,9 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/pong
 <p>We define the state using an enum and a simple finite state machine. This is overkill for two states but makes it easy to expand our game to include other concepts, such as the end of a point.</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// game state
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">enum</span> {IDLE, PLAY} state, state_next;
-    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        <span style="color:#66d9ef">case</span>(state)
+    <span style="color:#66d9ef">initial</span> state <span style="color:#f92672">=</span> IDLE;  <span style="color:#75715e">// needed for Yosys
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">case</span> (state)
             IDLE: state_next <span style="color:#f92672">=</span> (sig_ctrl) <span style="color:#f92672">?</span> PLAY <span style="color:#f92672">:</span> IDLE;
             PLAY: state_next <span style="color:#f92672">=</span> (sig_ctrl) <span style="color:#f92672">?</span> IDLE <span style="color:#f92672">:</span> PLAY;
             <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> state_next <span style="color:#f92672">=</span> IDLE;
@@ -478,8 +489,9 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/pong
 <p>Add these to your top module:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// game state
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">enum</span> {INIT, IDLE, START, PLAY, POINT_END} state, state_next;
-    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        <span style="color:#66d9ef">case</span>(state)
+    <span style="color:#66d9ef">initial</span> state <span style="color:#f92672">=</span> IDLE;  <span style="color:#75715e">// needed for Yosys
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">case</span> (state)
             INIT: state_next <span style="color:#f92672">=</span> IDLE;
             IDLE: state_next <span style="color:#f92672">=</span> (sig_ctrl) <span style="color:#f92672">?</span> START <span style="color:#f92672">:</span> IDLE;
             START: state_next <span style="color:#f92672">=</span> (sig_ctrl) <span style="color:#f92672">?</span> PLAY <span style="color:#f92672">:</span> START;
@@ -489,23 +501,41 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/pong
         <span style="color:#66d9ef">endcase</span>
     <span style="color:#66d9ef">end</span>
 </code></pre></div><p>Once a point has ended, the player presses the control button to set up the game for the next point. Pressing the control button no longer switches to demo mode.</p>
-<p>You&rsquo;ll notice that the PLAY state transitions to POINT_END if <code>lft_col</code> or <code>rgt_col</code> are high. We need to set these signals when the ball collides with the left or right edge of the screen.</p>
-<p>Within the top module, update the ball animation for the right and left edges to record a collision:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (bx <span style="color:#f92672">&gt;=</span> H_RES <span style="color:#f92672">-</span> (spx <span style="color:#f92672">+</span> B_SIZE)) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// right edge
-</span><span style="color:#75715e"></span>        rgt_col <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-    <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (bx <span style="color:#f92672">&lt;</span> spx) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// left edge
-</span><span style="color:#75715e"></span>        lft_col <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-    <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> bx <span style="color:#f92672">&lt;=</span> (dx) <span style="color:#f92672">?</span> bx <span style="color:#f92672">-</span> spx <span style="color:#f92672">:</span> bx <span style="color:#f92672">+</span> spx;
-</code></pre></div><p>Then add support for the INIT and START states to the paddle and ball animations:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+<p>You&rsquo;ll notice that the PLAY state transitions to POINT_END if <code>lft_col</code> or <code>rgt_col</code> are high. We need to set these signals when the ball collides with the left or right edge of the screen. We also need to update the ball and paddle animations to support the new <code>INIT</code> and <code>START</code> states.</p>
+<p>The new ball animation looks like this:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// ball animation
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">if</span> (state <span style="color:#f92672">==</span> INIT <span style="color:#f92672">||</span> state <span style="color:#f92672">==</span> START) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// reset ball position
+</span><span style="color:#75715e"></span>            bx <span style="color:#f92672">&lt;=</span> (H_RES <span style="color:#f92672">-</span> B_SIZE) <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">1</span>;
+            by <span style="color:#f92672">&lt;=</span> (V_RES <span style="color:#f92672">-</span> B_SIZE) <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">1</span>;
+            dx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// serve towards player 2 (AI)
+</span><span style="color:#75715e"></span>            dy <span style="color:#f92672">&lt;=</span> <span style="color:#f92672">~</span>dy;
+            lft_col <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            rgt_col <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (animate <span style="color:#f92672">&amp;&amp;</span> state <span style="color:#f92672">!=</span> POINT_END) <span style="color:#66d9ef">begin</span>
+
+            <span style="color:#75715e">// ...
+</span><span style="color:#75715e"></span>
+            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (bx <span style="color:#f92672">&gt;=</span> H_RES <span style="color:#f92672">-</span> (spx <span style="color:#f92672">+</span> B_SIZE)) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// right edge
+</span><span style="color:#75715e"></span>                rgt_col <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (bx <span style="color:#f92672">&lt;</span> spx) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// left edge
+</span><span style="color:#75715e"></span>                lft_col <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> bx <span style="color:#f92672">&lt;=</span> (dx) <span style="color:#f92672">?</span> bx <span style="color:#f92672">-</span> spx <span style="color:#f92672">:</span> bx <span style="color:#f92672">+</span> spx;
+
+            <span style="color:#75715e">// ...
+</span></code></pre></div><p>And paddle animation like this:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// paddle animation
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">if</span> (state <span style="color:#f92672">==</span> INIT <span style="color:#f92672">||</span> state <span style="color:#f92672">==</span> START) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// reset paddle positions
 </span><span style="color:#75715e"></span>            p1y <span style="color:#f92672">&lt;=</span> (V_RES <span style="color:#f92672">-</span> P_H) <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">1</span>;
             p2y <span style="color:#f92672">&lt;=</span> (V_RES <span style="color:#f92672">-</span> P_H) <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">1</span>;
         <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (animate <span style="color:#f92672">&amp;&amp;</span> state <span style="color:#f92672">!=</span> POINT_END) <span style="color:#66d9ef">begin</span>
             <span style="color:#66d9ef">if</span> (state <span style="color:#f92672">==</span> PLAY) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// human paddle 1
-</span><span style="color:#75715e"></span>            <span style="color:#75715e">// ...
 </span><span style="color:#75715e"></span>
-    <span style="color:#75715e">// ball animation
+            <span style="color:#75715e">// ...
+</span></code></pre></div><h2 id="bouncing-mad">Bouncing Mad</h2>
+<p>To make the game more interesting, we can change the bounce angle depending on where the ball hits the paddle. A simple way to do this is to update the vertical direction depending on where the ball hits the paddle. If the ball strikes the top half of the paddle, it goes up, if it strikes the bottom half it goes down. We need to add this for collisions with either paddle. The final ball animation looks like this:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// ball animation
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">if</span> (state <span style="color:#f92672">==</span> INIT <span style="color:#f92672">||</span> state <span style="color:#f92672">==</span> START) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// reset ball position
 </span><span style="color:#75715e"></span>            bx <span style="color:#f92672">&lt;=</span> (H_RES <span style="color:#f92672">-</span> B_SIZE) <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">1</span>;
@@ -516,20 +546,29 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/pong
             rgt_col <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
         <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (animate <span style="color:#f92672">&amp;&amp;</span> state <span style="color:#f92672">!=</span> POINT_END) <span style="color:#66d9ef">begin</span>
             <span style="color:#66d9ef">if</span> (p1_col) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// left paddle collision
-</span><span style="color:#75715e"></span>            <span style="color:#75715e">// ...
-</span></code></pre></div><h2 id="bouncing-mad">Bouncing Mad</h2>
-<p>To make the game more interesting, we can change the bounce angle depending on where the ball hits the paddle. A simple way to do this is to update the vertical direction depending on where the ball hits the paddle. If the ball strikes the top half of the paddle, it goes up, if it strikes the bottom half it goes down. We need to add this for collisions with either paddle:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">if</span> (p1_col) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// left paddle collision
-</span><span style="color:#75715e"></span>        dx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-        bx <span style="color:#f92672">&lt;=</span> bx <span style="color:#f92672">+</span> spx;
-        dy <span style="color:#f92672">&lt;=</span> (by <span style="color:#f92672">+</span> B_SIZE<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span> <span style="color:#f92672">&lt;</span> p1y <span style="color:#f92672">+</span> P_H<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>) <span style="color:#f92672">?</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
-    <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (p2_col) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// right paddle collision
-</span><span style="color:#75715e"></span>        dx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-        bx <span style="color:#f92672">&lt;=</span> bx <span style="color:#f92672">-</span> spx;
-        dy <span style="color:#f92672">&lt;=</span> (by <span style="color:#f92672">+</span> B_SIZE<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span> <span style="color:#f92672">&lt;</span> p1y <span style="color:#f92672">+</span> P_H<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>) <span style="color:#f92672">?</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
-    <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (bx <span style="color:#f92672">&gt;=</span> H_RES <span style="color:#f92672">-</span> (spx <span style="color:#f92672">+</span> B_SIZE)) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// right edge
-</span><span style="color:#75715e"></span>        <span style="color:#75715e">// ...
-</span></code></pre></div><p>We can also increase the ball speed over time by counting the number of collisions:</p>
+</span><span style="color:#75715e"></span>                dx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                bx <span style="color:#f92672">&lt;=</span> bx <span style="color:#f92672">+</span> spx;
+                dy <span style="color:#f92672">&lt;=</span> (by <span style="color:#f92672">+</span> B_SIZE<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span> <span style="color:#f92672">&lt;</span> p1y <span style="color:#f92672">+</span> P_H<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>) <span style="color:#f92672">?</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
+            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (p2_col) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// right paddle collision
+</span><span style="color:#75715e"></span>                dx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                bx <span style="color:#f92672">&lt;=</span> bx <span style="color:#f92672">-</span> spx;
+                dy <span style="color:#f92672">&lt;=</span> (by <span style="color:#f92672">+</span> B_SIZE<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span> <span style="color:#f92672">&lt;</span> p1y <span style="color:#f92672">+</span> P_H<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span>) <span style="color:#f92672">?</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
+            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (bx <span style="color:#f92672">&gt;=</span> H_RES <span style="color:#f92672">-</span> (spx <span style="color:#f92672">+</span> B_SIZE)) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// right edge
+</span><span style="color:#75715e"></span>                rgt_col <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (bx <span style="color:#f92672">&lt;</span> spx) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// left edge
+</span><span style="color:#75715e"></span>                lft_col <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> bx <span style="color:#f92672">&lt;=</span> (dx) <span style="color:#f92672">?</span> bx <span style="color:#f92672">-</span> spx <span style="color:#f92672">:</span> bx <span style="color:#f92672">+</span> spx;
+
+            <span style="color:#66d9ef">if</span> (by <span style="color:#f92672">&gt;=</span> V_RES <span style="color:#f92672">-</span> (spy <span style="color:#f92672">+</span> B_SIZE)) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// bottom edge
+</span><span style="color:#75715e"></span>                dy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                by <span style="color:#f92672">&lt;=</span> by <span style="color:#f92672">-</span> spy;
+            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (by <span style="color:#f92672">&lt;</span> spy) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// top edge
+</span><span style="color:#75715e"></span>                dy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                by <span style="color:#f92672">&lt;=</span> by <span style="color:#f92672">+</span> spy;
+            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> by <span style="color:#f92672">&lt;=</span> (dy) <span style="color:#f92672">?</span> by <span style="color:#f92672">-</span> spy <span style="color:#f92672">:</span> by <span style="color:#f92672">+</span> spy;
+        <span style="color:#66d9ef">end</span>
+    <span style="color:#66d9ef">end</span>
+</code></pre></div><p>We can also increase the ball speed over time by counting the number of collisions:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// ball speed control
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> SPEED_STEP <span style="color:#f92672">=</span> <span style="color:#ae81ff">5</span>;  <span style="color:#75715e">// speed up after this many collisions
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(SPEED_STEP)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_sp;  <span style="color:#75715e">// speed counter
@@ -586,7 +625,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/pong
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>;  <span style="color:#75715e">// screen coordinate width in bits
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx, sy;
     <span style="color:#66d9ef">logic</span> hsync, vsync, de;
-    display_timings_480p display_timings_inst (
+    simple_display_timings_480p display_timings_inst (
         .clk_pix,
         .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for clock lock
 </span><span style="color:#75715e"></span>        .sx,
@@ -634,8 +673,9 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/pong
 </span><span style="color:#75715e"></span>
     <span style="color:#75715e">// game state
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">enum</span> {INIT, IDLE, START, PLAY, POINT_END} state, state_next;
-    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        <span style="color:#66d9ef">case</span>(state)
+    <span style="color:#66d9ef">initial</span> state <span style="color:#f92672">=</span> IDLE;  <span style="color:#75715e">// needed for Yosys
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">case</span> (state)
             INIT: state_next <span style="color:#f92672">=</span> IDLE;
             IDLE: state_next <span style="color:#f92672">=</span> (sig_ctrl) <span style="color:#f92672">?</span> START <span style="color:#f92672">:</span> IDLE;
             START: state_next <span style="color:#f92672">=</span> (sig_ctrl) <span style="color:#f92672">?</span> PLAY <span style="color:#f92672">:</span> START;
@@ -813,7 +853,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/pong
 	
 	<li><a href="/posts/fpga-ad-astra/">Ad Astra</a></li>
 	
-	<li><a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a></li>
+	<li><a href="/posts/fpga-graphics/">FPGA Graphics</a></li>
 	
 	<li><a href="/posts/video-timings-vga-720p-1080p/">Video Timings: VGA, SVGA, 720p, 1080p</a></li>
 	

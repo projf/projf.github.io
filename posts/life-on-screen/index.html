@@ -119,7 +119,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
     
     <div class="content">
       <p>Welcome back to <em>Exploring FPGA Graphics</em>. In this post we&rsquo;re going to use the designs we created in <a href="/posts/framebuffers/">Framebuffers</a> to experiment with Conway&rsquo;s Game of Life.</p>
-<p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how displays work, race the beam with Pong, animate starfields and sprites, paint Michelangelo&rsquo;s David, simulate life with bitmaps, draw lines and shapes, and finally render simple 3D models. New to the series? Start with <a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a>.</p>
+<p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how displays work, race the beam with Pong, animate starfields and sprites, paint Michelangelo&rsquo;s David, simulate life with bitmaps, draw lines and shapes, and finally render simple 3D models. New to the series? Start with <a href="/posts/fpga-graphics/">FPGA Graphics</a>.</p>
 <p><strong>April 2021: Draft post now includes design for iCEBreaker!</strong></p>
 <p><em>Updated 2021-04-23. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <blockquote>
@@ -128,14 +128,14 @@ In this series, we explore graphics at the hardware level and get a feel for the
 </blockquote>
 <h3 id="series-outline">Series Outline</h3>
 <ul>
-<li><a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a> - learn how displays work and animate simple shapes</li>
+<li><a href="/posts/fpga-graphics/">FPGA Graphics</a> - learn how displays work and animate simple shapes</li>
 <li><a href="/posts/fpga-pong/">Pong</a> - race the beam to create the arcade classic</li>
 <li><a href="/posts/hardware-sprites/">Hardware Sprites</a> - fast, colourful, graphics with minimal resources</li>
 <li><a href="/posts/fpga-ad-astra/">Ad Astra</a> - demo with hardware sprites and animated starfields</li>
 <li><a href="/posts/framebuffers/">Framebuffers</a> - driving the display from a bitmap in memory</li>
 <li>Life on Screen (this post) - the screen comes alive with Conway&rsquo;s Game of Life</li>
 <li><a href="/posts/lines-and-triangles/">Lines and Triangles</a> - drawing lines and triangles with a framebuffer</li>
-<li><a href="/posts/fpga-shapes/">Shapes</a> - filling and animating shapes</li>
+<li><a href="/posts/fpga-shapes/">2D Shapes</a> - filling and animating shapes</li>
 <li>Simple 3D - models and wireframe rendering (draft coming soon)</li>
 </ul>
 <h3 id="requirements">Requirements</h3>
@@ -184,7 +184,7 @@ b. otherwise, it&rsquo;s dead next generation</li>
 <li>Wrap the world around at left and right, and at top and bottom</li>
 </ol>
 <p>Both approaches have their advantages and disadvantages, so we&rsquo;ll support both, but start with option 1.</p>
-<p>Since a cell&rsquo;s state depends on all those around it, we can&rsquo;t calculate the new state of each cell with one array. Instead, we have two array (or buffers): one contains the current generation; we use it to calculate the next generation in the second buffer. Every generation, we swap buffers and repeat the simulation process.</p>
+<p>Since a cell&rsquo;s state depends on all those around it, we can&rsquo;t calculate the new state of each cell with one array. Instead, we have two array (or buffers): one contains the current generation; we use it to calculate the next generation in the second buffer. Every generation, we swap buffers and repeat the generation process.</p>
 <p>Create a life module with the following design - <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/life-on-screen/life.sv">life.sv</a>]</strong>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> life #(
     <span style="color:#66d9ef">parameter</span> CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>,   <span style="color:#75715e">// signed coordinate width
@@ -192,19 +192,19 @@ b. otherwise, it&rsquo;s dead next generation</li>
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> HEIGHT<span style="color:#f92672">=</span><span style="color:#ae81ff">6</span>,   <span style="color:#75715e">// world height in cells
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> F_INIT<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;&#34;</span>   <span style="color:#75715e">// initial world state
 </span><span style="color:#75715e"></span>    ) (
-    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,             <span style="color:#75715e">// clock
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst,             <span style="color:#75715e">// reset
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> start,           <span style="color:#75715e">// start sim generation
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> ready,           <span style="color:#75715e">// cell state ready to be read
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> alive,           <span style="color:#75715e">// is the cell alive? (when ready)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> changed,         <span style="color:#75715e">// cell&#39;s state changed (when ready)
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,      <span style="color:#75715e">// clock
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst,      <span style="color:#75715e">// reset
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> start,    <span style="color:#75715e">// start generation
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> ready,    <span style="color:#75715e">// cell state ready to be read
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> alive,    <span style="color:#75715e">// is the cell alive? (when ready)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> changed,  <span style="color:#75715e">// cell&#39;s state changed (when ready)
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x,  <span style="color:#75715e">// horizontal cell position
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] y,  <span style="color:#75715e">// vertical cell position
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> running,         <span style="color:#75715e">// sim is running
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> done             <span style="color:#75715e">// sim complete (high for one tick)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> running,  <span style="color:#75715e">// life is running
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> done      <span style="color:#75715e">// generation complete (high for one tick)
 </span><span style="color:#75715e"></span>    );
 
-    <span style="color:#75715e">// sim buffer selection
+    <span style="color:#75715e">// world buffer selection
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> next_gen;  <span style="color:#75715e">// where to write the next generation
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">if</span> (start) next_gen <span style="color:#f92672">&lt;=</span> <span style="color:#f92672">~</span>next_gen;  <span style="color:#75715e">// swap every generation
@@ -254,7 +254,7 @@ b. otherwise, it&rsquo;s dead next generation</li>
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [GRID<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] top_sr, mid_sr, bot_sr;  <span style="color:#75715e">// shift reg for neighbours
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(GRID<span style="color:#f92672">*</span>GRID)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] neigh_cnt;  <span style="color:#75715e">// count of neighbours
 </span><span style="color:#75715e"></span>
-    <span style="color:#75715e">// life sim state
+    <span style="color:#75715e">// life generation state
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">enum</span> {IDLE, INIT, READ, NEIGH, UPDATE, NEW_CELL, NEW_LINE} state;
     <span style="color:#66d9ef">initial</span> state <span style="color:#f92672">=</span> IDLE;  <span style="color:#75715e">// needed for Yosys
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
@@ -406,7 +406,7 @@ b. otherwise, it&rsquo;s dead next generation</li>
 <li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/life-on-screen/xc7/top_life.sv">xc7/top_life.sv</a></strong></li>
 <li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/life-on-screen/ice40/top_life.sv">ice40/top_life.sv</a></strong></li>
 </ul>
-<p>The Xilinx version is shown below:</p>
+<p>The Arty version is shown below:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_life (
     <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_100m,     <span style="color:#75715e">// 100 MHz clock
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_rst,      <span style="color:#75715e">// reset button (active low)
@@ -516,14 +516,14 @@ b. otherwise, it&rsquo;s dead next generation</li>
     ) life_inst (
         .clk(clk_100m),          <span style="color:#75715e">// clock
 </span><span style="color:#75715e"></span>        .rst(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),              <span style="color:#75715e">// reset
-</span><span style="color:#75715e"></span>        .start(life_start),      <span style="color:#75715e">// start sim generation
+</span><span style="color:#75715e"></span>        .start(life_start),      <span style="color:#75715e">// start generation
 </span><span style="color:#75715e"></span>        .ready(fb_we),           <span style="color:#75715e">// cell state ready to be read
 </span><span style="color:#75715e"></span>        .alive(life_alive),      <span style="color:#75715e">// is the cell alive? (when ready)
 </span><span style="color:#75715e"></span>        .changed(life_changed),  <span style="color:#75715e">// cell&#39;s state changed (when ready)
 </span><span style="color:#75715e"></span>        .x(fbx),                 <span style="color:#75715e">// horizontal cell position
 </span><span style="color:#75715e"></span>        .y(fby),                 <span style="color:#75715e">// vertical cell position
-</span><span style="color:#75715e"></span>        .running(),              <span style="color:#75715e">// sim is running
-</span><span style="color:#75715e"></span>        .done()                  <span style="color:#75715e">// sim complete (high for one tick)
+</span><span style="color:#75715e"></span>        .running(),              <span style="color:#75715e">// life is running
+</span><span style="color:#75715e"></span>        .done()                  <span style="color:#75715e">// generation complete (high for one tick)
 </span><span style="color:#75715e"></span>    );
 
     <span style="color:#75715e">// reading from FB takes one cycle: delay display signals to match
@@ -542,7 +542,7 @@ b. otherwise, it&rsquo;s dead next generation</li>
         vga_b <span style="color:#f92672">&lt;=</span> fb_blue;
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
-</code></pre></div><p>We use a 64x48 world, which is a tenth of the 640x480 screen dimensions. With the padding of dead cells, each simulation array has <code>66 x 50 = 3,300</code> cells, which comfortably fits into 4Kb (though iCEBreaker BRAM has a minimum width of two bits, so it uses two BRAMs per world buffer).</p>
+</code></pre></div><p>We use a 64x48 world, which is a tenth of the 640x480 screen dimensions. With the padding of dead cells, each world array has <code>66 x 50 = 3,300</code> cells, which comfortably fits into 4Kb (though iCEBreaker BRAM has a minimum width of two bits, so it uses two BRAMs per world buffer).</p>
 <blockquote>
 <p><strong>Building the Designs</strong><br>
 In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/life-on-screen">Life on Screen</a> section of the git repo, you&rsquo;ll find the design files, a makefile for iCEBreaker, a Vivado project for Arty, and instructions for building the designs for both boards.</p>
@@ -550,7 +550,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/life
 <p>Once you&rsquo;ve programmed your board, you should see a simple test pattern of oscillators and a still life.
 If that works, try the Gosper glider gun by changing the seed file in <code>top_life.sv</code> to <code>gosper_gun.mem</code>.</p>
 <p>The Gosper pattern repeatedly generates small gliders that move down the screen. Our gliders doesn&rsquo;t continue indefinitely because our world is currently surrounded by dead cells, which kill the gliders when they collide with it.</p>
-<p>You can also change how fast the simulation runs by adjusting <code>GEN_FRAMES</code>:</p>
+<p>You can also change how fast Life runs by adjusting <code>GEN_FRAMES</code>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">parameter</span> GEN_FRAMES  <span style="color:#f92672">=</span> <span style="color:#ae81ff">60</span>;  <span style="color:#75715e">// each generation lasts this many frames
 </span></code></pre></div><h2 id="wrap-around">Wrap Around</h2>
 <p>Let&rsquo;s wrap our world around at left and right, and at top and bottom; this is known as a <a href="https://en.wikipedia.org/wiki/Torus">toroidal</a> array. Contrast a toroidal array with a 2D map of Earth: the map wraps around at the east and west, but <em>not</em> at the north and south.</p>
@@ -577,7 +577,7 @@ If that works, try the Gosper glider gun by changing the seed file in <code>top_
 	
 	<li><a href="/posts/fpga-ad-astra/">Ad Astra</a></li>
 	
-	<li><a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a></li>
+	<li><a href="/posts/fpga-graphics/">FPGA Graphics</a></li>
 	
 	<li><a href="/posts/video-timings-vga-720p-1080p/">Video Timings: VGA, SVGA, 720p, 1080p</a></li>
 	

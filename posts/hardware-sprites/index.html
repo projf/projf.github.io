@@ -119,18 +119,18 @@ In this series, we explore graphics at the hardware level and get a feel for the
     
     <div class="content">
       <p>Welcome back to <em>Exploring FPGA Graphics</em>. In the previous part, we recreated <a href="/posts/fpga-pong/">Pong</a>. In this part, we learn how to create colourful animated graphics with hardware sprites. Hardware sprites maintain much of the simplicity of our Pong design while offering much greater creative freedom. In the <a href="/posts/fpga-ad-astra/">next part</a>, we&rsquo;ll create a demo that gives a taste of what&rsquo;s possible with sprites.</p>
-<p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how displays work, race the beam with Pong, animate starfields and sprites, paint Michelangelo&rsquo;s David, simulate life with bitmaps, draw lines and shapes, and finally render simple 3D models. New to the series? Start with <a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a>.</p>
+<p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how displays work, race the beam with Pong, animate starfields and sprites, paint Michelangelo&rsquo;s David, simulate life with bitmaps, draw lines and shapes, and finally render simple 3D models. New to the series? Start with <a href="/posts/fpga-graphics/">FPGA Graphics</a>.</p>
 <p><em>Updated 2021-04-23. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <h3 id="series-outline">Series Outline</h3>
 <ul>
-<li><a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a> - learn how displays work and animate simple shapes</li>
+<li><a href="/posts/fpga-graphics/">FPGA Graphics</a> - learn how displays work and animate simple shapes</li>
 <li><a href="/posts/fpga-pong/">Pong</a> - race the beam to create the arcade classic</li>
 <li>Hardware Sprites (this post) - fast, colourful, graphics with minimal resources</li>
 <li><a href="/posts/fpga-ad-astra/">Ad Astra</a> - demo with hardware sprites and animated starfields</li>
 <li><a href="/posts/framebuffers/">Framebuffers</a> - driving the display from a bitmap in memory</li>
 <li><a href="/posts/life-on-screen/">Life on Screen</a> - the screen comes alive with Conway&rsquo;s Game of Life</li>
 <li><a href="/posts/lines-and-triangles/">Lines and Triangles</a> - drawing lines and triangles with a framebuffer</li>
-<li><a href="/posts/fpga-shapes/">Shapes</a> - filling and animating shapes</li>
+<li><a href="/posts/fpga-shapes/">2D Shapes</a> - filling and animating shapes</li>
 <li>Simple 3D - models and wireframe rendering (draft coming soon)</li>
 </ul>
 <h3 id="requirements">Requirements</h3>
@@ -207,7 +207,8 @@ In this series, we explore graphics at the hardware level and get a feel for the
 </span><span style="color:#75715e"></span>        DRAW,       <span style="color:#75715e">// draw pixel
 </span><span style="color:#75715e"></span>        NEXT_LINE   <span style="color:#75715e">// prepare for next sprite line
 </span><span style="color:#75715e"></span>    } state, state_next;
-
+    <span style="color:#66d9ef">initial</span> state <span style="color:#f92672">=</span> IDLE;  <span style="color:#75715e">// needed for Yosys
+</span><span style="color:#75715e"></span>
     <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
         state <span style="color:#f92672">&lt;=</span> state_next;  <span style="color:#75715e">// advance to next state
 </span><span style="color:#75715e"></span>
@@ -244,7 +245,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
 
     <span style="color:#75715e">// determine next state
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        <span style="color:#66d9ef">case</span>(state)
+        <span style="color:#66d9ef">case</span> (state)
             IDLE:       state_next <span style="color:#f92672">=</span> start <span style="color:#f92672">?</span> START <span style="color:#f92672">:</span> IDLE;
             START:      state_next <span style="color:#f92672">=</span> AWAIT_POS;
             AWAIT_POS:  state_next <span style="color:#f92672">=</span> (sx <span style="color:#f92672">==</span> sprx<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#f92672">?</span> DRAW <span style="color:#f92672">:</span> AWAIT_POS;
@@ -286,7 +287,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
 <h3 id="revisiting-display-timings">Revisiting Display Timings</h3>
 <p>Didn&rsquo;t we already sort out display timings at the <a href="/posts/fpga-graphics/#display-timings">start of the series</a>?
 Yes, we did, but there are good reasons to change how we treat screen coordinates before we start drawing sprites.</p>
-<p>Take a look at the new <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/hardware-sprites/display_timings_480p.sv">display_timings_480p.sv</a>]</strong> module, then we&rsquo;ll discuss the changes:</p>
+<p>Take a look at the new <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lib/display/display_timings_480p.sv">display_timings_480p.sv</a>]</strong> module, then we&rsquo;ll discuss the changes:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> display_timings_480p #(
     CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>,   <span style="color:#75715e">// signed coordinate width (bits)
 </span><span style="color:#75715e"></span>    H_RES<span style="color:#f92672">=</span><span style="color:#ae81ff">640</span>,  <span style="color:#75715e">// horizontal resolution (pixels)
@@ -325,45 +326,59 @@ Yes, we did, but there are good reasons to change how we treat screen coordinate
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> <span style="color:#66d9ef">signed</span> VA_STA <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;                           <span style="color:#75715e">// active start
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> <span style="color:#66d9ef">signed</span> VA_END <span style="color:#f92672">=</span> V_RES <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;                   <span style="color:#75715e">// active end
 </span><span style="color:#75715e"></span>
+    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x, y;  <span style="color:#75715e">// screen position
+</span><span style="color:#75715e"></span>
     <span style="color:#75715e">// generate horizontal and vertical syncs with correct polarity
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        hsync <span style="color:#f92672">=</span> H_POL <span style="color:#f92672">?</span> (sx <span style="color:#f92672">&gt;</span> HS_STA <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">&lt;=</span> HS_END)
-                     <span style="color:#f92672">:</span> <span style="color:#f92672">~</span>(sx <span style="color:#f92672">&gt;</span> HS_STA <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">&lt;=</span> HS_END);
-        vsync <span style="color:#f92672">=</span> V_POL <span style="color:#f92672">?</span> (sy <span style="color:#f92672">&gt;</span> VS_STA <span style="color:#f92672">&amp;&amp;</span> sy <span style="color:#f92672">&lt;=</span> VS_END)
-                     <span style="color:#f92672">:</span> <span style="color:#f92672">~</span>(sy <span style="color:#f92672">&gt;</span> VS_STA <span style="color:#f92672">&amp;&amp;</span> sy <span style="color:#f92672">&lt;=</span> VS_END);
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        hsync <span style="color:#f92672">&lt;=</span> H_POL <span style="color:#f92672">?</span> (x <span style="color:#f92672">&gt;</span> HS_STA <span style="color:#f92672">&amp;&amp;</span> x <span style="color:#f92672">&lt;=</span> HS_END)
+                      <span style="color:#f92672">:</span> <span style="color:#f92672">~</span>(x <span style="color:#f92672">&gt;</span> HS_STA <span style="color:#f92672">&amp;&amp;</span> x <span style="color:#f92672">&lt;=</span> HS_END);
+        vsync <span style="color:#f92672">&lt;=</span> V_POL <span style="color:#f92672">?</span> (y <span style="color:#f92672">&gt;</span> VS_STA <span style="color:#f92672">&amp;&amp;</span> y <span style="color:#f92672">&lt;=</span> VS_END)
+                      <span style="color:#f92672">:</span> <span style="color:#f92672">~</span>(y <span style="color:#f92672">&gt;</span> VS_STA <span style="color:#f92672">&amp;&amp;</span> y <span style="color:#f92672">&lt;=</span> VS_END);
     <span style="color:#66d9ef">end</span>
 
     <span style="color:#75715e">// control signals
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        de    <span style="color:#f92672">=</span> (sy <span style="color:#f92672">&gt;=</span> VA_STA <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">&gt;=</span> HA_STA);
-        frame <span style="color:#f92672">=</span> (sy <span style="color:#f92672">==</span> V_STA  <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">==</span> H_STA);
-        line  <span style="color:#f92672">=</span> (sy <span style="color:#f92672">&gt;=</span> VA_STA <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">==</span> H_STA);
-        <span style="color:#66d9ef">if</span> (rst) frame <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// don&#39;t assert frame in reset
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        de    <span style="color:#f92672">&lt;=</span> (y <span style="color:#f92672">&gt;=</span> VA_STA <span style="color:#f92672">&amp;&amp;</span> x <span style="color:#f92672">&gt;=</span> HA_STA);
+        frame <span style="color:#f92672">&lt;=</span> (y <span style="color:#f92672">==</span> V_STA  <span style="color:#f92672">&amp;&amp;</span> x <span style="color:#f92672">==</span> H_STA);
+        line  <span style="color:#f92672">&lt;=</span> (y <span style="color:#f92672">&gt;=</span> VA_STA <span style="color:#f92672">&amp;&amp;</span> x <span style="color:#f92672">==</span> H_STA);
+        <span style="color:#66d9ef">if</span> (rst) frame <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// don&#39;t assert frame in reset
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">end</span>
 
     <span style="color:#75715e">// calculate horizontal and vertical screen position
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @ (<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
-        <span style="color:#66d9ef">if</span> (sx <span style="color:#f92672">==</span> HA_END) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// last pixel on line?
-</span><span style="color:#75715e"></span>            sx <span style="color:#f92672">&lt;=</span> H_STA;
-            sy <span style="color:#f92672">&lt;=</span> (sy <span style="color:#f92672">==</span> VA_END) <span style="color:#f92672">?</span> V_STA <span style="color:#f92672">:</span> sy <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// last line on screen?
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">if</span> (x <span style="color:#f92672">==</span> HA_END) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// last pixel on line?
+</span><span style="color:#75715e"></span>            x <span style="color:#f92672">&lt;=</span> H_STA;
+            y <span style="color:#f92672">&lt;=</span> (y <span style="color:#f92672">==</span> VA_END) <span style="color:#f92672">?</span> V_STA <span style="color:#f92672">:</span> y <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// last line on screen?
 </span><span style="color:#75715e"></span>        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
-            sx <span style="color:#f92672">&lt;=</span> sx <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+            x <span style="color:#f92672">&lt;=</span> x <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
         <span style="color:#66d9ef">end</span>
+        <span style="color:#66d9ef">if</span> (rst) <span style="color:#66d9ef">begin</span>
+            x <span style="color:#f92672">&lt;=</span> H_STA;
+            y <span style="color:#f92672">&lt;=</span> V_STA;
+        <span style="color:#66d9ef">end</span>
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// align screen position with sync and control signals
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @ (<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        sx <span style="color:#f92672">&lt;=</span> x;
+        sy <span style="color:#f92672">&lt;=</span> y;
         <span style="color:#66d9ef">if</span> (rst) <span style="color:#66d9ef">begin</span>
             sx <span style="color:#f92672">&lt;=</span> H_STA;
             sy <span style="color:#f92672">&lt;=</span> V_STA;
         <span style="color:#66d9ef">end</span>
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
-</code></pre></div><p>The two significant changes are:</p>
+</code></pre></div><p>The three significant changes are:</p>
 <ol>
 <li>The blanking intervals occur <em>before</em> the active drawing area</li>
 <li>The use of signed coordinates for screen position</li>
+<li>All signals are registered for improved timing</li>
 </ol>
 <p>Imagine we want to draw a sprite at the far-left of the screen. We need to start the drawing process before the first sprite pixel, for example, to load pixels from ram. If horizontal blanking occurs at the end of the line, we need to start the sprite on the line before. If we want to draw at the top of the screen, there is no previous line, so we need to start in the previous frame. Dealing with these edge cases complicates drawing needlessly.</p>
 <p>If blanking before active area is so handy, why didn&rsquo;t we do this before? Putting the blanking interval first means the first visible pixel is no longer (0,0); for VGA, it moves to (160,45). We can add an offset to all our coordinates, which is slightly annoying, but the <a href="http://amigadev.elowar.com/read/ADCD_2.1/Hardware_Manual_guide/node0071.html">Amiga successfully used this approach</a>. However, this creates issues when handling different resolutions: the Amiga worked around this by always using low-resolution sprite coordinates.</p>
 <p>There is a better way if we&rsquo;re prepared to accept signed coordinates. We retain (0,0) as the top-left of the screen, while blanking occurs at negative coordinates. If we adopt 16-bit signed coordinates, we can handle any plausible screen size and an (X,Y) coordinate pair fits cleanly into a 32-bit word. Signed signals are a bit of a pain in Verilog, but I&rsquo;ve found the slight inconvenience more than worth it when working with sprites and framebuffers.</p>
-<p>To abstract the size of blanking intervals, I&rsquo;ve added a couple of signals for the start of the <strong>frame</strong> and active <strong>line</strong>. For example, if you&rsquo;re animating a sprite, you can move it when you receive a frame signal.</p>
+<p>To abstract the size of blanking intervals, I&rsquo;ve added a couple of signals for the start of the <strong>frame</strong> and active <strong>line</strong>. For example, if you&rsquo;re animating a sprite, you can move it when you receive a <code>frame</code>. We register control signals, so they don&rsquo;t make timing closure harder.</p>
+<p>Vivado users can test the new display timings with <strong><a href="https://github.com/projf/projf-explore/tree/master/lib/display/xc7/display_timings_480p_tb.sv">xc7/display_timings_480p_tb.sv</a></strong>.</p>
 <h3 id="lets-draw">Let&rsquo;s Draw</h3>
 <p>With our new display timings in hand, it&rsquo;s time to see our static sprite in action:</p>
 <ul>
@@ -394,13 +409,11 @@ Yes, we did, but there are good reasons to change how we treat screen coordinate
     );
 
     <span style="color:#75715e">// display timings
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> H_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">640</span>;
-    <span style="color:#66d9ef">localparam</span> V_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">480</span>;
-    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">16</span>;
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">16</span>;
     <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx, sy;
     <span style="color:#66d9ef">logic</span> hsync, vsync;
     <span style="color:#66d9ef">logic</span> de, line;
-    display_timings_480p display_timings_inst (
+    display_timings_480p #(.CORDW(CORDW)) display_timings_inst (
         .clk_pix,
         .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for pixel clock lock
 </span><span style="color:#75715e"></span>        .sx,
@@ -522,7 +535,8 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/hard
 </span><span style="color:#75715e"></span>        DRAW,       <span style="color:#75715e">// draw pixel
 </span><span style="color:#75715e"></span>        NEXT_LINE   <span style="color:#75715e">// prepare for next sprite line
 </span><span style="color:#75715e"></span>    } state, state_next;
-
+    <span style="color:#66d9ef">initial</span> state <span style="color:#f92672">=</span> IDLE;  <span style="color:#75715e">// needed for Yosys
+</span><span style="color:#75715e"></span>
     <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
         state <span style="color:#f92672">&lt;=</span> state_next;  <span style="color:#75715e">// advance to next state
 </span><span style="color:#75715e"></span>
@@ -578,7 +592,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/hard
 
     <span style="color:#75715e">// determine next state
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        <span style="color:#66d9ef">case</span>(state)
+        <span style="color:#66d9ef">case</span> (state)
             IDLE:       state_next <span style="color:#f92672">=</span> start <span style="color:#f92672">?</span> START <span style="color:#f92672">:</span> IDLE;
             START:      state_next <span style="color:#f92672">=</span> AWAIT_POS;
             AWAIT_POS:  state_next <span style="color:#f92672">=</span> (sx <span style="color:#f92672">==</span> sprx<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#f92672">?</span> DRAW <span style="color:#f92672">:</span> AWAIT_POS;
@@ -692,7 +706,8 @@ This design was common in older computers, for example, the <a href="https://en.
 </span><span style="color:#75715e"></span>        NEXT_LINE,  <span style="color:#75715e">// prepare for next sprite line
 </span><span style="color:#75715e"></span>        DONE        <span style="color:#75715e">// set done signal, then go idle
 </span><span style="color:#75715e"></span>    } state, state_next;
-
+    <span style="color:#66d9ef">initial</span> state <span style="color:#f92672">=</span> IDLE;  <span style="color:#75715e">// needed for Yosys
+</span><span style="color:#75715e"></span>
     <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
         state <span style="color:#f92672">&lt;=</span> state_next;  <span style="color:#75715e">// advance to next state
 </span><span style="color:#75715e"></span>
@@ -752,7 +767,7 @@ This design was common in older computers, for example, the <a href="https://en.
 
     <span style="color:#75715e">// determine next state
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        <span style="color:#66d9ef">case</span>(state)
+        <span style="color:#66d9ef">case</span> (state)
             IDLE:       state_next <span style="color:#f92672">=</span> start <span style="color:#f92672">?</span> START <span style="color:#f92672">:</span> IDLE;
             START:      state_next <span style="color:#f92672">=</span> AWAIT_POS;
             AWAIT_POS:  state_next <span style="color:#f92672">=</span> (sx <span style="color:#f92672">==</span> sprx<span style="color:#f92672">-</span><span style="color:#ae81ff">2</span>) <span style="color:#f92672">?</span> DRAW <span style="color:#f92672">:</span> AWAIT_POS;  <span style="color:#75715e">// BRAM
@@ -822,7 +837,7 @@ You&rsquo;ll learn how to create your own memory files from images using <code>i
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// sprite frame selector
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">5</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_anim;  <span style="color:#75715e">// count from 0-63
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
-        <span style="color:#66d9ef">if</span> (animate) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">if</span> (frame) <span style="color:#66d9ef">begin</span>
             <span style="color:#75715e">// select sprite frame
 </span><span style="color:#75715e"></span>            cnt_anim <span style="color:#f92672">&lt;=</span> cnt_anim <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
             <span style="color:#66d9ef">case</span> (cnt_anim)
@@ -832,7 +847,9 @@ You&rsquo;ll learn how to create your own memory files from images using <code>i
                 <span style="color:#ae81ff">47</span><span style="color:#f92672">:</span> spr_base_addr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">2</span> <span style="color:#f92672">*</span> SPR_PIXELS;
                 <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> spr_base_addr <span style="color:#f92672">&lt;=</span> spr_base_addr;
             <span style="color:#66d9ef">endcase</span>
-</code></pre></div><p>The rom address uses the sprite base address, <code>spr_base_addr</code>, to select the right image:</p>
+
+            <span style="color:#75715e">// ...
+</span></code></pre></div><p>The rom address uses the sprite base address, <code>spr_base_addr</code>, to select the right image:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// sprite graphic ROM
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [COLR_BITS<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] spr_rom_data;
     <span style="color:#66d9ef">logic</span> [SPR_ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] spr_rom_addr, spr_base_addr;
@@ -869,7 +886,7 @@ You&rsquo;ll learn how to create your own memory files from images using <code>i
 <li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/hardware-sprites/xc7/top_hedgehog.sv">xc7/top_hedgehog.sv</a></strong></li>
 <li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/hardware-sprites/ice40/top_hedgehog.sv">ice40/top_hedgehog.sv</a></strong></li>
 </ul>
-<p>Xilinx version shown below:</p>
+<p>Arty version shown below:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_hedgehog (
     <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_100m,     <span style="color:#75715e">// 100 MHz clock
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_rst,      <span style="color:#75715e">// reset button (active low)
@@ -891,13 +908,11 @@ You&rsquo;ll learn how to create your own memory files from images using <code>i
     );
 
     <span style="color:#75715e">// display timings
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> H_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">640</span>;
-    <span style="color:#66d9ef">localparam</span> V_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">480</span>;
-    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">16</span>;
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">16</span>;
     <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx, sy;
     <span style="color:#66d9ef">logic</span> hsync, vsync;
     <span style="color:#66d9ef">logic</span> de, frame, line;
-    display_timings_480p display_timings_inst (
+    display_timings_480p #(.CORDW(CORDW)) display_timings_inst (
         .clk_pix,
         .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for pixel clock lock
 </span><span style="color:#75715e"></span>        .sx,
@@ -941,8 +956,8 @@ You&rsquo;ll learn how to create your own memory files from images using <code>i
     );
 
     <span style="color:#75715e">// draw sprite at position
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> SPR_SPEED_X <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span>;
-    <span style="color:#66d9ef">localparam</span> SPR_SPEED_Y <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> H_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">640</span>;
+    <span style="color:#66d9ef">localparam</span> SPR_SPEED_X <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span>;
     <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sprx, spry;
 
     <span style="color:#75715e">// sprite frame selector
@@ -1062,7 +1077,7 @@ You&rsquo;ll learn how to create your own memory files from images using <code>i
 	
 	<li><a href="/posts/fpga-ad-astra/">Ad Astra</a></li>
 	
-	<li><a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a></li>
+	<li><a href="/posts/fpga-graphics/">FPGA Graphics</a></li>
 	
 	<li><a href="/posts/video-timings-vga-720p-1080p/">Video Timings: VGA, SVGA, 720p, 1080p</a></li>
 	
