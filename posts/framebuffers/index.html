@@ -119,18 +119,18 @@
     <div class="content">
       <p>Welcome back to <em>Exploring FPGA Graphics</em>. In the previous two parts, we worked with sprites, but another approach is needed as graphics become more complex. Instead of drawing directly to the screen, we draw to a framebuffer, which is read out to the screen. This post provides an introduction to framebuffers and how to scale them up. We&rsquo;ll also learn how to fizzlefade graphics Wolfenstein 3D style. In the <a href="/posts/life-on-screen/">next part</a>, we&rsquo;ll use a framebuffer to visualize a simulation of life.</p>
 <p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how displays work, race the beam with Pong, animate starfields and sprites, paint Michelangelo&rsquo;s David, simulate life with bitmaps, draw lines and shapes, and finally render simple 3D models. New to the series? Start with <a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a>.</p>
-<p><em>Updated 2021-04-17. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><em>Updated 2021-04-23. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <p><strong>April 2021: Includes new framebuffer module design; further explanation will be added soon.</strong></p>
 <h3 id="series-outline">Series Outline</h3>
 <ul>
 <li><a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a> - learn how displays work and animate simple shapes</li>
-<li><a href="/posts/fpga-pong/">FPGA Pong</a> - race the beam to create the arcade classic</li>
+<li><a href="/posts/fpga-pong/">Pong</a> - race the beam to create the arcade classic</li>
 <li><a href="/posts/hardware-sprites/">Hardware Sprites</a> - fast, colourful, graphics with minimal resources</li>
-<li><a href="/posts/fpga-ad-astra/">FPGA Ad Astra</a> - demo with hardware sprites and animated starfields</li>
+<li><a href="/posts/fpga-ad-astra/">Ad Astra</a> - demo with hardware sprites and animated starfields</li>
 <li>Framebuffers (this post) - driving the display from a bitmap in memory</li>
 <li><a href="/posts/life-on-screen/">Life on Screen</a> - the screen comes alive with Conway&rsquo;s Game of Life</li>
 <li><a href="/posts/lines-and-triangles/">Lines and Triangles</a> - drawing lines and triangles with a framebuffer</li>
-<li><a href="/posts/fpga-shapes/">FPGA Shapes</a> - filling and animating shapes</li>
+<li><a href="/posts/fpga-shapes/">Shapes</a> - filling and animating shapes</li>
 <li>Simple 3D - models and wireframe rendering (draft coming soon)</li>
 </ul>
 <h3 id="requirements">Requirements</h3>
@@ -149,8 +149,8 @@
 <p>If we divide our 640x480 screen by four in both dimensions, we get 160x120. 160x120 is 19,200 pixels, so a monochrome framebuffer requires 18.75 kilobits of memory (19,200 = 18.75 * 1024).</p>
 <p>We&rsquo;ll start by wiring up our usual display timings with a framebuffer based on BRAM, then draw a simple horizontal line in it to confirm everything is working.</p>
 <ul>
-<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/framebuffers/xc7/top_line.sv">xc7/top_line.sv</a></strong></li>
-<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/framebuffers/ice40/top_line.sv">ice40/top_line.sv</a></strong></li>
+<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/framebuffers/xc7/top_line.sv">xc7/top_line.sv</a></strong></li>
+<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/framebuffers/ice40/top_line.sv">ice40/top_line.sv</a></strong></li>
 </ul>
 <p>The Arty version is shown below:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_line (
@@ -275,7 +275,7 @@
 </code></pre></div><p>Build this design, and you should see a white horizontal line near the top left of your screen. It&rsquo;s only 160 pixels long, so it won&rsquo;t go right across the screen.</p>
 <blockquote>
 <p><strong>Building the Designs</strong><br>
-In the <a href="https://github.com/projf/projf-explore/tree/master/framebuffers">Framebuffers</a> section of the git repo, you&rsquo;ll find the design files, a makefile for iCEBreaker, a Vivado project for Arty, and instructions for building the designs for both boards.</p>
+In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/framebuffers">Framebuffers</a> section of the git repo, you&rsquo;ll find the design files, a makefile for iCEBreaker, a Vivado project for Arty, and instructions for building the designs for both boards.</p>
 </blockquote>
 <h2 id="a-small-bitmap">A Small Bitmap</h2>
 <p><img src="/img/posts/framebuffers/david-comparison.png" alt="Michelangelo&rsquo;s David" title="David is a masterpiece of Renaissance sculpture created in marble between 1501 and 1504 by the Italian artist Michelangelo."></p>
@@ -283,8 +283,8 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/framebuffers"
 <p>The version on the right is the <a href="https://commons.wikimedia.org/wiki/File:Michelangelo%27s_David_-_63_grijswaarden.png">original from Wikipedia</a>; it has 64 shades of grey. I created the middle image by reducing the original to 16 colours using img2fmem with no dithering (we will discuss this tool later in the post). The monochrome image on the left was created by <a href="https://commons.wikimedia.org/wiki/User:Gerbrant/Dithering_algorithms">Gerbrant</a> using <a href="https://en.wikipedia.org/wiki/Floyd%E2%80%93Steinberg_dithering">Floyd-Steinberg dithering</a>.</p>
 <p>Create a new top module to load the monochrome image of David. We&rsquo;ll also draw a white border around the edge of the image using a simple finite state machine.</p>
 <ul>
-<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/framebuffers/xc7/top_david_v1.sv">xc7/top_david_v1.sv</a></strong></li>
-<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/framebuffers/ice40/top_david_v1.sv">ice40/top_david_v1.sv</a></strong></li>
+<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/framebuffers/xc7/top_david_v1.sv">xc7/top_david_v1.sv</a></strong></li>
+<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/framebuffers/ice40/top_david_v1.sv">ice40/top_david_v1.sv</a></strong></li>
 </ul>
 <p><strong>top_david_v1 BRAM usage:</strong> 1x36Kb on Arty and 10x4Kb on iCEBreaker</p>
 <p>The iCEBreaker version is shown below:</p>
@@ -461,7 +461,7 @@ The iCE40 version uses more block ram than you might expect: 160x120 should fit 
 </blockquote>
 <h2 id="casting-shade">Casting Shade</h2>
 <p>We can increase the bits assigned to each pixel to support more colours, or in the case of David, more shades. Our video output is 12-bit, which means there are 16 possible shades of grey.</p>
-<p>As with the hedgehog graphic in <a href="/posts/hardware-sprites/">Hardware Sprites</a>, we store the palette in a file: <strong><a href="https://github.com/projf/projf-explore/blob/master/framebuffers/res/david/david_palette.mem">david_palette.mem</a></strong>.</p>
+<p>As with the hedgehog graphic in <a href="/posts/hardware-sprites/">Hardware Sprites</a>, we store the palette in a file: <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/framebuffers/res/david/david_palette.mem">david_palette.mem</a></strong>.</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">FFF EEE DDD CCC BBB AAA 999 888 777 666 555 444 333 222 111 000
 </code></pre></div><p><img src="/img/posts/framebuffers/david-palette.png" alt="Greyscale" title="16 shades: #FFF to #000"></p>
 <p>We load the palette file into a colour lookup table (CLUT) ROM, which is used to find the colour of each pixel for display. If you need a refresher on CLUTs, see <a href="/posts/hardware-sprites/#a-refined-palette">A Refined Palette</a>.</p>
@@ -506,8 +506,8 @@ The iCE40 version uses more block ram than you might expect: 160x120 should fit 
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">end</span>
 </code></pre></div><p>Build the updated top module with 4-bit greyscale David and fizzlefade:</p>
 <ul>
-<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/framebuffers/xc7/top_david_v2.sv">xc7/top_david_v2.sv</a></strong></li>
-<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/framebuffers/ice40/top_david_v2.sv">ice40/top_david_v2.sv</a></strong></li>
+<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/framebuffers/xc7/top_david_v2.sv">xc7/top_david_v2.sv</a></strong></li>
+<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/framebuffers/ice40/top_david_v2.sv">ice40/top_david_v2.sv</a></strong></li>
 </ul>
 <p><strong>top_david_v2 BRAM usage:</strong> 4x36Kb on Arty and 20x4Kb on iCEBreaker</p>
 <p>You may have noticed that the top-left pixel doesn&rsquo;t fade out; this is because the LFSR produces every value except zero. To fix this, you need to add some logic to specifically update the pixel at address zero when fading.</p>
@@ -527,8 +527,8 @@ Wikipedia has a lovely <em><a href="https://en.wikipedia.org/wiki/List_of_color_
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    fb_addr_read <span style="color:#f92672">&lt;=</span> FB_WIDTH <span style="color:#f92672">*</span> (sy<span style="color:#f92672">/</span><span style="color:#ae81ff">4</span>) <span style="color:#f92672">+</span> (sx<span style="color:#f92672">/</span><span style="color:#ae81ff">4</span>);
 </code></pre></div><p>This does work, as the third version of David demonstrates:</p>
 <ul>
-<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/framebuffers/xc7/top_david_v3.sv">xc7/top_david_v3.sv</a></strong></li>
-<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/framebuffers/ice40/top_david_v3.sv">ice40/top_david_v3.sv</a></strong></li>
+<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/framebuffers/xc7/top_david_v3.sv">xc7/top_david_v3.sv</a></strong></li>
+<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/framebuffers/ice40/top_david_v3.sv">ice40/top_david_v3.sv</a></strong></li>
 </ul>
 <p>However, I don&rsquo;t recommend using this approach in any but the most basic designs.</p>
 <p>With crude scaling, the memory access pattern is dictated by the pixel clock and beam position (sx,sy):</p>
@@ -559,7 +559,7 @@ While iCE40UP5K BRAM is not true dual-port, it does support async read and write
 However, iCE40UP5K has only one PLL, so you can only generate one clock.</p>
 </blockquote>
 <h3 id="linebuffer-module">Linebuffer Module</h3>
-<p>Add the linebuffer module - <strong>[<a href="https://github.com/projf/projf-explore/blob/master/framebuffers/linebuffer.sv">linebuffer.sv</a>]</strong>:</p>
+<p>Add the linebuffer module - <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lib/display/linebuffer.sv">linebuffer.sv</a>]</strong>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> linebuffer #(
     <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,    <span style="color:#75715e">// data width of each channel
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> LEN<span style="color:#f92672">=</span><span style="color:#ae81ff">640</span>,    <span style="color:#75715e">// length of line
@@ -655,10 +655,10 @@ However, iCE40UP5K has only one PLL, so you can only generate one clock.</p>
         .data_out(dout_2)
     );
 <span style="color:#66d9ef">endmodule</span>
-</code></pre></div><p>There&rsquo;s a test bench you can use to exercise the module with Vivado: <strong>[<a href="https://github.com/projf/projf-explore/blob/master/framebuffers/xc7/linebuffer_tb.sv">xc7/linebuffer_tb.sv</a>]</strong>.</p>
+</code></pre></div><p>There&rsquo;s a test bench you can use to exercise the module with Vivado: <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lib/display/xc7/linebuffer_tb.sv">xc7/linebuffer_tb.sv</a>]</strong>.</p>
 <h3 id="crossing-the-streams">Crossing the Streams</h3>
 <p>When the output (<strong>clk_out</strong> domain) finishes with a line of data, it needs to signal the input (<strong>clk_in</strong> domain) to provide another line. We could use a pair of flip-flops to cross domains, but that could fail if the destination domain is of lower frequency. We could use a BRAM, but using a whole BRAM to move one bit of data is wasteful. Instead, we use a simple trick to safely send a pulse of data between two domains, irrespective of their frequencies.</p>
-<p>Add the <strong>[<a href="https://github.com/projf/projf-explore/blob/master/common/xd.sv">xd.sv</a>]</strong> module:</p>
+<p>Add the <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lib/clock/xd.sv">xd.sv</a>]</strong> module:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> xd (
     <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_i,  <span style="color:#75715e">//  input clock: source domain
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_o,  <span style="color:#75715e">// output clock: destination domain
@@ -690,10 +690,10 @@ However, iCE40UP5K has only one PLL, so you can only generate one clock.</p>
 </code></pre></div><p>Before you rush to add new clock domains to your designs with <code>xd.sv</code>, you need to be aware of a significant limitation: this only works for isolated pulses of one clock cycle. This module is ideal for sending well-spaced events but can&rsquo;t be used to send arbitrary data from one clock domain to another: use BRAM or a proper FIFO for that. Thanks to <a href="https://www.fpga4fun.com/CrossClockDomain.html">fpga4fun</a> for this approach to CDC.</p>
 <p>The following simulation shows what happens if you try to abuse this approach. Note how the final two-cycle pulse becomes two separate pulses when sent from slow to fast but disappears altogether when sent from fast to slow. You have been warned!</p>
 <p><img src="/img/posts/framebuffers/xd-sim.png" alt="xd module simulation" title="Where did my pulses go?"></p>
-<p>There&rsquo;s a test bench you can use to exercise the module with Vivado: <strong>[<a href="https://github.com/projf/projf-explore/blob/master/common/xc7/xd_tb.sv">common/xc7/xd_tb.sv</a>]</strong>.</p>
+<p>There&rsquo;s a test bench you can use to exercise the module with Vivado: <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lib/clock/xc7/xd_tb.sv">xc7/xd_tb.sv</a>]</strong>.</p>
 <h3 id="framebuffer-module">Framebuffer Module</h3>
 <p>The linebuffer doesn&rsquo;t know anything about the framebuffer design. This is deliberate. We want the freedom to store our framebuffer however we like or even push data into the linebuffer from other sources. This post will use BRAM to create a simple framebuffer module that drives the linebuffer for us.</p>
-<p>Add the framebuffer module - <strong>[<a href="https://github.com/projf/projf-explore/blob/master/framebuffers/framebuffer.sv">framebuffer.sv</a>]</strong>:</p>
+<p>Add the framebuffer module - <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lib/display/framebuffer.sv">framebuffer.sv</a>]</strong>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> framebuffer #(
     <span style="color:#66d9ef">parameter</span> CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>,      <span style="color:#75715e">// signed coordinate width (bits)
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">160</span>,     <span style="color:#75715e">// width of framebuffer in pixels
@@ -860,12 +860,12 @@ However, iCE40UP5K has only one PLL, so you can only generate one clock.</p>
         blue  <span style="color:#f92672">=</span> lb_en_out_p1 <span style="color:#f92672">?</span> lb_out_0 <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
-</code></pre></div><p>There&rsquo;s a test bench you can use to exercise the module with Vivado: <strong>[<a href="https://github.com/projf/projf-explore/blob/master/framebuffers/xc7/framebuffer_tb.sv">xc7/framebuffer_tb.sv</a>]</strong>.</p>
+</code></pre></div><p>There&rsquo;s a test bench you can use to exercise the module with Vivado: <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lib/display/xc7/framebuffer_tb.sv">xc7/framebuffer_tb.sv</a>]</strong>.</p>
 <p><em>Explanation of framebuffer module will be added shortly.</em></p>
 <p>Build the updated top module with the new framebuffer module:</p>
 <ul>
-<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/framebuffers/xc7/top_david.sv">xc7/top_david.sv</a></strong></li>
-<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/framebuffers/ice40/top_david.sv">ice40/top_david.sv</a></strong></li>
+<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/framebuffers/xc7/top_david.sv">xc7/top_david.sv</a></strong></li>
+<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/framebuffers/ice40/top_david.sv">ice40/top_david.sv</a></strong></li>
 </ul>
 <p><strong>top_david BRAM usage:</strong> 4.5x36Kb on Arty and 23x4Kb on iCEBreaker</p>
 <p>The Arty version is shown below:</p>
@@ -1041,9 +1041,9 @@ You&rsquo;d expect the final David design to use 3x18Kb BRAMs (1.5x36Kb) on the 
 	
 	<li><a href="/posts/life-on-screen/">Life on Screen</a></li>
 	
-	<li><a href="/posts/fpga-pong/">FPGA Pong</a></li>
+	<li><a href="/posts/fpga-pong/">Pong</a></li>
 	
-	<li><a href="/posts/fpga-ad-astra/">FPGA Ad Astra</a></li>
+	<li><a href="/posts/fpga-ad-astra/">Ad Astra</a></li>
 	
 	<li><a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a></li>
 	

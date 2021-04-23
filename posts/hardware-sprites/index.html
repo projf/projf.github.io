@@ -120,17 +120,17 @@ In this series, we explore graphics at the hardware level and get a feel for the
     <div class="content">
       <p>Welcome back to <em>Exploring FPGA Graphics</em>. In the previous part, we recreated <a href="/posts/fpga-pong/">Pong</a>. In this part, we learn how to create colourful animated graphics with hardware sprites. Hardware sprites maintain much of the simplicity of our Pong design while offering much greater creative freedom. In the <a href="/posts/fpga-ad-astra/">next part</a>, we&rsquo;ll create a demo that gives a taste of what&rsquo;s possible with sprites.</p>
 <p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how displays work, race the beam with Pong, animate starfields and sprites, paint Michelangelo&rsquo;s David, simulate life with bitmaps, draw lines and shapes, and finally render simple 3D models. New to the series? Start with <a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a>.</p>
-<p><em>Updated 2021-03-31. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><em>Updated 2021-04-23. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <h3 id="series-outline">Series Outline</h3>
 <ul>
 <li><a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a> - learn how displays work and animate simple shapes</li>
-<li><a href="/posts/fpga-pong/">FPGA Pong</a> - race the beam to create the arcade classic</li>
+<li><a href="/posts/fpga-pong/">Pong</a> - race the beam to create the arcade classic</li>
 <li>Hardware Sprites (this post) - fast, colourful, graphics with minimal resources</li>
-<li><a href="/posts/fpga-ad-astra/">FPGA Ad Astra</a> - demo with hardware sprites and animated starfields</li>
+<li><a href="/posts/fpga-ad-astra/">Ad Astra</a> - demo with hardware sprites and animated starfields</li>
 <li><a href="/posts/framebuffers/">Framebuffers</a> - driving the display from a bitmap in memory</li>
 <li><a href="/posts/life-on-screen/">Life on Screen</a> - the screen comes alive with Conway&rsquo;s Game of Life</li>
 <li><a href="/posts/lines-and-triangles/">Lines and Triangles</a> - drawing lines and triangles with a framebuffer</li>
-<li><a href="/posts/fpga-shapes/">FPGA Shapes</a> - filling and animating shapes</li>
+<li><a href="/posts/fpga-shapes/">Shapes</a> - filling and animating shapes</li>
 <li>Simple 3D - models and wireframe rendering (draft coming soon)</li>
 </ul>
 <h3 id="requirements">Requirements</h3>
@@ -148,7 +148,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
 <p>We&rsquo;re going to start with a small 8x8 pixel sprite with just two colours.</p>
 <p>We&rsquo;ll load the sprite into FPGA memory using a simple text format. Each line is simply composed of eight 1s or 0s separated by spaces. I&rsquo;m going to start with the letter &lsquo;F&rsquo; and a full stop (period) as a sprite. It&rsquo;s a simple, asymmetric, design, making it easier to spot bugs (such as incorrect orientation or pixels being missed off):</p>
 <p><img src="/img/posts/hardware-sprites/letter-f.png" alt="F." title="F for Project F"></p>
-<p>The text file to initialize the sprite memory looks like this <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/res/simple/letter_f.mem">letter_f.mem</a>]</strong>:</p>
+<p>The text file to initialize the sprite memory looks like this <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/hardware-sprites/res/simple/letter_f.mem">letter_f.mem</a>]</strong>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">1 1 1 1 1 1 0 0
 1 1 0 0 0 0 0 0
 1 1 0 0 0 0 0 0
@@ -168,7 +168,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
 <li>If we&rsquo;re not done, then go to step 3</li>
 <li>Sprite is complete</li>
 </ol>
-<p>This process is well represented by our old friend, the finite state machine (FSM). In fact, our first sprite design is little more than a simple finite state machine with a small ROM for the graphic <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/sprite_v1.sv">sprite_v1.sv</a>]</strong>:</p>
+<p>This process is well represented by our old friend, the finite state machine (FSM). In fact, our first sprite design is little more than a simple finite state machine with a small ROM for the graphic <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/hardware-sprites/sprite_v1.sv">sprite_v1.sv</a>]</strong>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> sprite_v1 #(
     <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,            <span style="color:#75715e">// graphic width in pixels
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> HEIGHT<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,           <span style="color:#75715e">// graphic height in pixels
@@ -260,7 +260,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
 <p>We wait for the pixel <em>before</em> the start of the sprite, so that the next cycle we start drawing in the right place:</p>
 <p><code>DRAW:       state_next = !last_pixel ? DRAW : (!last_line ? NEXT_LINE : IDLE);</code></p>
 <p>In the next-state logic, we&rsquo;ve nested a conditional operator. Nested conditional operators are confusing, so best avoided. However, in this case, I think it reads naturally. If we&rsquo;re not reached the last pixel, keep drawing. If we&rsquo;ve not arrived at the final line, go to the next line. Otherwise idle.</p>
-<p>The graphic itself is held in an asynchronous ROM. An asynchronous ROM uses logic (LUTs); it&rsquo;s a good choice for a small ROM such as this <strong>[<a href="https://github.com/projf/projf-explore/blob/master/common/rom_async.sv">rom_async.sv</a>]</strong>:</p>
+<p>The graphic itself is held in an asynchronous ROM. An asynchronous ROM uses logic (LUTs); it&rsquo;s a good choice for a small ROM such as this <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lib/memory/rom_async.sv">rom_async.sv</a>]</strong>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> rom_async #(
     <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,
     <span style="color:#66d9ef">parameter</span> DEPTH<span style="color:#f92672">=</span><span style="color:#ae81ff">256</span>,
@@ -286,7 +286,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
 <h3 id="revisiting-display-timings">Revisiting Display Timings</h3>
 <p>Didn&rsquo;t we already sort out display timings at the <a href="/posts/fpga-graphics/#display-timings">start of the series</a>?
 Yes, we did, but there are good reasons to change how we treat screen coordinates before we start drawing sprites.</p>
-<p>Take a look at the new <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/display_timings_480p.sv">display_timings_480p.sv</a>]</strong> module, then we&rsquo;ll discuss the changes:</p>
+<p>Take a look at the new <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/hardware-sprites/display_timings_480p.sv">display_timings_480p.sv</a>]</strong> module, then we&rsquo;ll discuss the changes:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> display_timings_480p #(
     CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>,   <span style="color:#75715e">// signed coordinate width (bits)
 </span><span style="color:#75715e"></span>    H_RES<span style="color:#f92672">=</span><span style="color:#ae81ff">640</span>,  <span style="color:#75715e">// horizontal resolution (pixels)
@@ -367,8 +367,8 @@ Yes, we did, but there are good reasons to change how we treat screen coordinate
 <h3 id="lets-draw">Let&rsquo;s Draw</h3>
 <p>With our new display timings in hand, it&rsquo;s time to see our static sprite in action:</p>
 <ul>
-<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/xc7/top_sprite_v1.sv">xc7/top_sprite_v1.sv</a></strong></li>
-<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/ice40/top_sprite_v1.sv">ice40/top_sprite_v1.sv</a></strong></li>
+<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/hardware-sprites/xc7/top_sprite_v1.sv">xc7/top_sprite_v1.sv</a></strong></li>
+<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/hardware-sprites/ice40/top_sprite_v1.sv">ice40/top_sprite_v1.sv</a></strong></li>
 </ul>
 <p>iCE40 version show below:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_sprite_v1 (
@@ -472,12 +472,12 @@ Yes, we did, but there are good reasons to change how we treat screen coordinate
 <p>We pass the horizontal position of the screen, <code>sx</code>, to the sprite module, so it can wait for the correct horizontal drawing position.</p>
 <blockquote>
 <p><strong>Building the Designs</strong><br>
-In the <a href="https://github.com/projf/projf-explore/tree/master/hardware-sprites">Hardware Sprites</a> section of the git repo, you&rsquo;ll find the design files, a makefile for iCEBreaker, a Vivado project for Arty, and instructions for building the designs for both boards.</p>
+In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/hardware-sprites">Hardware Sprites</a> section of the git repo, you&rsquo;ll find the design files, a makefile for iCEBreaker, a Vivado project for Arty, and instructions for building the designs for both boards.</p>
 </blockquote>
 <p>Program your board, and you should see a small golden letter &lsquo;F&rsquo; and a dot towards the top left of the screen. From these tiny beginnings, mighty sprites will grow.</p>
 <h2 id="scaling-up">Scaling Up</h2>
 <p>Now we can position our sprite correctly, it&rsquo;s time to make it bigger. We make larger sprites by increasing the size of the design. However, it&rsquo;s also useful to be able to scale our sprites up when drawing them. A scaled-up sprite will be blocky but will use few resources and allows a design to work at different screen resolutions.</p>
-<p>To scale our sprite, we count additional screen pixels and lines when drawing the sprite using <code>cnt_x</code> and <code>cnt_y</code> respectively. The new module is <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/sprite_v2.sv">sprite_v2sv</a>]</strong>:</p>
+<p>To scale our sprite, we count additional screen pixels and lines when drawing the sprite using <code>cnt_x</code> and <code>cnt_y</code> respectively. The new module is <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/hardware-sprites/sprite_v2.sv">sprite_v2sv</a>]</strong>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> sprite_v2 #(
     <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,            <span style="color:#75715e">// graphic width in pixels
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> HEIGHT<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,           <span style="color:#75715e">// graphic height in pixels
@@ -591,15 +591,15 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/hardware-spri
 <span style="color:#66d9ef">endmodule</span>
 </code></pre></div><p>We can then drive this with a small change to our top module:</p>
 <ul>
-<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/xc7/top_sprite_v2.sv">xc7/top_sprite_v2.sv</a></strong></li>
-<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/ice40/top_sprite_v2.sv">ice40/top_sprite_v2.sv</a></strong></li>
+<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/hardware-sprites/xc7/top_sprite_v2.sv">xc7/top_sprite_v2.sv</a></strong></li>
+<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/hardware-sprites/ice40/top_sprite_v2.sv">ice40/top_sprite_v2.sv</a></strong></li>
 </ul>
 <p>Build the v2 design with scaling. This design has hard-coded scale parameters, <code>SCALE_X</code> and <code>SCALE_Y</code>, but these could easily be made module inputs to allow for changes at run time.</p>
 <p><img src="/img/posts/hardware-sprites/letter-f-720p.png" alt="Letter F" title="Letter F: FPGA Capture"></p>
 <h2 id="motion">Motion</h2>
 <p>It&rsquo;s time we got our sprites moving. Now we have our basic sprite working, I&rsquo;m going to use a new design, which I&rsquo;m charitably calling a flying saucer:</p>
 <p><img src="/img/posts/hardware-sprites/saucer.png" alt="Flying Saucer" title="From Area 51"></p>
-<p>The memory initilization file is <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/res/simple/saucer.mem">saucer.mem</a>]</strong>:</p>
+<p>The memory initilization file is <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/hardware-sprites/res/simple/saucer.mem">saucer.mem</a>]</strong>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">0 0 1 1 1 1 0 0
 0 1 1 0 0 1 1 0
 1 1 0 1 1 0 1 1
@@ -609,11 +609,11 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/hardware-spri
 0 1 1 0 0 1 1 0
 0 0 1 1 1 1 0 0
 </code></pre></div><p>I&rsquo;m sure you can come up with something better: create your own design following the same format as above. You don&rsquo;t have to limit yourself to 8x8 pixels, just be sure to update the width and height in the top module (see below).</p>
-<p>To make it easy to build your own design I&rsquo;ve added an empty sprite with the name <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/res/simple/user.mem">user.mem</a>]</strong>. If you replace this file in <code>res/simple/</code> with your own design it will automatically be included in projects and makefiles. See the <a href="https://github.com/projf/projf-explore/tree/master/hardware-sprites">Hardware Sprites</a> section of the git repo for build instructions.</p>
+<p>To make it easy to build your own design I&rsquo;ve added an empty sprite with the name <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/hardware-sprites/res/simple/user.mem">user.mem</a>]</strong>. If you replace this file in <code>res/simple/</code> with your own design it will automatically be included in projects and makefiles. See the <a href="https://github.com/projf/projf-explore/tree/master/graphics/hardware-sprites">Hardware Sprites</a> section of the git repo for build instructions.</p>
 <p>To move our sprite, I&rsquo;ve borrowed the horizontal bouncing logic from our <a href="/posts/fpga-graphics/">first part</a>, yet again, to create:</p>
 <ul>
-<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/xc7/top_sprite_v2a.sv">xc7/top_sprite_v2a.sv</a></strong></li>
-<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/ice40/top_sprite_v2a.sv">ice40/top_sprite_v2a.sv</a></strong></li>
+<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/hardware-sprites/xc7/top_sprite_v2a.sv">xc7/top_sprite_v2a.sv</a></strong></li>
+<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/hardware-sprites/ice40/top_sprite_v2a.sv">ice40/top_sprite_v2a.sv</a></strong></li>
 </ul>
 <p>Build this version of the project. You should see your sprite bounce back and forth across the screen. If you created your own sprite, remember to update the sprite filename, <code>SPR_FILE</code>, in <code>top_sprite_v2a.sv</code>. You can also tweak the sprite height, width, and scale as you like.</p>
 <h2 id="colourful">Colourful?</h2>
@@ -621,7 +621,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/hardware-spri
 <p><img src="/img/posts/hardware-sprites/hedgehog-enlarged.png" alt="Hedgehog" title="Hedgehog"></p>
 <p>The hedgehog graphic is 32x20, so has a total of 640 pixels. The original Amiga game uses 32 colours, of which the hedgehog uses ten, plus one transparent colour. To allow for 11 colours we need four bits per pixel.</p>
 <p>The memory requirement for this sprite is: <code>32 x 20 x 4 = 2,560 or 2.5 kilobits</code>.</p>
-<p>The memory initialization file is similar to our monochrome sprites, but instead of pixels being <code>0</code> or <code>1</code>, they&rsquo;re <code>0</code> to <code>F</code>. I use a tool called <a href="https://github.com/projf/fpgatools">img2fmem</a> (discussed later) to convert the sprite image to <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/res/hedgehog/hedgehog.mem">hedgehog.mem</a>]</strong>. To read this hex text data into memory we use <code>$readmemh</code> (note the &lsquo;h&rsquo; for hex).</p>
+<p>The memory initialization file is similar to our monochrome sprites, but instead of pixels being <code>0</code> or <code>1</code>, they&rsquo;re <code>0</code> to <code>F</code>. I use a tool called <a href="https://github.com/projf/fpgatools">img2fmem</a> (discussed later) to convert the sprite image to <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/hardware-sprites/res/hedgehog/hedgehog.mem">hedgehog.mem</a>]</strong>. To read this hex text data into memory we use <code>$readmemh</code> (note the &lsquo;h&rsquo; for hex).</p>
 <blockquote>
 <p><strong>Quick Aside: Indexed Colour</strong><br>
 This design was common in older computers, for example, the <a href="https://en.wikipedia.org/wiki/Original_Chip_Set">original Amiga chipset</a> supported 32 colours from a possible 4,096: very similar to our design! The GIF and PNG formats still use this approach to squeeze the best quality out of 256-colour images.</p>
@@ -629,7 +629,7 @@ This design was common in older computers, for example, the <a href="https://en.
 <h3 id="more-memory">More Memory</h3>
 <p>If we&rsquo;re going to use larger sprites, we need to rethink our memory design. An async ROM suffices for small designs but is a resource hog and timing disaster for larger sprites. FPGAs include block ram (BRAM), which is ideal for memories of a few hundred bits to a few tens of kilobits.</p>
 <p>Our sprites designs don&rsquo;t change at runtime, so we can create a ROM using BRAM. The ROM takes a clock and address as input, and outputs the requested data the <em>following</em> clock cycle. This extra latency has implications for correct positioning of our sprite, which we&rsquo;ll discuss shortly. Check out <a href="/posts/fpga-memory-types/">FPGA Memory Types</a> to learn more about BRAM and other memory.</p>
-<p>Synchronous ROM using BRAM <strong>[<a href="https://github.com/projf/projf-explore/blob/master/common/rom_sync.sv">rom_sync.sv</a>]</strong>:</p>
+<p>Synchronous ROM using BRAM <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lib/memory/rom_sync.sv">rom_sync.sv</a>]</strong>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> rom_sync #(
     <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,
     <span style="color:#66d9ef">parameter</span> DEPTH<span style="color:#f92672">=</span><span style="color:#ae81ff">256</span>,
@@ -654,7 +654,7 @@ This design was common in older computers, for example, the <a href="https://en.
         data <span style="color:#f92672">&lt;=</span> memory[addr];
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
-</code></pre></div><p>Once you&rsquo;ve created the appropriate memory module, we can create our final sprite module <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/sprite.sv">sprite.sv</a>]</strong>:</p>
+</code></pre></div><p>Once you&rsquo;ve created the appropriate memory module, we can create our final sprite module <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/hardware-sprites/sprite.sv">sprite.sv</a>]</strong>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> sprite #(
     <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,         <span style="color:#75715e">// graphic width in pixels
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> HEIGHT<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,        <span style="color:#75715e">// graphic height in pixels
@@ -772,7 +772,7 @@ This design was common in older computers, for example, the <a href="https://en.
 <h4 id="drawing--done">Drawing &amp; Done</h4>
 <p>For better control and reuse of sprite instances, we&rsquo;ve added two new signals: <code>drawing</code> is high when the sprite is drawing pixels, and <code>done</code> indicates the sprite is complete.</p>
 <h3 id="a-refined-palette">A Refined Palette</h3>
-<p>Our boards have 12-bit colour output, supporting 4,096 colours. We can map our 11 sprite colours to any of these using a colour lookup table (CLUT). We populate the colour lookup table using a simple text file <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/res/hedgehog/hedgehog_palette.mem">hedgehog_palette.mem</a>]</strong>:</p>
+<p>Our boards have 12-bit colour output, supporting 4,096 colours. We can map our 11 sprite colours to any of these using a colour lookup table (CLUT). We populate the colour lookup table using a simple text file <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/hardware-sprites/res/hedgehog/hedgehog_palette.mem">hedgehog_palette.mem</a>]</strong>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">CCC AAA 888 874 763 651 540 330 111 F0F 000
 </code></pre></div><p><img src="/img/posts/hardware-sprites/hedgehog-palette.png" alt="Hedgehog Palette" title="The colour of the hedge"></p>
 <p>The hedgehog sprite has ten drawing colours, with an additional colour <code>F0F</code> (magenta) used for transparency. These colours are 12-bit in hex format: <code>RGB</code>; the same as a <a href="https://en.wikipedia.org/wiki/Web_colors">web colour hex triplet</a>.</p>
@@ -806,8 +806,8 @@ This design was common in older computers, for example, the <a href="https://en.
 <h3 id="top-hedgehog">Top Hedgehog</h3>
 <p>We&rsquo;re now ready to draw our hedgehog using a new top module:</p>
 <ul>
-<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/xc7/top_hedgehog_v1.sv">xc7/top_hedgehog_v1.sv</a></strong></li>
-<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/ice40/top_hedgehog_v1.sv">ice40/top_hedgehog_v1.sv</a></strong></li>
+<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/hardware-sprites/xc7/top_hedgehog_v1.sv">xc7/top_hedgehog_v1.sv</a></strong></li>
+<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/hardware-sprites/ice40/top_hedgehog_v1.sv">ice40/top_hedgehog_v1.sv</a></strong></li>
 </ul>
 <h2 id="animation">Animation</h2>
 <p>Our hedgehog looks like it&rsquo;s on ice. To complete our sprite design we need to add animation support so the hedgehog can move its legs. The required change is surprisingly small; we just need to load all three hedgehog images into memory and add offset the memory position to choose which image to display.</p>
@@ -816,7 +816,7 @@ This design was common in older computers, for example, the <a href="https://en.
 <p><strong>Quick Aside: Your Own Colour Graphics</strong><br>
 You&rsquo;ll learn how to create your own memory files from images using <code>img2fmem</code> <a href="/posts/framebuffers/">later in this series</a>.</p>
 </blockquote>
-<p>The animated sprite graphic has three images stacked vertically, so each image is contiguous in memory <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/res/hedgehog/hedgehog_walk.mem">hedgehog_walk.mem</a></strong>:</p>
+<p>The animated sprite graphic has three images stacked vertically, so each image is contiguous in memory <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/hardware-sprites/res/hedgehog/hedgehog_walk.mem">hedgehog_walk.mem</a></strong>:</p>
 <p><img src="/img/posts/hardware-sprites/hedgehog-frames.png" alt="Hedgehog Frames" title="Walking 1,2,3"></p>
 <p>Every display frame we increment the counter <code>cnt_anim</code>. When the counter hits specific values, we update the sprite base address, <code>spr_base_addr</code>, to select a different image in the sprite graphic.</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// sprite frame selector
@@ -866,8 +866,8 @@ You&rsquo;ll learn how to create your own memory files from images using <code>i
 </code></pre></div><p><img src="/img/posts/hardware-sprites/hedgehog-720p.png" alt="Hedgehog walking under the sky" title="Hedgehog: FPGA Capture"></p>
 <p>Our completed top module animates the hedgehog at approximently four frames per second:</p>
 <ul>
-<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/xc7/top_hedgehog.sv">xc7/top_hedgehog.sv</a></strong></li>
-<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/hardware-sprites/ice40/top_hedgehog.sv">ice40/top_hedgehog.sv</a></strong></li>
+<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/hardware-sprites/xc7/top_hedgehog.sv">xc7/top_hedgehog.sv</a></strong></li>
+<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/hardware-sprites/ice40/top_hedgehog.sv">ice40/top_hedgehog.sv</a></strong></li>
 </ul>
 <p>Xilinx version shown below:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_hedgehog (
@@ -1058,9 +1058,9 @@ You&rsquo;ll learn how to create your own memory files from images using <code>i
 	
 	<li><a href="/posts/life-on-screen/">Life on Screen</a></li>
 	
-	<li><a href="/posts/fpga-pong/">FPGA Pong</a></li>
+	<li><a href="/posts/fpga-pong/">Pong</a></li>
 	
-	<li><a href="/posts/fpga-ad-astra/">FPGA Ad Astra</a></li>
+	<li><a href="/posts/fpga-ad-astra/">Ad Astra</a></li>
 	
 	<li><a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a></li>
 	

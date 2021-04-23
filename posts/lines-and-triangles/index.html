@@ -120,17 +120,17 @@ In this series, we explore graphics at the hardware level and get a feel for the
     <div class="content">
       <p>Welcome back to <em>Exploring FPGA Graphics</em>. It&rsquo;s time to turn our attention to drawing. Most modern computer graphics come down to drawing triangles and colouring them in. So, it seems fitting to begin our tour of drawing with triangles and the straight lines that form them. This post will implement Bresenham&rsquo;s line algorithm in Verilog, creating lines, triangles, and even a cube (our first sort-of-3D graphic).</p>
 <p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how displays work, race the beam with Pong, animate starfields and sprites, paint Michelangelo&rsquo;s David, simulate life with bitmaps, draw lines and shapes, and finally render simple 3D models. New to the series? Start with <a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a>.</p>
-<p><em>Updated 2021-04-17. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><em>Updated 2021-04-23. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <h3 id="series-outline">Series Outline</h3>
 <ul>
 <li><a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a> - learn how displays work and animate simple shapes</li>
-<li><a href="/posts/fpga-pong/">FPGA Pong</a> - race the beam to create the arcade classic</li>
+<li><a href="/posts/fpga-pong/">Pong</a> - race the beam to create the arcade classic</li>
 <li><a href="/posts/hardware-sprites/">Hardware Sprites</a> - fast, colourful, graphics with minimal resources</li>
-<li><a href="/posts/fpga-ad-astra/">FPGA Ad Astra</a> - demo with hardware sprites and animated starfields</li>
+<li><a href="/posts/fpga-ad-astra/">Ad Astra</a> - demo with hardware sprites and animated starfields</li>
 <li><a href="/posts/framebuffers/">Framebuffers</a> - driving the display from a bitmap in memory</li>
 <li><a href="/posts/life-on-screen/">Life on Screen</a> - the screen comes alive with Conway&rsquo;s Game of Life</li>
 <li>Lines and Triangles (this post) - drawing lines and triangles with a framebuffer</li>
-<li><a href="/posts/fpga-shapes/">FPGA Shapes</a> - filling and animating shapes</li>
+<li><a href="/posts/fpga-shapes/">Shapes</a> - filling and animating shapes</li>
 <li>Simple 3D - models and wireframe rendering (draft coming soon)</li>
 </ul>
 <h3 id="requirements">Requirements</h3>
@@ -161,7 +161,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
 <h3 id="16-colour-palette">16 Colour Palette</h3>
 <p>For the 16 colour palette, I&rsquo;ve chosen the <a href="https://lospec.com/palette-list/pico-8">PICO-8 palette</a> (adjusted for 12-bit output):</p>
 <p><img src="/img/posts/lines-and-triangles/pico8-palette.png" alt="PICO-8 Palette" title="Sixteen lovely colours"></p>
-<p>We load the 16 colours into the colour lookup table (CLUT) ROM using a file: <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lines-and-triangles/res/palette/16_colr_4bit_palette.mem">16_colr_4bit_palette.mem</a>]</strong>.</p>
+<p>We load the 16 colours into the colour lookup table (CLUT) ROM using a file: <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/lines-and-triangles/res/palette/16_colr_4bit_palette.mem">16_colr_4bit_palette.mem</a>]</strong>.</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">000  // 0 - black
 235  // 1 - dark-blue
 825  // 2 - dark-purple
@@ -184,7 +184,7 @@ FCA  // F - peach
 FA0  // 1 - orange
 0E3  // 2 - green
 3BF  // 3 - blue
-</code></pre></div><p>We load the 4 colours into the CLUT ROM using a file: <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lines-and-triangles/res/palette/4_colr_4bit_palette.mem">4_colr_4bit_palette.mem</a>]</strong>.</p>
+</code></pre></div><p>We load the 4 colours into the CLUT ROM using a file: <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/lines-and-triangles/res/palette/4_colr_4bit_palette.mem">4_colr_4bit_palette.mem</a>]</strong>.</p>
 <h2 id="from-point-to-line">From Point to Line</h2>
 <p>We can draw a point by writing to a single memory address, but we want to draw a line <em>between</em> two points. Bresenham&rsquo;s line algorithm is the definitive way to do this, and <a href="http://members.chello.at/~easyfilter/bresenham.html">The Beauty of Bresenham&rsquo;s Algorithm</a> has just what we need: a clearly written version of the algorithm using integers.</p>
 <p>Here&rsquo;s the C design:</p>
@@ -366,7 +366,7 @@ FA0  // 1 - orange
 </span><span style="color:#75715e"></span>    dy <span style="color:#f92672">&lt;=</span> ya <span style="color:#f92672">-</span> yb;  <span style="color:#75715e">// dy = -abs(yb - ya)
 </span><span style="color:#75715e"></span><span style="color:#66d9ef">end</span>
 </code></pre></div><h3 id="ready-to-draw">Ready to Draw</h3>
-<p>We&rsquo;re now ready to use our improved line drawing module <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lines-and-triangles/draw_line.sv">draw_line.sv</a>]</strong>:</p>
+<p>We&rsquo;re now ready to use our improved line drawing module <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/lines-and-triangles/draw_line.sv">draw_line.sv</a>]</strong>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> draw_line #(<span style="color:#66d9ef">parameter</span> CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>) (  <span style="color:#75715e">// signed coordinate width
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,             <span style="color:#75715e">// clock
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst,             <span style="color:#75715e">// reset
@@ -454,19 +454,19 @@ FA0  // 1 - orange
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
 </code></pre></div><p>The pixel to draw is output as <code>(x,y)</code> and the line coordinates are input as <code>(x0,y0)</code> and <code>(x1,y1)</code>. A high <code>start</code> signal begins drawing, and drawing completion is marked by <code>done</code>. An output enable signal, <code>oe</code>, allows you to pause drawing, handy for multiplexing memory access or slowing down the action to make it visible.</p>
-<p>There&rsquo;s a test bench you can use to exercise the module with Vivado: <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lines-and-triangles/xc7/draw_line_tb.sv">xc7/draw_line_tb.sv</a>]</strong>.</p>
+<p>There&rsquo;s a test bench you can use to exercise the module with Vivado: <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/lines-and-triangles/xc7/draw_line_tb.sv">xc7/draw_line_tb.sv</a>]</strong>.</p>
 <p>We test several sorts of lines: steep and not steep, drawn upwards, downwards, left to right, and right to left, as well as points, and the longest possible horizontal, vertical, and diagonal lines. A steep line is one in which the vertical change is larger than the horizontal.</p>
 <h3 id="top-of-the-line">Top of the Line</h3>
 <p>It&rsquo;s time to get drawing with actual hardware.</p>
 <p>Create a new top module and build it for your board:</p>
 <ul>
-<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/lines-and-triangles/xc7/top_line.sv">xc7/top_line.sv</a></strong></li>
-<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/lines-and-triangles/ice40/top_line.sv">ice40/top_line.sv</a></strong></li>
+<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/lines-and-triangles/xc7/top_line.sv">xc7/top_line.sv</a></strong></li>
+<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/lines-and-triangles/ice40/top_line.sv">ice40/top_line.sv</a></strong></li>
 </ul>
 <p>This design is similar to the top modules we used in the <a href="/posts/framebuffers/">framebuffers</a> post.</p>
 <blockquote>
 <p><strong>Building the Designs</strong><br>
-In the <a href="https://github.com/projf/projf-explore/tree/master/lines-and-triangles">Lines and Triangles</a> section of the git repo, you&rsquo;ll find the design files, a makefile for iCEBreaker, a Vivado project for Arty, and instructions for building the designs for both boards.</p>
+In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/lines-and-triangles">Lines and Triangles</a> section of the git repo, you&rsquo;ll find the design files, a makefile for iCEBreaker, a Vivado project for Arty, and instructions for building the designs for both boards.</p>
 </blockquote>
 <p>The Arty version of <code>top_line</code> looks like this:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_line (
@@ -612,8 +612,8 @@ On the Arty, we&rsquo;re drawing at 100 MHz with plenty of timing slack.</p>
 <h3 id="that-aint-no-cube">That Ain&rsquo;t No Cube</h3>
 <p>If we can draw one line, we can draw many! Let&rsquo;s draw a cube as you&rsquo;ve probably doodled on paper; this requires nine lines. To see how the drawing works, we&rsquo;ve wired the drawing <em>output enable</em> to the <code>animate</code> signal. For each frame, one new pixel is drawn, with a delay of 300 frames to allow the monitor time to start showing the image.</p>
 <ul>
-<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/lines-and-triangles/xc7/top_cube.sv">xc7/top_cube.sv</a></strong></li>
-<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/lines-and-triangles/ice40/top_cube.sv">ice40/top_cube.sv</a></strong></li>
+<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/lines-and-triangles/xc7/top_cube.sv">xc7/top_cube.sv</a></strong></li>
+<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/lines-and-triangles/ice40/top_cube.sv">ice40/top_cube.sv</a></strong></li>
 </ul>
 <p>iCEBreaker cube drawing looks like this:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_cube (
@@ -819,7 +819,7 @@ On the Arty, we&rsquo;re drawing at 100 MHz with plenty of timing slack.</p>
 <p>It looks like a cube, but it&rsquo;s an ersatz cube. Our cube has no real depth; it cannot move in 3D space, nor can we apply realistic lighting. We&rsquo;ll cover real 3D models in a later post, but for now, let&rsquo;s turn our attention to the most critical shape in all of computer graphics: the triangle.</p>
 <h2 id="the-triangle">The Triangle</h2>
 <p>As you gaze upon the beautiful 4K vista from a AAA game in 2021, know this: it&rsquo;s all triangles!</p>
-<p>A triangle consists of three lines so that we could issue three draw_line commands, but it&rsquo;s so useful, it deserves its own module <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lines-and-triangles/draw_triangle.sv">draw_triangle.sv</a>]</strong>:</p>
+<p>A triangle consists of three lines so that we could issue three draw_line commands, but it&rsquo;s so useful, it deserves its own module <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/lines-and-triangles/draw_triangle.sv">draw_triangle.sv</a>]</strong>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> draw_triangle #(<span style="color:#66d9ef">parameter</span> CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>) (  <span style="color:#75715e">// signed coordinate width
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,             <span style="color:#75715e">// clock
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst,             <span style="color:#75715e">// reset
@@ -907,11 +907,11 @@ On the Arty, we&rsquo;re drawing at 100 MHz with plenty of timing slack.</p>
         .done(line_done)
     );
 <span style="color:#66d9ef">endmodule</span>
-</code></pre></div><p>There&rsquo;s a test bench you can use to exercise the module with Vivado: <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lines-and-triangles/xc7/draw_triangle_tb.sv">xc7/draw_triangle_tb.sv</a>]</strong>.</p>
+</code></pre></div><p>There&rsquo;s a test bench you can use to exercise the module with Vivado: <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/lines-and-triangles/xc7/draw_triangle_tb.sv">xc7/draw_triangle_tb.sv</a>]</strong>.</p>
 <p>We can tweak our existing top module to draw a few triangles:</p>
 <ul>
-<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/lines-and-triangles/xc7/top_triangles.sv">xc7/top_triangles.sv</a></strong></li>
-<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/lines-and-triangles/ice40/top_triangles.sv">ice40/top_triangles.sv</a></strong></li>
+<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/lines-and-triangles/xc7/top_triangles.sv">xc7/top_triangles.sv</a></strong></li>
+<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/lines-and-triangles/ice40/top_triangles.sv">ice40/top_triangles.sv</a></strong></li>
 </ul>
 <p>Arty triangles look like this:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_triangles (
@@ -1124,9 +1124,9 @@ On the Arty, we&rsquo;re drawing at 100 MHz with plenty of timing slack.</p>
 	
 	<li><a href="/posts/life-on-screen/">Life on Screen</a></li>
 	
-	<li><a href="/posts/fpga-pong/">FPGA Pong</a></li>
+	<li><a href="/posts/fpga-pong/">Pong</a></li>
 	
-	<li><a href="/posts/fpga-ad-astra/">FPGA Ad Astra</a></li>
+	<li><a href="/posts/fpga-ad-astra/">Ad Astra</a></li>
 	
 </ul>
 </div>

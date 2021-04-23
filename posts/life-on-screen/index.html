@@ -121,7 +121,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
       <p>Welcome back to <em>Exploring FPGA Graphics</em>. In this post we&rsquo;re going to use the designs we created in <a href="/posts/framebuffers/">Framebuffers</a> to experiment with Conway&rsquo;s Game of Life.</p>
 <p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how displays work, race the beam with Pong, animate starfields and sprites, paint Michelangelo&rsquo;s David, simulate life with bitmaps, draw lines and shapes, and finally render simple 3D models. New to the series? Start with <a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a>.</p>
 <p><strong>April 2021: Draft post now includes design for iCEBreaker!</strong></p>
-<p><em>Updated 2021-04-21. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><em>Updated 2021-04-23. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <blockquote>
 <p>He is Archimedes, Mick Jagger, Salvador Dalí, and Richard Feynman, all rolled into one.<br>
 <em>The Guardian, <a href="https://www.theguardian.com/science/2015/jul/23/john-horton-conway-the-most-charismatic-mathematician-in-the-world">John Horton Conway: the world&rsquo;s most charismatic mathematician</a> (2015)</em></p>
@@ -129,13 +129,13 @@ In this series, we explore graphics at the hardware level and get a feel for the
 <h3 id="series-outline">Series Outline</h3>
 <ul>
 <li><a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a> - learn how displays work and animate simple shapes</li>
-<li><a href="/posts/fpga-pong/">FPGA Pong</a> - race the beam to create the arcade classic</li>
+<li><a href="/posts/fpga-pong/">Pong</a> - race the beam to create the arcade classic</li>
 <li><a href="/posts/hardware-sprites/">Hardware Sprites</a> - fast, colourful, graphics with minimal resources</li>
-<li><a href="/posts/fpga-ad-astra/">FPGA Ad Astra</a> - demo with hardware sprites and animated starfields</li>
+<li><a href="/posts/fpga-ad-astra/">Ad Astra</a> - demo with hardware sprites and animated starfields</li>
 <li><a href="/posts/framebuffers/">Framebuffers</a> - driving the display from a bitmap in memory</li>
 <li>Life on Screen (this post) - the screen comes alive with Conway&rsquo;s Game of Life</li>
 <li><a href="/posts/lines-and-triangles/">Lines and Triangles</a> - drawing lines and triangles with a framebuffer</li>
-<li><a href="/posts/fpga-shapes/">FPGA Shapes</a> - filling and animating shapes</li>
+<li><a href="/posts/fpga-shapes/">Shapes</a> - filling and animating shapes</li>
 <li>Simple 3D - models and wireframe rendering (draft coming soon)</li>
 </ul>
 <h3 id="requirements">Requirements</h3>
@@ -185,7 +185,7 @@ b. otherwise, it&rsquo;s dead next generation</li>
 </ol>
 <p>Both approaches have their advantages and disadvantages, so we&rsquo;ll support both, but start with option 1.</p>
 <p>Since a cell&rsquo;s state depends on all those around it, we can&rsquo;t calculate the new state of each cell with one array. Instead, we have two array (or buffers): one contains the current generation; we use it to calculate the next generation in the second buffer. Every generation, we swap buffers and repeat the simulation process.</p>
-<p>Create a life module with the following design - <strong>[<a href="https://github.com/projf/projf-explore/blob/master/life-on-screen/life.sv">life.sv</a>]</strong>:</p>
+<p>Create a life module with the following design - <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/life-on-screen/life.sv">life.sv</a>]</strong>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> life #(
     <span style="color:#66d9ef">parameter</span> CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>,   <span style="color:#75715e">// signed coordinate width
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">6</span>,    <span style="color:#75715e">// world width in cells
@@ -399,12 +399,12 @@ b. otherwise, it&rsquo;s dead next generation</li>
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
 </code></pre></div><p><em>Explanation of life module will be added shortly.</em></p>
-<p>To exercise this module we have a test bench for Vivado: <strong><a href="https://github.com/projf/projf-explore/tree/master/life-on-screen/xc7/life_tb.sv">life_tb.sv</a></strong>. If you have a Xilinx Vivado installed, try using the test bench with the included test seed files. You can find instructions for running the simulation in the design <a href="https://github.com/projf/projf-explore/tree/master/life-on-screen">README</a>.</p>
+<p>To exercise this module we have a test bench for Vivado: <strong><a href="https://github.com/projf/projf-explore/tree/master/graphics/life-on-screen/xc7/life_tb.sv">life_tb.sv</a></strong>. If you have a Xilinx Vivado installed, try using the test bench with the included test seed files. You can find instructions for running the simulation in the design <a href="https://github.com/projf/projf-explore/tree/master/life-on-screen">README</a>.</p>
 <h3 id="top-life">Top Life</h3>
 <p>Now we have our life sim, we&rsquo;re ready to render it with the design from <a href="/posts/framebuffers/">Framebuffers</a>.</p>
 <ul>
-<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/life-on-screen/xc7/top_life.sv">xc7/top_life.sv</a></strong></li>
-<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/life-on-screen/ice40/top_life.sv">ice40/top_life.sv</a></strong></li>
+<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/life-on-screen/xc7/top_life.sv">xc7/top_life.sv</a></strong></li>
+<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/life-on-screen/ice40/top_life.sv">ice40/top_life.sv</a></strong></li>
 </ul>
 <p>The Xilinx version is shown below:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_life (
@@ -545,7 +545,7 @@ b. otherwise, it&rsquo;s dead next generation</li>
 </code></pre></div><p>We use a 64x48 world, which is a tenth of the 640x480 screen dimensions. With the padding of dead cells, each simulation array has <code>66 x 50 = 3,300</code> cells, which comfortably fits into 4Kb (though iCEBreaker BRAM has a minimum width of two bits, so it uses two BRAMs per world buffer).</p>
 <blockquote>
 <p><strong>Building the Designs</strong><br>
-In the <a href="https://github.com/projf/projf-explore/tree/master/life-on-screen">Life on Screen</a> section of the git repo, you&rsquo;ll find the design files, a makefile for iCEBreaker, a Vivado project for Arty, and instructions for building the designs for both boards.</p>
+In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/life-on-screen">Life on Screen</a> section of the git repo, you&rsquo;ll find the design files, a makefile for iCEBreaker, a Vivado project for Arty, and instructions for building the designs for both boards.</p>
 </blockquote>
 <p>Once you&rsquo;ve programmed your board, you should see a simple test pattern of oscillators and a still life.
 If that works, try the Gosper glider gun by changing the seed file in <code>top_life.sv</code> to <code>gosper_gun.mem</code>.</p>
@@ -573,9 +573,9 @@ If that works, try the Gosper glider gun by changing the seed file in <code>top_
 <h3>Similar articles:</h3>
 <ul>
 	
-	<li><a href="/posts/fpga-pong/">FPGA Pong</a></li>
+	<li><a href="/posts/fpga-pong/">Pong</a></li>
 	
-	<li><a href="/posts/fpga-ad-astra/">FPGA Ad Astra</a></li>
+	<li><a href="/posts/fpga-ad-astra/">Ad Astra</a></li>
 	
 	<li><a href="/posts/fpga-graphics/">Exploring FPGA Graphics</a></li>
 	

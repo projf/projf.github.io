@@ -119,7 +119,7 @@
     <div class="content">
       <p>Welcome to <em>Exploring FPGA Graphics</em>. In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how displays work, race the beam with Pong, animate starfields and sprites, paint Michelangelo&rsquo;s David, simulate life with bitmaps, draw lines and shapes, and finally render simple 3D models. Along the way, you&rsquo;ll experience a Smörgåsbord of designs and techniques, from BRAM and finite state machines to crossing clock domains and translating C algorithms into Verilog.</p>
 <p>We begin with the basics of computer displays and animating shapes in real-time.</p>
-<p><em>Updated 2021-04-16. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><em>Updated 2021-04-23. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <blockquote>
 <p>In all beginnings dwells a magic force<br>
 <em>Herman Hesse, Stages from <a href="https://en.wikipedia.org/wiki/The_Glass_Bead_Game">The Glass Bead Game</a></em></p>
@@ -127,13 +127,13 @@
 <h3 id="series-outline">Series Outline</h3>
 <ul>
 <li>Exploring FPGA Graphics (this post) - learn how displays work and animate simple shapes</li>
-<li><a href="/posts/fpga-pong/">FPGA Pong</a> - race the beam to create the arcade classic</li>
+<li><a href="/posts/fpga-pong/">Pong</a> - race the beam to create the arcade classic</li>
 <li><a href="/posts/hardware-sprites/">Hardware Sprites</a> - fast, colourful, graphics with minimal resources</li>
-<li><a href="/posts/fpga-ad-astra/">FPGA Ad Astra</a> - demo with hardware sprites and animated starfields</li>
+<li><a href="/posts/fpga-ad-astra/">Ad Astra</a> - demo with hardware sprites and animated starfields</li>
 <li><a href="/posts/framebuffers/">Framebuffers</a> - driving the display from a bitmap in memory</li>
 <li><a href="/posts/life-on-screen/">Life on Screen</a> - the screen comes alive with Conway&rsquo;s Game of Life</li>
 <li><a href="/posts/lines-and-triangles/">Lines and Triangles</a> - drawing lines and triangles with a framebuffer</li>
-<li><a href="/posts/fpga-shapes/">FPGA Shapes</a> - filling and animating shapes</li>
+<li><a href="/posts/fpga-shapes/">Shapes</a> - filling and animating shapes</li>
 <li>Simple 3D - models and wireframe rendering (draft coming soon)</li>
 </ul>
 <h3 id="requirements">Requirements</h3>
@@ -184,13 +184,14 @@ Modern displays, including <a href="https://en.wikipedia.org/wiki/Multisync_moni
 <p>We have provided implementations for the Arty (XC7) and iCEBreaker (iCE40); for other FPGAs, you&rsquo;ll need to consult your vendor documentation. If you can&rsquo;t reach 25.2 MHz exactly, then 25 MHz or thereabouts should be fine. The iCE40 can&rsquo;t generate 25.2 MHz using the oscillators on iCEBreaker but works fine at 25.125 MHz.</p>
 <h3 id="clock-generator-modules">Clock Generator Modules</h3>
 <ul>
-<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/common/xc7/clock_gen_480p.sv">xc7/clock_gen_480p.sv</a></strong></li>
-<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/common/ice40/clock_gen_480p.sv">ice40/clock_gen_480p.sv</a></strong></li>
+<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/lib/clock/xc7/clock_gen_480p.sv">xc7/clock_gen_480p.sv</a></strong></li>
+<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/lib/clock/ice40/clock_gen_480p.sv">ice40/clock_gen_480p.sv</a></strong></li>
 </ul>
-<h2 id="display-timings-module">Display Timings Module</h2>
+<p>These modules are part of the <a href="https://github.com/projf/projf-explore/tree/master/lib">Project F Library</a> of useful Verilog designs.</p>
+<h2 id="simple-display-timings">Simple Display Timings</h2>
 <p>Using our ~25 MHz pixel clock, we can generate timings for our 640x480 display. Creating display timings is straightforward: there&rsquo;s one counter for horizontal position and one for vertical. We use these counters to decide on the correct time for sync signals.</p>
-<p>640x480 60Hz display timings generator <strong>[<a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/display_timings_480p.sv">display_timings_480p.sv</a>]</strong>:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> display_timings_480p (
+<p>Create a module for 640x480 60Hz display timings <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/exploring-graphics/simple_display_timings_480p.sv">simple_display_timings_480p.sv</a>]</strong>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> simple_display_timings_480p (
     <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_pix,   <span style="color:#75715e">// pixel clock
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst,       <span style="color:#75715e">// reset
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">9</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx,  <span style="color:#75715e">// horizontal screen position
@@ -241,8 +242,8 @@ Modern displays, including <a href="https://en.wikipedia.org/wiki/Multisync_moni
 <h2 id="test-benches">Test Benches</h2>
 <p>You can exercise the designs with the included test benches (Xilinx only):</p>
 <ul>
-<li><strong><a href="https://github.com/projf/projf-explore/tree/master/common/xc7/clock_gen_480p_tb.sv">Clock Gen Test Bench</a></strong></li>
-<li><strong><a href="https://github.com/projf/projf-explore/tree/master/fpga-graphics/xc7/display_timings_480p_tb.sv">Display Timings Test Bench</a></strong></li>
+<li><strong><a href="https://github.com/projf/projf-explore/tree/master/lib/clock/xc7/clock_gen_480p_tb.sv">Clock Gen Test Bench</a></strong></li>
+<li><strong><a href="https://github.com/projf/projf-explore/tree/master/graphics/exploring-graphics/xc7/simple_display_timings_480p_tb.sv">Display Timings Test Bench</a></strong></li>
 </ul>
 <p>Some things to check:</p>
 <ul>
@@ -261,8 +262,8 @@ Modern displays, including <a href="https://en.wikipedia.org/wiki/Multisync_moni
 When the screen coordinates, <code>sx</code> and <code>sy</code>, are both less than 32, we draw orange; otherwise, we draw blue.</p>
 <p>There are two versions of the square top module, one for each demo board:</p>
 <ul>
-<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/xc7/top_square.sv">xc7/top_square.sv</a></strong></li>
-<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/ice40/top_square.sv">ice40/top_square.sv</a></strong></li>
+<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/exploring-graphics/xc7/top_square.sv">xc7/top_square.sv</a></strong></li>
+<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/exploring-graphics/ice40/top_square.sv">ice40/top_square.sv</a></strong></li>
 </ul>
 <p>We&rsquo;ll review both of them in turn then explain how to build the designs for your board.</p>
 <h3 id="arty-vga">Arty VGA</h3>
@@ -397,17 +398,17 @@ The SB_IO primitive (with registered outputs) ensures our DVI signals are in syn
 <p>Before building the design, we need board constraints. The constraints map the pins on the FPGA to the signals in our design. For example, we need to know which FPGA pin is connected to the oscillator. The Arty constraints use Xilinx&rsquo;s XDC format, which is written in Tcl.</p>
 <p>Take a look at the constraints for your board:</p>
 <ul>
-<li>Arty Constraints: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/xc7/arty.xdc">arty.xdc</a></strong></li>
-<li>iCEBreaker Constraints: <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/ice40/icebreaker.pcf">icebreaker.pcf</a></strong></li>
+<li>Arty Constraints: <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/exploring-graphics/xc7/arty.xdc">arty.xdc</a></strong></li>
+<li>iCEBreaker Constraints: <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/exploring-graphics/ice40/icebreaker.pcf">icebreaker.pcf</a></strong></li>
 </ul>
 <h2 id="building">Building</h2>
-<p>Every part of <em>FPGA Graphics</em> includes a <a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/README.md">README</a> with build instructions. I have included the basic instructions in this post to get you started. If you need help with your board or tools, I recommend the <a href="https://forum.digilentinc.com/">Digilent Forum</a> for Arty and <a href="https://1bitsquared.com/pages/chat">1BitSquared Discord</a> for iCEBreaker.</p>
+<p>Every part of <em>FPGA Graphics</em> includes a <a href="https://github.com/projf/projf-explore/blob/master/graphics/exploring-graphics/README.md">README</a> with build instructions. I have included the basic instructions in this post to get you started. If you need help with your board or tools, I recommend the <a href="https://forum.digilentinc.com/">Digilent Forum</a> for Arty and <a href="https://1bitsquared.com/pages/chat">1BitSquared Discord</a> for iCEBreaker.</p>
 <h3 id="arty">Arty</h3>
 <p>We build Arty designs using Xilinx Vivado. To create a Vivado project, clone the <a href="https://github.com/projf/projf-explore">projf-explore repo</a> from GitHub. Then, start Vivado and run the following in the Tcl Console:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-tcl" data-lang="tcl">cd projf-explore<span style="color:#f92672">/</span>fpga-graphics<span style="color:#f92672">/</span>xc7<span style="color:#f92672">/</span>vivado
 source .<span style="color:#f92672">/</span>create_project.tcl
 </code></pre></div><h3 id="icebreaker">iCEBreaker</h3>
-<p>We build iCEBreaker designs with the open-source toolchain of <a href="http://www.clifford.at/yosys/">Yosys</a>, <a href="https://github.com/YosysHQ/nextpnr">nextpnr</a>, and <a href="http://www.clifford.at/icestorm/">IceStorm Tools</a>. If you don&rsquo;t already have these tools see the <a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/README.md">README</a>.</p>
+<p>We build iCEBreaker designs with the open-source toolchain of <a href="http://www.clifford.at/yosys/">Yosys</a>, <a href="https://github.com/YosysHQ/nextpnr">nextpnr</a>, and <a href="http://www.clifford.at/icestorm/">IceStorm Tools</a>. If you don&rsquo;t already have these tools see the <a href="https://github.com/projf/projf-explore/blob/master/graphics/exploring-graphics/README.md">README</a>.</p>
 <p>For example, to build and program <code>top_bounce</code>; clone the <a href="https://github.com/projf/projf-explore">projf-explore repo</a>, then in a shell:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">cd projf-explore/fpga-graphics/ice40
 make top_bounce
@@ -420,8 +421,8 @@ iceprog top_bounce.bin
 <p>To create a simple animation, we can update the position of the square every frame. If we move the square during active drawing, we risk <strong><a href="https://en.wikipedia.org/wiki/Screen_tearing">screen tearing</a></strong>, so we create an <code>animate</code> signal at the start of the vertical blanking period.</p>
 <p>We&rsquo;re going to replicate the behaviour of the video display itself, scanning across then down the screen. The square &ldquo;beam&rdquo; disappears off the edge of the screen, like the signal in the blanking interval. Try rebuilding the design with <code>top_beam</code>:</p>
 <ul>
-<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/xc7/top_beam.sv">xc7/top_beam.sv</a></strong></li>
-<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/ice40/top_beam.sv">ice40/top_beam.sv</a></strong></li>
+<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/exploring-graphics/xc7/top_beam.sv">xc7/top_beam.sv</a></strong></li>
+<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/exploring-graphics/ice40/top_beam.sv">ice40/top_beam.sv</a></strong></li>
 </ul>
 <p>The square animation logic looks like this:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// size of screen with and without blanking
@@ -460,8 +461,8 @@ iceprog top_bounce.bin
 <p>Now we can animate, we can start to create some interesting effects. By adding collision detection, we can bounce squares around the screen. If we draw three squares: red, green, and blue, we have a simple demo. While simple, it&rsquo;s satisfying to watch the squares combine colours as they move around the screen.</p>
 <p>Try rebuilding the design with <code>top_bounce</code>:</p>
 <ul>
-<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/xc7/top_bounce.sv">xc7/top_bounce.sv</a></strong></li>
-<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/fpga-graphics/ice40/top_bounce.sv">ice40/top_bounce.sv</a></strong></li>
+<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/exploring-graphics/xc7/top_bounce.sv">xc7/top_bounce.sv</a></strong></li>
+<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/exploring-graphics/ice40/top_bounce.sv">ice40/top_bounce.sv</a></strong></li>
 </ul>
 <p><img src="/img/posts/fpga-graphics/bounce.jpg" alt="Bouncing Squares" title="Bounce!"></p>
 <h3 id="collision-detection">Collision Detection</h3>
