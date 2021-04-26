@@ -118,7 +118,9 @@
     
     <div class="content">
       <p>Division is a fundamental arithmetic operation; one we take for granted in most contexts. FPGAs are different; Verilog can&rsquo;t synthesize division: we need to do it ourselves. In this <a href="/tags/cookbook">FPGA recipe</a>, we&rsquo;re going to look at a straightforward division algorithm for positive integers and <a href="/posts/fixed-point-numbers-in-verilog/">fixed-point numbers</a>. For integers, this method takes one cycle per bit: 32 cycles for 32-bit numbers. You might also be interested in <a href="/posts/square-root-in-verilog/">Square Root in Verilog</a>.</p>
-<p><em>Updated 2021-01-04. Feedback to <a href="https://twitter.com/WillFlux">@WillFlux</a> is most welcome.</em></p>
+<p><em>Updated 2021-04-26. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<h3 id="source">Source</h3>
+<p>The SystemVerilog designs featured in this post are available from the <a href="https://github.com/projf/projf-explore/tree/master/lib">Project F Library</a> under the open-source MIT licence: build on them to your heart&rsquo;s content. The rest of the blog content is subject to standard copyright restrictions: don&rsquo;t republish it without permission.</p>
 <h2 id="division-defined">Division Defined</h2>
 <p>Before we get to the design, it helps be familiar with some terminology.</p>
 <p>When you divide <strong>dividend</strong> <code>X</code> by <strong>divisor</strong> <code>Y</code> you get <strong>quotient</strong> <code>Q</code> and <strong>remainder</strong> <code>R</code>:</p>
@@ -187,13 +189,8 @@ Outputs: Q=0100  R=010
 <p>We never use the same digit in <code>X</code> and <code>Q</code> at the same time, so it&rsquo;s possible to combine those registers together. As a digit of the dividend is shifted out, a digit of the quotient is shifted in. We&rsquo;ll do this in our Verilog module.</p>
 <h2 id="verilog-module">Verilog Module</h2>
 <p>Our Verilog design uses the above algorithm, but adds a check for divide by zero and allows the width of the numbers to be configured.</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#75715e">// Project F: Division (Integer)
-</span><span style="color:#75715e">// (C)2021 Will Green, Open source hardware released under the MIT License
-</span><span style="color:#75715e"></span>
-<span style="color:#66d9ef">`default_nettype</span> none
-<span style="color:#66d9ef">`timescale</span> <span style="color:#ae81ff">1</span>ns <span style="color:#f92672">/</span> <span style="color:#ae81ff">1</span>ps
-
-<span style="color:#66d9ef">module</span> div_int #(<span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">4</span>) (
+<p>Project F Library source: <strong>[<a href="https://github.com/projf/projf-explore/tree/master/lib/maths/div_int.sv">div_int.sv</a>]</strong>.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> div_int #(<span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">4</span>) (
     <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,
     <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> start,          <span style="color:#75715e">// start signal
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> busy,           <span style="color:#75715e">// calculation in progress
@@ -254,15 +251,9 @@ Outputs: Q=0100  R=010
 The accumulator needs to be 1 bit wider than the dividend because the remainder comes from unshifting the final <code>ac_next</code>. For example, when we divide eight by nine, the remainder should be eight <code>4'b1000</code>, but without the wider accumulator the left-most digit would be lost, and the remainder would appear to be <code>4'b0000</code>.</p>
 </blockquote>
 <h3 id="testing">Testing</h3>
-<p>The following test bench exercises the module, including dividing by zero:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#75715e">// Project F: Test Bench for Integer Division
-</span><span style="color:#75715e">// (C)2021 Will Green, Open source hardware released under the MIT License
-</span><span style="color:#75715e">// Learn more at https://projectf.io
-</span><span style="color:#75715e"></span>
-<span style="color:#66d9ef">`default_nettype</span> none
-<span style="color:#66d9ef">`timescale</span> <span style="color:#ae81ff">1</span>ns <span style="color:#f92672">/</span> <span style="color:#ae81ff">1</span>ps
-
-<span style="color:#66d9ef">module</span> div_int_tb();
+<p>The following Vivado test bench exercises the module, including dividing by zero.</p>
+<p>Project F Library source: <strong>[<a href="https://github.com/projf/projf-explore/tree/master/lib/maths/xc7/div_int_tb.sv">xc7/div_int_tb.sv</a>]</strong>.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> div_int_tb();
 
     <span style="color:#66d9ef">parameter</span> CLK_PERIOD <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>;  <span style="color:#75715e">// 10 ns == 100 MHz
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> WIDTH <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;
@@ -345,16 +336,9 @@ The accumulator needs to be 1 bit wider than the dividend because the remainder 
 <li>Handling overflow</li>
 </ol>
 <p>To account for the fractional part of the number, we need to increase the number of iterations by the number of fractional bits.</p>
-<p><strong>More explanation to follow&hellip;</strong></p>
-<p>With these changes, the module looks like this:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#75715e">// Project F: Division (Fixed-Point)
-</span><span style="color:#75715e">// (C)2021 Will Green, Open source hardware released under the MIT License
-</span><span style="color:#75715e">// Learn more at https://projectf.io
-</span><span style="color:#75715e"></span>
-<span style="color:#66d9ef">`default_nettype</span> none
-<span style="color:#66d9ef">`timescale</span> <span style="color:#ae81ff">1</span>ns <span style="color:#f92672">/</span> <span style="color:#ae81ff">1</span>ps
-
-<span style="color:#66d9ef">module</span> div #(
+<p><em>More explanation to follow&hellip;</em></p>
+<p>Project F Library source: <strong>[<a href="https://github.com/projf/projf-explore/tree/master/lib/maths/div.sv">div.sv</a>]</strong>.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> div #(
     <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">4</span>,  <span style="color:#75715e">// width of numbers in bits
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> FBITS<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>   <span style="color:#75715e">// fractional bits (for fixed point)
 </span><span style="color:#75715e"></span>    ) (
@@ -422,15 +406,9 @@ The accumulator needs to be 1 bit wider than the dividend because the remainder 
         <span style="color:#66d9ef">end</span>
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
-</code></pre></div><p>A new test bench can exercise the module (a sample of tests shown for brevity):</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#75715e">// Project F: Test Bench for Fixed-Point Division
-</span><span style="color:#75715e">// (C)2021 Will Green, Open source hardware released under the MIT License
-</span><span style="color:#75715e">// Learn more at https://projectf.io
-</span><span style="color:#75715e"></span>
-<span style="color:#66d9ef">`default_nettype</span> none
-<span style="color:#66d9ef">`timescale</span> <span style="color:#ae81ff">1</span>ns <span style="color:#f92672">/</span> <span style="color:#ae81ff">1</span>ps
-
-<span style="color:#66d9ef">module</span> div_tb();
+</code></pre></div><p>A new Vivado test bench can exercise the module (a sample of tests shown for brevity).</p>
+<p>Project F Library source: <strong>[<a href="https://github.com/projf/projf-explore/tree/master/lib/maths/xc7/div_tb.sv">xc7/div_tb.sv</a>]</strong>.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> div_tb();
 
     <span style="color:#66d9ef">parameter</span> CLK_PERIOD <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>;  <span style="color:#75715e">// 10 ns == 100 MHz
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> WIDTH <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span>;
@@ -522,7 +500,8 @@ The accumulator needs to be 1 bit wider than the dividend because the remainder 
 1130:	 8.000000 /  9.000000 = 00001110  (0.875000) (r = 00100000) (V=1) (DBZ=0) (OVF=0)
 </code></pre></div><p>Try experimenting with a wider range of test values and different fractional widths.</p>
 <h2 id="signed-numbers">Signed Numbers</h2>
-<p>I plan to add support for signed numbers during 2021. Follow <a href="https://twitter.com/WillFlux">@WillFlux</a> for updates.</p>
+<p>I plan to add support for signed numbers during 2021. In the meantime you might like to check out <a href="/posts/square-root-in-verilog/">Square Root in Verilog</a>.</p>
+<p><em>Constructive feedback is always welcome. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 
       
       <div class="related">

@@ -8,8 +8,7 @@
 
 <meta property='og:title' content='Square Root in Verilog - Project F - FPGA Development'>
 <meta property='og:description' content='The square root is useful in many circumstances, including statistics, graphics, and signal processing. In this FPGA recipe, we&rsquo;re going to look at a straightforward digit-by-digit square root algorithm for integer and fixed-point numbers. There are lower-latency methods, but this one is simple, using only subtraction and bit shifts. You might also be interested in Division in Verilog.
-Updated 2021-01-04. Feedback to @WillFlux is most welcome.
-Getting Radical The square root of a number is a second number that multiplied by itself produces the first number.'>
+Updated 2021-04-26. Get in touch with @WillFlux or open an issue on GitHub.'>
 <meta property='og:url' content='https://projectf.io/posts/square-root-in-verilog/'>
 <meta property='og:site_name' content='Project F - FPGA Development'>
 <meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/square-root-in-verilog/social-card.png'><meta property='article:published_time' content='2020-12-22T00:00:00Z'/><meta property='article:modified_time' content='2020-12-22T00:00:00Z'/><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
@@ -120,7 +119,9 @@ Getting Radical The square root of a number is a second number that multiplied b
     
     <div class="content">
       <p>The square root is useful in many circumstances, including statistics, graphics, and signal processing. In this <a href="/tags/cookbook">FPGA recipe</a>, we&rsquo;re going to look at a straightforward digit-by-digit square root algorithm for integer and <a href="/posts/fixed-point-numbers-in-verilog/">fixed-point numbers</a>. There are lower-latency methods, but this one is simple, using only subtraction and bit shifts. You might also be interested in <a href="/posts/division-in-verilog/">Division in Verilog</a>.</p>
-<p><em>Updated 2021-01-04. Feedback to <a href="https://twitter.com/WillFlux">@WillFlux</a> is most welcome.</em></p>
+<p><em>Updated 2021-04-26. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<h3 id="source">Source</h3>
+<p>The SystemVerilog designs featured in this post are available from the <a href="https://github.com/projf/projf-explore/tree/master/lib">Project F Library</a> under the open-source MIT licence: build on them to your heart&rsquo;s content. The rest of the blog content is subject to standard copyright restrictions: don&rsquo;t republish it without permission.</p>
 <h2 id="getting-radical">Getting Radical</h2>
 <p>The square root of a number is a second number that multiplied by itself produces the first number. If <code>b</code> is the square root of <code>a</code>, then the following are different ways of representing their relationship:</p>
 <ul>
@@ -216,14 +217,8 @@ Step  A         X         T         Q       Description
 Output: Q=1010 (decimal 11), R=0 (remainder taken from final A).
 </code></pre></div><h2 id="verilog-module">Verilog Module</h2>
 <p>Our Verilog design uses the above algorithm, but you can configure the width of the radicand. <code>WIDTH</code> must be a multiple of two, for example, when working with seven binary digits, you must set the width to eight.</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#75715e">// Project F: Square Root (Integer)
-</span><span style="color:#75715e">// (C)2021 Will Green, Open source hardware released under the MIT License
-</span><span style="color:#75715e">// Learn more at https://projectf.io
-</span><span style="color:#75715e"></span>
-<span style="color:#66d9ef">`default_nettype</span> none
-<span style="color:#66d9ef">`timescale</span> <span style="color:#ae81ff">1</span>ns <span style="color:#f92672">/</span> <span style="color:#ae81ff">1</span>ps
-
-<span style="color:#66d9ef">module</span> sqrt #(<span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>) (      <span style="color:#75715e">// width of radicand
+<p>Project F Library source: <strong>[<a href="https://github.com/projf/projf-explore/tree/master/lib/maths/sqrt_int.sv">sqrt_int.sv</a>]</strong>.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> sqrt_int #(<span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>) (      <span style="color:#75715e">// width of radicand
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,
     <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> start,             <span style="color:#75715e">// start signal
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> busy,              <span style="color:#75715e">// calculation in progress
@@ -277,15 +272,9 @@ Output: Q=1010 (decimal 11), R=0 (remainder taken from final A).
 </code></pre></div><p>To use the module, set <code>WIDTH</code> to the correct number of bits and input <code>rad</code> to the radicand. To begin the calculation set <code>start</code> high for one clock. The <code>valid</code> signal indicates when the output data is valid; you can then read the results from <code>root</code> and <code>rem</code>. The calculation takes one cycle for each pair of bits in the radicand, so a 16-bit radicand would take eight cycles. The <code>busy</code> signal is high during calculation.</p>
 <p>The Verilog itself is straightforward. The algorithm is in the <code>always_comb</code> block, though we start with the initial shift already in place. The <code>always_ff</code> block sets up the initial values, then runs the algorithm for the number of digits in the root.</p>
 <h3 id="testing">Testing</h3>
-<p>The following test bench exercises the module:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#75715e">// Project F: Test Bench for Integer Square Root
-</span><span style="color:#75715e">// (C)2021 Will Green, Open source hardware released under the MIT License
-</span><span style="color:#75715e">// Learn more at https://projectf.io
-</span><span style="color:#75715e"></span>
-<span style="color:#66d9ef">`default_nettype</span> none
-<span style="color:#66d9ef">`timescale</span> <span style="color:#ae81ff">1</span>ns <span style="color:#f92672">/</span> <span style="color:#ae81ff">1</span>ps
-
-<span style="color:#66d9ef">module</span> sqrt_int_tb();
+<p>The following Vivado test bench exercises the module.</p>
+<p>Project F Library source: <strong>[<a href="https://github.com/projf/projf-explore/tree/master/lib/maths/xc7/sqrt_int_tb.sv">xc7/sqrt_int_tb.sv</a>]</strong>.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">`module</span> sqrt_int_tb();
 
     <span style="color:#66d9ef">parameter</span> CLK_PERIOD <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>;
     <span style="color:#66d9ef">parameter</span> WIDTH <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span>;
@@ -298,7 +287,7 @@ Output: Q=1010 (decimal 11), R=0 (remainder taken from final A).
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] root;  <span style="color:#75715e">// root
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] rem;   <span style="color:#75715e">// remainder
 </span><span style="color:#75715e"></span>
-    sqrt #(.WIDTH(WIDTH)) sqrt_inst (.<span style="color:#f92672">*</span>);
+    sqrt_int #(.WIDTH(WIDTH)) sqrt_inst (.<span style="color:#f92672">*</span>);
 
     <span style="color:#66d9ef">always</span> #(CLK_PERIOD <span style="color:#f92672">/</span> <span style="color:#ae81ff">2</span>) clk <span style="color:#f92672">=</span> <span style="color:#f92672">~</span>clk;
 
@@ -348,14 +337,8 @@ sqrt(255) = 15 (rem = 30)
 </code></pre></div><h2 id="fixed-point-roots">Fixed-Point Roots</h2>
 <p>In a previous recipe, we looked at <a href="/posts/fixed-point-numbers-in-verilog/">Fixed Point Numbers in Verilog</a>. It turns out that supporting fixed-point square roots is straightforward: we just run more iterations to account for the fractional digits. Unlike with division, there&rsquo;s no possibility of overflow, as the root of a radicand greater than 1 is always smaller than the radicand itself.</p>
 <p>This new version of the sqrt module adds a parameter <code>FBITS</code> for the number of fractional bits in the radicand (<code>FBITS</code> must be a multiple of two). For example, if we want to calculate √2 using Q8.8 format (eight integer and eight fractional bits), we set <code>WIDTH=16</code> and <code>FBITS=8</code>. The only change within the module is for <code>ITER</code>, which now accounts for fractional bits. For a Q8.8 radicand, we now perform <code>(16+8)/2 = 12</code> iterations, generating four more bits for the root.</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#75715e">// Project F: Square Root
-</span><span style="color:#75715e">// (C)2021 Will Green, Open source hardware released under the MIT License
-</span><span style="color:#75715e">// Learn more at https://projectf.io
-</span><span style="color:#75715e"></span>
-<span style="color:#66d9ef">`default_nettype</span> none
-<span style="color:#66d9ef">`timescale</span> <span style="color:#ae81ff">1</span>ns <span style="color:#f92672">/</span> <span style="color:#ae81ff">1</span>ps
-
-<span style="color:#66d9ef">module</span> sqrt #(
+<p>Project F Library source: <strong>[<a href="https://github.com/projf/projf-explore/tree/master/lib/maths/sqrt.sv">sqrt.sv</a>]</strong>.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> sqrt #(
     <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,  <span style="color:#75715e">// width of radicand
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> FBITS<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>   <span style="color:#75715e">// fractional bits (for fixed point)
 </span><span style="color:#75715e"></span>    ) (
@@ -409,15 +392,9 @@ sqrt(255) = 15 (rem = 30)
         <span style="color:#66d9ef">end</span>
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
-</code></pre></div><p>And we can create a simple test bench for it:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#75715e">// Project F: Test Bench for Fixed-Point Square Root
-</span><span style="color:#75715e">// (C)2021 Will Green, Open source hardware released under the MIT License
-</span><span style="color:#75715e">// Learn more at https://projectf.io
-</span><span style="color:#75715e"></span>
-<span style="color:#66d9ef">`default_nettype</span> none
-<span style="color:#66d9ef">`timescale</span> <span style="color:#ae81ff">1</span>ns <span style="color:#f92672">/</span> <span style="color:#ae81ff">1</span>ps
-
-<span style="color:#66d9ef">module</span> sqrt_tb();
+</code></pre></div><p>And we can create a simple Vivado test bench for it.</p>
+<p>Project F Library source: <strong>[<a href="https://github.com/projf/projf-explore/tree/master/lib/maths/xc7/sqrt_tb.sv">xc7/sqrt_tb.sv</a>]</strong>.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> sqrt_tb();
 
     <span style="color:#66d9ef">parameter</span> CLK_PERIOD <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>;
     <span style="color:#66d9ef">parameter</span> WIDTH <span style="color:#f92672">=</span> <span style="color:#ae81ff">16</span>;
@@ -467,7 +444,8 @@ sqrt(  0.250000) = 0000000010000000  (0.500000) (rem = 0000000000000000)
 sqrt(  2.000000) = 0000000101101010  (1.414062) (rem = 0000000000011100)
 </code></pre></div><p><code>1.01101010</code> is the correct result for <code>√2</code> using eight fractional bits. Wolfram Alpha provides a quick way to check binary square roots, for example: <a href="https://www.wolframalpha.com/input/?i=%E2%88%9A2+to+base+2">√2 to base 2</a>.</p>
 <p>The smallest value the Q8.8 format can represent is 1/256 or ~0.004 in decimal; if you want a more accurate result, you need to use more fractional bits.</p>
-<p>That wraps up this recipe, but watch out for forthcoming <a href="/tags/graphics/">graphics posts</a> using square root.</p>
+<p>That wraps up this recipe, but you might like to check out <a href="/posts/division-in-verilog/">Division in Verilog</a>.</p>
+<p><em>Constructive feedback is always welcome. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 
       
       <div class="related">
