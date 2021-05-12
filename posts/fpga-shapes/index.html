@@ -121,7 +121,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
       <p>Welcome back to <em>Exploring FPGA Graphics</em>. This time we&rsquo;re going to build on our work in <a href="/posts/lines-and-triangles/">lines and triangles</a> by drawing more shapes and filling them in before using our framebuffer to animate them.</p>
 <p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how displays work, race the beam with Pong, animate starfields and sprites, paint Michelangelo&rsquo;s David, simulate life with bitmaps, draw lines and shapes, and finally render simple 3D models. New to the series? Start with <a href="/posts/fpga-graphics/">FPGA Graphics</a>.</p>
 <p><strong>April 2021: Draft post - designs for iCEBreaker and filled triangles will be added soon.</strong></p>
-<p><em>Updated 2021-04-26. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><em>Updated 2021-05-12. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <h3 id="series-outline">Series Outline</h3>
 <ul>
 <li><a href="/posts/fpga-graphics/">FPGA Graphics</a> - learn how displays work and animate simple shapes</li>
@@ -170,9 +170,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lx1, ly1;  <span style="color:#75715e">// point 1 position
 </span><span style="color:#75715e"></span>
     <span style="color:#66d9ef">enum</span> {IDLE, INIT, DRAW} state;
-    <span style="color:#66d9ef">initial</span> state <span style="color:#f92672">=</span> IDLE;  <span style="color:#75715e">// needed for Yosys
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
-        line_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">case</span> (state)
             INIT: <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// register coordinates
 </span><span style="color:#75715e"></span>                <span style="color:#66d9ef">if</span> (line_id <span style="color:#f92672">==</span> <span style="color:#ae81ff">2</span><span style="color:#ae81ff">&#39;d0</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// (x0,y0) (x1,y0)
@@ -192,6 +190,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
                 line_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
             <span style="color:#66d9ef">end</span>
             DRAW: <span style="color:#66d9ef">begin</span>
+                line_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
                 <span style="color:#66d9ef">if</span> (line_done) <span style="color:#66d9ef">begin</span>
                     <span style="color:#66d9ef">if</span> (line_id <span style="color:#f92672">==</span> <span style="color:#ae81ff">3</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// final line
 </span><span style="color:#75715e"></span>                        done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
@@ -333,9 +332,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
 </span><span style="color:#75715e"></span>
     <span style="color:#75715e">// draw state machine
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">enum</span> {IDLE, INIT, DRAW, DONE} state;
-    <span style="color:#66d9ef">initial</span> state <span style="color:#f92672">=</span> IDLE;  <span style="color:#75715e">// needed for Yosys
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_100m) <span style="color:#66d9ef">begin</span>
-        draw_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_100m) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">case</span> (state)
             INIT: <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// register coordinates and colour
 </span><span style="color:#75715e"></span>                draw_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
@@ -346,12 +343,15 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
                 ry1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">180</span> <span style="color:#f92672">-</span> shape_id;
                 fb_cidx <span style="color:#f92672">&lt;=</span> shape_id <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// skip 1st colour (black)
 </span><span style="color:#75715e"></span>            <span style="color:#66d9ef">end</span>
-            DRAW: <span style="color:#66d9ef">if</span> (draw_done) <span style="color:#66d9ef">begin</span>
-                <span style="color:#66d9ef">if</span> (shape_id <span style="color:#f92672">==</span> SHAPE_CNT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
-                    state <span style="color:#f92672">&lt;=</span> DONE;
-                <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
-                    shape_id <span style="color:#f92672">&lt;=</span> shape_id <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-                    state <span style="color:#f92672">&lt;=</span> INIT;
+            DRAW: <span style="color:#66d9ef">begin</span>
+                draw_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                <span style="color:#66d9ef">if</span> (draw_done) <span style="color:#66d9ef">begin</span>
+                    <span style="color:#66d9ef">if</span> (shape_id <span style="color:#f92672">==</span> SHAPE_CNT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
+                        state <span style="color:#f92672">&lt;=</span> DONE;
+                    <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
+                        shape_id <span style="color:#f92672">&lt;=</span> shape_id <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+                        state <span style="color:#f92672">&lt;=</span> INIT;
+                    <span style="color:#66d9ef">end</span>
                 <span style="color:#66d9ef">end</span>
             <span style="color:#66d9ef">end</span>
             DONE: state <span style="color:#f92672">&lt;=</span> DONE;
@@ -440,9 +440,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lx0, lx1, ly;
 
     <span style="color:#66d9ef">enum</span> {IDLE, INIT, DRAW} state;
-    <span style="color:#66d9ef">initial</span> state <span style="color:#f92672">=</span> IDLE;  <span style="color:#75715e">// needed for Yosys
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
-        line_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">case</span> (state)
             INIT: <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// register coordinates
 </span><span style="color:#75715e"></span>                <span style="color:#75715e">// x-coordinates don&#39;t change for a given filled rectangle
@@ -453,6 +451,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
                 line_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
             <span style="color:#66d9ef">end</span>
             DRAW: <span style="color:#66d9ef">begin</span>
+                line_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
                 <span style="color:#66d9ef">if</span> (line_done) <span style="color:#66d9ef">begin</span>
                     <span style="color:#66d9ef">if</span> (ly <span style="color:#f92672">==</span> y1s) <span style="color:#66d9ef">begin</span>
                         done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
@@ -509,9 +508,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
 </span><span style="color:#75715e"></span>
     <span style="color:#75715e">// draw state machine
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">enum</span> {IDLE, INIT, DRAW, DONE} state;
-    <span style="color:#66d9ef">initial</span> state <span style="color:#f92672">=</span> IDLE;  <span style="color:#75715e">// needed for Yosys
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_100m) <span style="color:#66d9ef">begin</span>
-        draw_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_100m) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">case</span> (state)
             INIT: <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// register coordinates and colour
 </span><span style="color:#75715e"></span>                draw_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
@@ -522,12 +519,15 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
                 ry1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">140</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">4</span> <span style="color:#f92672">*</span> shape_id;
                 fb_cidx <span style="color:#f92672">&lt;=</span> shape_id <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// skip 1st colour (black)
 </span><span style="color:#75715e"></span>            <span style="color:#66d9ef">end</span>
-            DRAW: <span style="color:#66d9ef">if</span> (draw_done) <span style="color:#66d9ef">begin</span>
-                <span style="color:#66d9ef">if</span> (shape_id <span style="color:#f92672">==</span> SHAPE_CNT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
-                    state <span style="color:#f92672">&lt;=</span> DONE;
-                <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
-                    shape_id <span style="color:#f92672">&lt;=</span> shape_id <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-                    state <span style="color:#f92672">&lt;=</span> INIT;
+            DRAW: <span style="color:#66d9ef">begin</span>
+                draw_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                <span style="color:#66d9ef">if</span> (draw_done) <span style="color:#66d9ef">begin</span>
+                    <span style="color:#66d9ef">if</span> (shape_id <span style="color:#f92672">==</span> SHAPE_CNT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
+                        state <span style="color:#f92672">&lt;=</span> DONE;
+                    <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
+                        shape_id <span style="color:#f92672">&lt;=</span> shape_id <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+                        state <span style="color:#f92672">&lt;=</span> INIT;
+                    <span style="color:#66d9ef">end</span>
                 <span style="color:#66d9ef">end</span>
             <span style="color:#66d9ef">end</span>
             DONE: state <span style="color:#f92672">&lt;=</span> DONE;
@@ -626,8 +626,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
 </span><span style="color:#75715e"></span>
     <span style="color:#75715e">// write state machine
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">enum</span> {IDLE, INIT, CLR, ACTIVE} wstate;
-    <span style="color:#66d9ef">initial</span> wstate <span style="color:#f92672">=</span> IDLE;  <span style="color:#75715e">// needed for Yosys
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_sys) <span style="color:#66d9ef">begin</span>
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_sys) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">case</span> (wstate)
             INIT: wstate <span style="color:#f92672">&lt;=</span> (clear) <span style="color:#f92672">?</span> CLR <span style="color:#f92672">:</span> ACTIVE;
             CLR: <span style="color:#66d9ef">if</span> (fb_addr_clr <span style="color:#f92672">==</span> FB_PIXELS<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) wstate <span style="color:#f92672">&lt;=</span> ACTIVE;
@@ -813,10 +812,8 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
     display_timings_480p #(.CORDW(CORDW)) display_timings_inst (
         .clk_pix,
         .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for pixel clock lock
-</span><span style="color:#75715e"></span>        <span style="color:#75715e">/* verilator lint_off PINCONNECTEMPTY */</span>
-        .sx(),
+</span><span style="color:#75715e"></span>        .sx(),
         .sy(),
-        <span style="color:#75715e">/* verilator lint_on PINCONNECTEMPTY */</span>
         .hsync,
         .vsync,
         .de,
@@ -865,9 +862,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
         .bgidx(<span style="color:#ae81ff">0</span>),
         .clear(<span style="color:#ae81ff">0</span>),  <span style="color:#75715e">// tunnel doesn&#39;t need clearing
 </span><span style="color:#75715e"></span>        .wready(fb_wready),
-        <span style="color:#75715e">/* verilator lint_off PINCONNECTEMPTY */</span>
         .clip(),
-        <span style="color:#75715e">/* verilator lint_on PINCONNECTEMPTY */</span>
         .red(fb_red),
         .green(fb_green),
         .blue(fb_blue)
@@ -899,9 +894,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
 </span><span style="color:#75715e"></span>
     <span style="color:#75715e">// draw state machine
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">enum</span> {IDLE, INIT, CLEAR, DRAW, DONE} state;
-    <span style="color:#66d9ef">initial</span> state <span style="color:#f92672">=</span> IDLE;  <span style="color:#75715e">// needed for Yosys
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_100m) <span style="color:#66d9ef">begin</span>
-        draw_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_100m) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">case</span> (state)
             INIT: <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// register coordinates and colour
 </span><span style="color:#75715e"></span>                <span style="color:#66d9ef">if</span> (fb_wready) <span style="color:#66d9ef">begin</span>
@@ -965,12 +958,15 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
                     <span style="color:#66d9ef">endcase</span>
                 <span style="color:#66d9ef">end</span>
             <span style="color:#66d9ef">end</span>
-            DRAW: <span style="color:#66d9ef">if</span> (draw_done) <span style="color:#66d9ef">begin</span>
-                <span style="color:#66d9ef">if</span> (shape_id <span style="color:#f92672">==</span> SHAPE_CNT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
-                    state <span style="color:#f92672">&lt;=</span> DONE;
-                <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
-                    shape_id <span style="color:#f92672">&lt;=</span> shape_id <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-                    state <span style="color:#f92672">&lt;=</span> INIT;
+            DRAW: <span style="color:#66d9ef">begin</span>
+                draw_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                <span style="color:#66d9ef">if</span> (draw_done) <span style="color:#66d9ef">begin</span>
+                    <span style="color:#66d9ef">if</span> (shape_id <span style="color:#f92672">==</span> SHAPE_CNT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
+                        state <span style="color:#f92672">&lt;=</span> DONE;
+                    <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
+                        shape_id <span style="color:#f92672">&lt;=</span> shape_id <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+                        state <span style="color:#f92672">&lt;=</span> INIT;
+                    <span style="color:#66d9ef">end</span>
                 <span style="color:#66d9ef">end</span>
             <span style="color:#66d9ef">end</span>
             DONE: state <span style="color:#f92672">&lt;=</span> IDLE;

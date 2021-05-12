@@ -120,7 +120,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
     <div class="content">
       <p>Welcome back to <em>Exploring FPGA Graphics</em>. It&rsquo;s time to turn our attention to drawing. Most modern computer graphics come down to drawing triangles and colouring them in. So, it seems fitting to begin our tour of drawing with triangles and the straight lines that form them. This post will implement Bresenham&rsquo;s line algorithm in Verilog, creating lines, triangles, and even a cube (our first sort-of-3D graphic).</p>
 <p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how displays work, race the beam with Pong, animate starfields and sprites, paint Michelangelo&rsquo;s David, simulate life with bitmaps, draw lines and shapes, and finally render simple 3D models. New to the series? Start with <a href="/posts/fpga-graphics/">FPGA Graphics</a>.</p>
-<p><em>Updated 2021-04-26. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><em>Updated 2021-05-12. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <h3 id="series-outline">Series Outline</h3>
 <ul>
 <li><a href="/posts/fpga-graphics/">FPGA Graphics</a> - learn how displays work and animate simple shapes</li>
@@ -293,7 +293,6 @@ FA0  // 1 - orange
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> drawing <span style="color:#f92672">=</span> in_progress;
 
     <span style="color:#66d9ef">enum</span> {IDLE, DRAW} state;  <span style="color:#75715e">// we&#39;re either idle or drawing
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">initial</span> state <span style="color:#f92672">=</span> IDLE;  <span style="color:#75715e">// needed for Yosys
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">case</span> (state)
             DRAW: <span style="color:#66d9ef">begin</span>
@@ -413,8 +412,7 @@ FA0  // 1 - orange
     <span style="color:#66d9ef">end</span>
 
     <span style="color:#66d9ef">enum</span> {IDLE, INIT, DRAW} state;
-    <span style="color:#66d9ef">initial</span> state <span style="color:#f92672">=</span> IDLE;  <span style="color:#75715e">// needed for Yosys
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">case</span> (state)
             DRAW: <span style="color:#66d9ef">begin</span>
                 <span style="color:#66d9ef">if</span> (oe) <span style="color:#66d9ef">begin</span>
@@ -556,9 +554,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/line
 </span><span style="color:#75715e"></span>
     <span style="color:#75715e">// draw state machine
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">enum</span> {IDLE, INIT, DRAW, DONE} state;
-    <span style="color:#66d9ef">initial</span> state <span style="color:#f92672">=</span> IDLE;  <span style="color:#75715e">// needed for Yosys
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_100m) <span style="color:#66d9ef">begin</span>
-        draw_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_100m) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">case</span> (state)
             INIT: <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// register coordinates and colour
 </span><span style="color:#75715e"></span>                lx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">40</span>; ly0 <span style="color:#f92672">&lt;=</span>   <span style="color:#ae81ff">0</span>;
@@ -567,7 +563,10 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/line
 </span><span style="color:#75715e"></span>                draw_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
                 state <span style="color:#f92672">&lt;=</span> DRAW;
             <span style="color:#66d9ef">end</span>
-            DRAW: <span style="color:#66d9ef">if</span> (draw_done) state <span style="color:#f92672">&lt;=</span> DONE;
+            DRAW: <span style="color:#66d9ef">begin</span>
+                draw_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                <span style="color:#66d9ef">if</span> (draw_done) state <span style="color:#f92672">&lt;=</span> DONE;
+            <span style="color:#66d9ef">end</span>
             DONE: state <span style="color:#f92672">&lt;=</span> DONE;
             <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">if</span> (frame_sys) state <span style="color:#f92672">&lt;=</span> INIT;  <span style="color:#75715e">// IDLE
 </span><span style="color:#75715e"></span>        <span style="color:#66d9ef">endcase</span>
@@ -624,9 +623,7 @@ On the Arty, we&rsquo;re drawing at 100 MHz with plenty of timing slack.</p>
 </span><span style="color:#75715e"></span>
     <span style="color:#75715e">// draw state machine
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">enum</span> {IDLE, INIT, DRAW, DONE} state;
-    <span style="color:#66d9ef">initial</span> state <span style="color:#f92672">=</span> IDLE;  <span style="color:#75715e">// needed for Yosys
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
-        draw_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">case</span> (state)
             INIT: <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// register coordinates and colour
 </span><span style="color:#75715e"></span>                draw_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
@@ -665,17 +662,21 @@ On the Arty, we&rsquo;re drawing at 100 MHz with plenty of timing slack.</p>
                     <span style="color:#66d9ef">end</span>
                 <span style="color:#66d9ef">endcase</span>
             <span style="color:#66d9ef">end</span>
-            DRAW: <span style="color:#66d9ef">if</span> (draw_done) <span style="color:#66d9ef">begin</span>
-                <span style="color:#66d9ef">if</span> (line_id <span style="color:#f92672">==</span> LINE_CNT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
-                    state <span style="color:#f92672">&lt;=</span> DONE;
-                <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
-                    line_id <span style="color:#f92672">&lt;=</span> line_id <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-                    state <span style="color:#f92672">&lt;=</span> INIT;
+            DRAW: <span style="color:#66d9ef">begin</span>
+                draw_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                <span style="color:#66d9ef">if</span> (draw_done) <span style="color:#66d9ef">begin</span>
+                    <span style="color:#66d9ef">if</span> (line_id <span style="color:#f92672">==</span> LINE_CNT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
+                        state <span style="color:#f92672">&lt;=</span> DONE;
+                    <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
+                        line_id <span style="color:#f92672">&lt;=</span> line_id <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+                        state <span style="color:#f92672">&lt;=</span> INIT;
+                    <span style="color:#66d9ef">end</span>
                 <span style="color:#66d9ef">end</span>
             <span style="color:#66d9ef">end</span>
             DONE: state <span style="color:#f92672">&lt;=</span> DONE;
             <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">if</span> (frame) state <span style="color:#f92672">&lt;=</span> INIT;  <span style="color:#75715e">// IDLE
 </span><span style="color:#75715e"></span>        <span style="color:#66d9ef">endcase</span>
+        <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>clk_locked) state <span style="color:#f92672">&lt;=</span> IDLE;
     <span style="color:#66d9ef">end</span>
 
     <span style="color:#75715e">// control drawing output enable - wait 300 frames, then 1 pixel/frame
@@ -736,9 +737,7 @@ On the Arty, we&rsquo;re drawing at 100 MHz with plenty of timing slack.</p>
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lx1, ly1;  <span style="color:#75715e">// point 1 position
 </span><span style="color:#75715e"></span>
     <span style="color:#66d9ef">enum</span> {IDLE, INIT, DRAW} state;
-    <span style="color:#66d9ef">initial</span> state <span style="color:#f92672">=</span> IDLE;  <span style="color:#75715e">// needed for Yosys
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
-        line_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">case</span> (state)
             INIT: <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// register coordinates
 </span><span style="color:#75715e"></span>                <span style="color:#66d9ef">if</span> (line_id <span style="color:#f92672">==</span> <span style="color:#ae81ff">2</span><span style="color:#ae81ff">&#39;d0</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// (x0,y0) (x1,y1)
@@ -755,6 +754,7 @@ On the Arty, we&rsquo;re drawing at 100 MHz with plenty of timing slack.</p>
                 line_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
             <span style="color:#66d9ef">end</span>
             DRAW: <span style="color:#66d9ef">begin</span>
+                line_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
                 <span style="color:#66d9ef">if</span> (line_done) <span style="color:#66d9ef">begin</span>
                     <span style="color:#66d9ef">if</span> (line_id <span style="color:#f92672">==</span> <span style="color:#ae81ff">2</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// final line
 </span><span style="color:#75715e"></span>                        done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
@@ -812,9 +812,7 @@ On the Arty, we&rsquo;re drawing at 100 MHz with plenty of timing slack.</p>
 </span><span style="color:#75715e"></span>
     <span style="color:#75715e">// draw state machine
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">enum</span> {IDLE, INIT, DRAW, DONE} state;
-    <span style="color:#66d9ef">initial</span> state <span style="color:#f92672">=</span> IDLE;  <span style="color:#75715e">// needed for Yosys
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_100m) <span style="color:#66d9ef">begin</span>
-        draw_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_100m) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">case</span> (state)
             INIT: <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// register coordinates and colour
 </span><span style="color:#75715e"></span>                draw_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
@@ -846,12 +844,15 @@ On the Arty, we&rsquo;re drawing at 100 MHz with plenty of timing slack.</p>
 </span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
                 <span style="color:#66d9ef">endcase</span>
             <span style="color:#66d9ef">end</span>
-            DRAW: <span style="color:#66d9ef">if</span> (draw_done) <span style="color:#66d9ef">begin</span>
-                <span style="color:#66d9ef">if</span> (shape_id <span style="color:#f92672">==</span> SHAPE_CNT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
-                    state <span style="color:#f92672">&lt;=</span> DONE;
-                <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
-                    shape_id <span style="color:#f92672">&lt;=</span> shape_id <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-                    state <span style="color:#f92672">&lt;=</span> INIT;
+            DRAW: <span style="color:#66d9ef">begin</span>
+                draw_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                <span style="color:#66d9ef">if</span> (draw_done) <span style="color:#66d9ef">begin</span>
+                    <span style="color:#66d9ef">if</span> (shape_id <span style="color:#f92672">==</span> SHAPE_CNT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
+                        state <span style="color:#f92672">&lt;=</span> DONE;
+                    <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
+                        shape_id <span style="color:#f92672">&lt;=</span> shape_id <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+                        state <span style="color:#f92672">&lt;=</span> INIT;
+                    <span style="color:#66d9ef">end</span>
                 <span style="color:#66d9ef">end</span>
             <span style="color:#66d9ef">end</span>
             DONE: state <span style="color:#f92672">&lt;=</span> DONE;

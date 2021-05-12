@@ -120,7 +120,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
     <div class="content">
       <p>Welcome back to <em>Exploring FPGA Graphics</em>. In the previous part we learnt how to create <a href="/posts/hardware-sprites/">hardware sprites</a>. In this fourth part, we create a demo by combining our knowledge of sprites with animated starfields.</p>
 <p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how displays work, race the beam with Pong, animate starfields and sprites, paint Michelangelo&rsquo;s David, simulate life with bitmaps, draw lines and shapes, and finally render simple 3D models. New to the series? Start with <a href="/posts/fpga-graphics/">FPGA Graphics</a>.</p>
-<p><em>Updated 2021-04-23. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><em>Updated 2021-05-12. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <h3 id="series-outline">Series Outline</h3>
 <ul>
 <li><a href="/posts/fpga-graphics/">FPGA Graphics</a> - learn how displays work and animate simple shapes</li>
@@ -436,8 +436,7 @@ You can easily create your own font version with different characters: check out
 </span><span style="color:#75715e"></span>        NEXT_LINE,  <span style="color:#75715e">// prepare for next sprite line
 </span><span style="color:#75715e"></span>        DONE        <span style="color:#75715e">// set done signal
 </span><span style="color:#75715e"></span>    } state, state_next;
-    <span style="color:#66d9ef">initial</span> state <span style="color:#f92672">=</span> IDLE;  <span style="color:#75715e">// needed for Yosys
-</span><span style="color:#75715e"></span>
+
     <span style="color:#66d9ef">integer</span> i;  <span style="color:#75715e">// for bit reversal in READ_MEM
 </span><span style="color:#75715e"></span>
     <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
@@ -786,17 +785,19 @@ You can easily create your own font version with different characters: check out
     <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] font_colr;  <span style="color:#75715e">// 12 bit colour (4-bit per channel)
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(LINE_INC)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_line;
     <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
-        <span style="color:#66d9ef">if</span> ((sy <span style="color:#f92672">==</span> SLIN_1A <span style="color:#f92672">||</span> sy <span style="color:#f92672">==</span> SLIN_2A) <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">begin</span>
-            cnt_line <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-            font_colr <span style="color:#f92672">&lt;=</span> COLR_A;
-        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> ((sy <span style="color:#f92672">==</span> SLIN_1B <span style="color:#f92672">||</span> sy <span style="color:#f92672">==</span> SLIN_2B) <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">begin</span>
-            cnt_line <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-            font_colr <span style="color:#f92672">&lt;=</span> COLR_B;
-        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sx <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">begin</span>
-            cnt_line <span style="color:#f92672">&lt;=</span> cnt_line <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-            <span style="color:#66d9ef">if</span> (cnt_line <span style="color:#f92672">==</span> LINE_INC<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">if</span> (line) <span style="color:#66d9ef">begin</span>
+            <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> SLIN_1A <span style="color:#f92672">||</span> sy <span style="color:#f92672">==</span> SLIN_2A) <span style="color:#66d9ef">begin</span>
                 cnt_line <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-                font_colr <span style="color:#f92672">&lt;=</span> font_colr <span style="color:#f92672">+</span> <span style="color:#ae81ff">&#39;h111</span>;
+                font_colr <span style="color:#f92672">&lt;=</span> COLR_A;
+            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> SLIN_1B <span style="color:#f92672">||</span> sy <span style="color:#f92672">==</span> SLIN_2B) <span style="color:#66d9ef">begin</span>
+                cnt_line <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                font_colr <span style="color:#f92672">&lt;=</span> COLR_B;
+            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
+                cnt_line <span style="color:#f92672">&lt;=</span> cnt_line <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+                <span style="color:#66d9ef">if</span> (cnt_line <span style="color:#f92672">==</span> LINE_INC<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
+                    cnt_line <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                    font_colr <span style="color:#f92672">&lt;=</span> font_colr <span style="color:#f92672">+</span> <span style="color:#ae81ff">&#39;h111</span>;
+                <span style="color:#66d9ef">end</span>
             <span style="color:#66d9ef">end</span>
         <span style="color:#66d9ef">end</span>
     <span style="color:#66d9ef">end</span>

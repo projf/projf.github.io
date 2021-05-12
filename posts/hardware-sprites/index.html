@@ -120,7 +120,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
     <div class="content">
       <p>Welcome back to <em>Exploring FPGA Graphics</em>. In the previous part, we recreated <a href="/posts/fpga-pong/">Pong</a>. In this part, we learn how to create colourful animated graphics with hardware sprites. Hardware sprites maintain much of the simplicity of our Pong design while offering much greater creative freedom. In the <a href="/posts/fpga-ad-astra/">next part</a>, we&rsquo;ll create a demo that gives a taste of what&rsquo;s possible with sprites.</p>
 <p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how displays work, race the beam with Pong, animate starfields and sprites, paint Michelangelo&rsquo;s David, simulate life with bitmaps, draw lines and shapes, and finally render simple 3D models. New to the series? Start with <a href="/posts/fpga-graphics/">FPGA Graphics</a>.</p>
-<p><em>Updated 2021-04-23. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><em>Updated 2021-05-12. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <h3 id="series-outline">Series Outline</h3>
 <ul>
 <li><a href="/posts/fpga-graphics/">FPGA Graphics</a> - learn how displays work and animate simple shapes</li>
@@ -207,8 +207,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
 </span><span style="color:#75715e"></span>        DRAW,       <span style="color:#75715e">// draw pixel
 </span><span style="color:#75715e"></span>        NEXT_LINE   <span style="color:#75715e">// prepare for next sprite line
 </span><span style="color:#75715e"></span>    } state, state_next;
-    <span style="color:#66d9ef">initial</span> state <span style="color:#f92672">=</span> IDLE;  <span style="color:#75715e">// needed for Yosys
-</span><span style="color:#75715e"></span>
+
     <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
         state <span style="color:#f92672">&lt;=</span> state_next;  <span style="color:#75715e">// advance to next state
 </span><span style="color:#75715e"></span>
@@ -535,8 +534,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/hard
 </span><span style="color:#75715e"></span>        DRAW,       <span style="color:#75715e">// draw pixel
 </span><span style="color:#75715e"></span>        NEXT_LINE   <span style="color:#75715e">// prepare for next sprite line
 </span><span style="color:#75715e"></span>    } state, state_next;
-    <span style="color:#66d9ef">initial</span> state <span style="color:#f92672">=</span> IDLE;  <span style="color:#75715e">// needed for Yosys
-</span><span style="color:#75715e"></span>
+
     <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
         state <span style="color:#f92672">&lt;=</span> state_next;  <span style="color:#75715e">// advance to next state
 </span><span style="color:#75715e"></span>
@@ -706,8 +704,7 @@ This design was common in older computers, for example, the <a href="https://en.
 </span><span style="color:#75715e"></span>        NEXT_LINE,  <span style="color:#75715e">// prepare for next sprite line
 </span><span style="color:#75715e"></span>        DONE        <span style="color:#75715e">// set done signal, then go idle
 </span><span style="color:#75715e"></span>    } state, state_next;
-    <span style="color:#66d9ef">initial</span> state <span style="color:#f92672">=</span> IDLE;  <span style="color:#75715e">// needed for Yosys
-</span><span style="color:#75715e"></span>
+
     <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
         state <span style="color:#f92672">&lt;=</span> state_next;  <span style="color:#75715e">// advance to next state
 </span><span style="color:#75715e"></span>
@@ -865,15 +862,17 @@ You&rsquo;ll learn how to create your own memory files from images using <code>i
 </code></pre></div><p>Next we want to make our hedgehog&rsquo;s world a little more interesting by bringing in the sky. We do this by creating horizontal bars of colour in the background:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// background colour
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] bg_colr;
-    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        bg_colr <span style="color:#f92672">=</span> <span style="color:#ae81ff">12&#39;h260</span>;  <span style="color:#75715e">// default
-</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">80</span>)       bg_colr <span style="color:#f92672">=</span> <span style="color:#ae81ff">12&#39;h239</span>;
-        <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">140</span>) bg_colr <span style="color:#f92672">=</span> <span style="color:#ae81ff">12&#39;h24A</span>;
-        <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">190</span>) bg_colr <span style="color:#f92672">=</span> <span style="color:#ae81ff">12&#39;h25B</span>;
-        <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">230</span>) bg_colr <span style="color:#f92672">=</span> <span style="color:#ae81ff">12&#39;h26C</span>;
-        <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">265</span>) bg_colr <span style="color:#f92672">=</span> <span style="color:#ae81ff">12&#39;h27D</span>;
-        <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">295</span>) bg_colr <span style="color:#f92672">=</span> <span style="color:#ae81ff">12&#39;h29E</span>;
-        <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">320</span>) bg_colr <span style="color:#f92672">=</span> <span style="color:#ae81ff">12&#39;h2BF</span>;
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">if</span> (line) <span style="color:#66d9ef">begin</span>
+            <span style="color:#66d9ef">if</span>      (sy <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>)   bg_colr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">12&#39;h239</span>;
+            <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> <span style="color:#ae81ff">80</span>)  bg_colr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">12&#39;h24A</span>;
+            <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> <span style="color:#ae81ff">140</span>) bg_colr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">12&#39;h25B</span>;
+            <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> <span style="color:#ae81ff">190</span>) bg_colr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">12&#39;h26C</span>;
+            <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> <span style="color:#ae81ff">230</span>) bg_colr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">12&#39;h27D</span>;
+            <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> <span style="color:#ae81ff">265</span>) bg_colr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">12&#39;h29E</span>;
+            <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> <span style="color:#ae81ff">295</span>) bg_colr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">12&#39;h2BF</span>;
+            <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> <span style="color:#ae81ff">320</span>) bg_colr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">12&#39;h260</span>;
+        <span style="color:#66d9ef">end</span>
     <span style="color:#66d9ef">end</span>
 </code></pre></div><p>We move our hedgehog down the screen to walk on the ground:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>clk_locked) <span style="color:#66d9ef">begin</span>
@@ -1008,15 +1007,17 @@ You&rsquo;ll learn how to create your own memory files from images using <code>i
 
     <span style="color:#75715e">// background colour
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] bg_colr;
-    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        bg_colr <span style="color:#f92672">=</span> <span style="color:#ae81ff">12&#39;h260</span>;  <span style="color:#75715e">// default
-</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">80</span>)       bg_colr <span style="color:#f92672">=</span> <span style="color:#ae81ff">12&#39;h239</span>;
-        <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">140</span>) bg_colr <span style="color:#f92672">=</span> <span style="color:#ae81ff">12&#39;h24A</span>;
-        <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">190</span>) bg_colr <span style="color:#f92672">=</span> <span style="color:#ae81ff">12&#39;h25B</span>;
-        <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">230</span>) bg_colr <span style="color:#f92672">=</span> <span style="color:#ae81ff">12&#39;h26C</span>;
-        <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">265</span>) bg_colr <span style="color:#f92672">=</span> <span style="color:#ae81ff">12&#39;h27D</span>;
-        <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">295</span>) bg_colr <span style="color:#f92672">=</span> <span style="color:#ae81ff">12&#39;h29E</span>;
-        <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">320</span>) bg_colr <span style="color:#f92672">=</span> <span style="color:#ae81ff">12&#39;h2BF</span>;
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">if</span> (line) <span style="color:#66d9ef">begin</span>
+            <span style="color:#66d9ef">if</span>      (sy <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>)   bg_colr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">12&#39;h239</span>;
+            <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> <span style="color:#ae81ff">80</span>)  bg_colr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">12&#39;h24A</span>;
+            <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> <span style="color:#ae81ff">140</span>) bg_colr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">12&#39;h25B</span>;
+            <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> <span style="color:#ae81ff">190</span>) bg_colr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">12&#39;h26C</span>;
+            <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> <span style="color:#ae81ff">230</span>) bg_colr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">12&#39;h27D</span>;
+            <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> <span style="color:#ae81ff">265</span>) bg_colr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">12&#39;h29E</span>;
+            <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> <span style="color:#ae81ff">295</span>) bg_colr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">12&#39;h2BF</span>;
+            <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> <span style="color:#ae81ff">320</span>) bg_colr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">12&#39;h260</span>;
+        <span style="color:#66d9ef">end</span>
     <span style="color:#66d9ef">end</span>
 
     <span style="color:#75715e">// colour lookup table (ROM) 11x12-bit entries
