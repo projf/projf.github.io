@@ -120,7 +120,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
     <div class="content">
       <p>Welcome back to <em>Exploring FPGA Graphics</em>. It&rsquo;s time to turn our attention to drawing. Most modern computer graphics come down to drawing triangles and colouring them in. So, it seems fitting to begin our tour of drawing with triangles and the straight lines that form them. This post will implement Bresenham&rsquo;s line algorithm in Verilog, creating lines, triangles, and even a cube (our first sort-of-3D graphic).</p>
 <p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how displays work, race the beam with Pong, animate starfields and sprites, paint Michelangelo&rsquo;s David, simulate life with bitmaps, draw lines and shapes, and finally render simple 3D models. New to the series? Start with <a href="/posts/fpga-graphics/">FPGA Graphics</a>.</p>
-<p><em>Updated 2021-05-12. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><em>Updated 2021-05-13. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <h3 id="series-outline">Series Outline</h3>
 <ul>
 <li><a href="/posts/fpga-graphics/">FPGA Graphics</a> - learn how displays work and animate simple shapes</li>
@@ -251,7 +251,7 @@ FA0  // 1 - orange
     <span style="color:#66d9ef">if</span> (movy) y <span style="color:#f92672">&lt;=</span> down  <span style="color:#f92672">?</span> y <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> y <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;
     err <span style="color:#f92672">&lt;=</span> err <span style="color:#f92672">+</span> derr;
 <span style="color:#66d9ef">end</span>
-</code></pre></div><p>The two blocking assignments to <code>derr</code> happen one after the other. Alternatively, we could have calculated <code>next_err</code> in our <code>always_comb</code> block and assigned it to <code>err</code> in our <code>always_ff</code>; I tried this approach, but it used more LUTs.</p>
+</code></pre></div><p>The two blocking assignments to <code>derr</code> happen one after the other.</p>
 <p>Note how we&rsquo;ve also eliminated the need for <code>e2</code>, replacing it with <code>2*err</code> in our comparisons.</p>
 <p>Our first attempt at a line drawing module:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> draw_line #(<span style="color:#66d9ef">parameter</span> CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">10</span>) (  <span style="color:#75715e">// framebuffer coord width in bits
@@ -327,8 +327,9 @@ FA0  // 1 - orange
 <span style="color:#66d9ef">endmodule</span>
 </code></pre></div><p>We&rsquo;ve got a good start here, but our module has a couple of significant problems we should tackle.</p>
 <h3 id="oh-dear-i-shall-be-too-late">Oh dear! I shall be too late!</h3>
-<p>Our module makes direct use of the results of quite complex combinational logic. For example, we use <code>movy</code> to control whether to move our drawing position vertically. <code>movy</code> depends on <code>dx</code>, which depends on <code>right</code>. All these signals are purely combinational, with nothing stored in registers (flip-flops). Unsurprisingly, my tests showed this path was the limiting factor in line drawing speed.</p>
-<p>The fix is straightforward: we register the values of <code>dx</code> and <code>dy</code> in an <code>always_ff</code> block. Even better, because <code>dx</code> and <code>dy</code> don&rsquo;t change for a given line, we only have to do this once and don&rsquo;t suffer a latency penalty for doing this:</p>
+<p>Line drawing crops up all over the place; if it&rsquo;s slow, it&rsquo;ll be a significant break on graphics performance.</p>
+<p>Our current line drawing module makes direct use of relatively complex combinational logic. For example, we use <code>movy</code> to control whether to move our drawing position vertically. <code>movy</code> depends on <code>dx</code>, which depends on <code>right</code>. All these signals are purely combinational, with nothing stored in registers (flip-flops). Unsurprisingly, my tests showed this path was the limiting factor in line drawing speed.</p>
+<p>Our first improvement is straightforward: we register the values of <code>dx</code> and <code>dy</code> in an <code>always_ff</code> block. Even better, because <code>dx</code> and <code>dy</code> don&rsquo;t change for a given line, we only have to do this once and don&rsquo;t suffer a latency penalty:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
     right <span style="color:#f92672">=</span> (x0 <span style="color:#f92672">&lt;</span> x1);
     down  <span style="color:#f92672">=</span> (y0 <span style="color:#f92672">&lt;</span> y1);
@@ -338,8 +339,32 @@ FA0  // 1 - orange
     dx <span style="color:#f92672">&lt;=</span> right <span style="color:#f92672">?</span> x1 <span style="color:#f92672">-</span> x0 <span style="color:#f92672">:</span> x0 <span style="color:#f92672">-</span> x1;  <span style="color:#75715e">// dx =  abs(x1 - x0)
 </span><span style="color:#75715e"></span>    dy <span style="color:#f92672">&lt;=</span> down  <span style="color:#f92672">?</span> y0 <span style="color:#f92672">-</span> y1 <span style="color:#f92672">:</span> y1 <span style="color:#f92672">-</span> y0;  <span style="color:#75715e">// dy = -abs(y1 - y0)
 </span><span style="color:#75715e"></span><span style="color:#66d9ef">end</span>
-</code></pre></div><p>To make good decisions about registering signals, you need to look at the timing results from Vivado (XC7) or nextpnr (iCE40).</p>
-<p>With experience, you&rsquo;ll get a feel for when registering a signal makes sense. For example, I recently learnt that iCE40 subtraction takes two layers of logic, making registering the initial line values all the more valuable.</p>
+</code></pre></div><p>We can further improve timing by removing the combinational <code>derr</code> and using <code>dx</code> and <code>dy</code> directly in the main <code>always_ff</code> block:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    DRAW: <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">if</span> (oe) <span style="color:#66d9ef">begin</span>
+            <span style="color:#66d9ef">if</span> (x <span style="color:#f92672">==</span> xb <span style="color:#f92672">&amp;&amp;</span> y <span style="color:#f92672">==</span> yb) <span style="color:#66d9ef">begin</span>
+                in_progress <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                state <span style="color:#f92672">&lt;=</span> IDLE;
+            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
+                <span style="color:#66d9ef">if</span> (movx) <span style="color:#66d9ef">begin</span>
+                    x <span style="color:#f92672">&lt;=</span> right <span style="color:#f92672">?</span> x <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> x <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;
+                    err <span style="color:#f92672">&lt;=</span> err <span style="color:#f92672">+</span> dy;
+                <span style="color:#66d9ef">end</span>
+                <span style="color:#66d9ef">if</span> (movy) <span style="color:#66d9ef">begin</span>
+                    y <span style="color:#f92672">&lt;=</span> y <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// always down
+</span><span style="color:#75715e"></span>                    err <span style="color:#f92672">&lt;=</span> err <span style="color:#f92672">+</span> dx;
+                <span style="color:#66d9ef">end</span>
+                <span style="color:#66d9ef">if</span> (movx <span style="color:#f92672">&amp;&amp;</span> movy) <span style="color:#66d9ef">begin</span>
+                    x <span style="color:#f92672">&lt;=</span> right <span style="color:#f92672">?</span> x <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> x <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;
+                    y <span style="color:#f92672">&lt;=</span> y <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// always down
+</span><span style="color:#75715e"></span>                    err <span style="color:#f92672">&lt;=</span> err <span style="color:#f92672">+</span> dy <span style="color:#f92672">+</span> dx;
+                <span style="color:#66d9ef">end</span>
+            <span style="color:#66d9ef">end</span>
+        <span style="color:#66d9ef">end</span>
+    <span style="color:#66d9ef">end</span>
+</code></pre></div><p>This Verilog seems overly verbose compared to the combinational <code>derr</code>, but the timing is much better on simpler FPGAs, such as the iCE40. For example, the cube design we will discuss  shortly, improves from 22.55 MHz to 27.70 MHz with this change (we need 25.125 MHz to meet timing).</p>
+<p>With experience, you&rsquo;ll get a feel for when registering a signal makes sense. For example, back in 2020 I learnt that iCE40 subtraction takes two layers of logic, making registering the initial line values all the more valuable. Both Vivado (Arty) and nextpnr (iCEBreaker) provide timing results to help you improve the performance of your designs.</p>
 <h3 id="breaking-symmetry">Breaking Symmetry</h3>
 <p>Bresenham&rsquo;s line algorithm is not symmetrical: drawing from <code>(x0,y0)</code> to <code>(x1,y1)</code> is not necessarily the same as drawing from <code>(x1,y1)</code> to <code>(x0,y0)</code>.</p>
 <p>For example, I drew the triangle (2,2) (6,2) (4,6) clockwise then anticlockwise:</p>
@@ -395,14 +420,12 @@ FA0  // 1 - orange
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">end</span>
 
     <span style="color:#75715e">// error values
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW:<span style="color:#ae81ff">0</span>] err, derr;  <span style="color:#75715e">// a bit wider as signed
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW:<span style="color:#ae81ff">0</span>] err;  <span style="color:#75715e">// a bit wider as signed
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW:<span style="color:#ae81ff">0</span>] dx, dy;
-    <span style="color:#66d9ef">logic</span> movx, movy;  <span style="color:#75715e">// horizontal or vertical move required
+    <span style="color:#66d9ef">logic</span> movx, movy;  <span style="color:#75715e">// horizontal/vertical move required
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
         movx <span style="color:#f92672">=</span> (<span style="color:#ae81ff">2</span><span style="color:#f92672">*</span>err <span style="color:#f92672">&gt;=</span> dy);
         movy <span style="color:#f92672">=</span> (<span style="color:#ae81ff">2</span><span style="color:#f92672">*</span>err <span style="color:#f92672">&lt;=</span> dx);
-        derr <span style="color:#f92672">=</span> movx <span style="color:#f92672">?</span> dy <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
-        <span style="color:#66d9ef">if</span> (movy) derr <span style="color:#f92672">=</span> derr <span style="color:#f92672">+</span> dx;
     <span style="color:#66d9ef">end</span>
 
     <span style="color:#66d9ef">logic</span> in_progress <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// calculation in progress (but only output if oe)
@@ -421,9 +444,19 @@ FA0  // 1 - orange
                         done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
                         state <span style="color:#f92672">&lt;=</span> IDLE;
                     <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
-                        <span style="color:#66d9ef">if</span> (movx) x <span style="color:#f92672">&lt;=</span> right <span style="color:#f92672">?</span> x <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> x <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;
-                        <span style="color:#66d9ef">if</span> (movy) y <span style="color:#f92672">&lt;=</span> y <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// always down
-</span><span style="color:#75715e"></span>                        err <span style="color:#f92672">&lt;=</span> err <span style="color:#f92672">+</span> derr;
+                        <span style="color:#66d9ef">if</span> (movx) <span style="color:#66d9ef">begin</span>
+                            x <span style="color:#f92672">&lt;=</span> right <span style="color:#f92672">?</span> x <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> x <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;
+                            err <span style="color:#f92672">&lt;=</span> err <span style="color:#f92672">+</span> dy;
+                        <span style="color:#66d9ef">end</span>
+                        <span style="color:#66d9ef">if</span> (movy) <span style="color:#66d9ef">begin</span>
+                            y <span style="color:#f92672">&lt;=</span> y <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// always down
+</span><span style="color:#75715e"></span>                            err <span style="color:#f92672">&lt;=</span> err <span style="color:#f92672">+</span> dx;
+                        <span style="color:#66d9ef">end</span>
+                        <span style="color:#66d9ef">if</span> (movx <span style="color:#f92672">&amp;&amp;</span> movy) <span style="color:#66d9ef">begin</span>
+                            x <span style="color:#f92672">&lt;=</span> right <span style="color:#f92672">?</span> x <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> x <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;
+                            y <span style="color:#f92672">&lt;=</span> y <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// always down
+</span><span style="color:#75715e"></span>                            err <span style="color:#f92672">&lt;=</span> err <span style="color:#f92672">+</span> dy <span style="color:#f92672">+</span> dx;
+                        <span style="color:#66d9ef">end</span>
                     <span style="color:#66d9ef">end</span>
                 <span style="color:#66d9ef">end</span>
             <span style="color:#66d9ef">end</span>
