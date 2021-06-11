@@ -121,11 +121,11 @@ This guide is designed for Ubuntu or Pop!_OS 20.04, but should be straightforwar
       <p>Since I <a href="/posts/fpga-dev-ubuntu-20.04/">tested FPGA development tools on Ubuntu 20.04</a>, there have been requests for more posts on FPGA tooling. In this post, I provide a quick guide to building an open-source FPGA toolchain for iCE40 boards, such as <a href="https://docs.icebreaker-fpga.org/hardware/icebreaker/">iCEBreaker</a>. I plan to cover ECP5 FPGAs in a future version.</p>
 <p>This guide is designed for <a href="https://ubuntu.com/desktop">Ubuntu</a> or <a href="https://pop.system76.com/">Pop!_OS 20.04</a>, but should be straightforward to adjust to your own distro. These instructions will work on Windows Subsystem for Linux (WSL), but there&rsquo;s no USB support in WSL, so you can&rsquo;t program boards under WSL.</p>
 <p>If you prefer pre-built tools, then <a href="https://github.com/open-tool-forge/fpga-toolchain">Open Tool Forge</a> has binaries for Linux, Mac, and Windows.</p>
-<p><em>Updated 2021-05-24. Feedback to <a href="https://twitter.com/WillFlux">@WillFlux</a> is most welcome.</em></p>
+<p><em>Updated 2021-06-11. Feedback to <a href="https://twitter.com/WillFlux">@WillFlux</a> is most welcome.</em></p>
 <h2 id="checklist">Checklist</h2>
 <p>We&rsquo;ll be installing:</p>
 <ol>
-<li><a href="#build-pre-requisites">Build Pre-requisites</a> - what we need before we begin</li>
+<li><a href="#build-prerequisites">Build Prerequisites</a> - what we need before we begin</li>
 <li><a href="#icestorm-tools">IceStorm Tools</a> - create bitstreams file and programs boards</li>
 <li><a href="#nextpnr">nextpnr</a> - portable place and route</li>
 <li><a href="#iverilog">iVerilog</a> - Verilog simulation and synthesis tool (optional)</li>
@@ -133,10 +133,10 @@ This guide is designed for Ubuntu or Pop!_OS 20.04, but should be straightforwar
 <li><a href="#verilator">Verilator</a> - Verilog simulation and linting (optional)</li>
 </ol>
 <p>We&rsquo;ll also demonstrate a simple <a href="#ice40-makefile">iCE40 makefile</a> for building a Verilog project with the iCEBreaker board.</p>
-<h2 id="build-pre-requisites">Build Pre-requisites</h2>
+<h2 id="build-prerequisites">Build Prerequisites</h2>
 <p>Make sure we&rsquo;ve got git and curl installed to retrieve source code:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">apt install curl git
-</code></pre></div><p>Install build depedencies (covers all six tools):</p>
+</code></pre></div><p>Install build prerequisites (covers all tools included in this guide):</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">apt install build-essential clang bison flex gperf libfl2 <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>    libfl-dev libreadline-dev gawk tcl-dev libffi-dev <span style="color:#ae81ff">\
 </span><span style="color:#ae81ff"></span>    graphviz xdot pkg-config python python3 libftdi-dev <span style="color:#ae81ff">\
@@ -145,6 +145,7 @@ This guide is designed for Ubuntu or Pop!_OS 20.04, but should be straightforwar
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">mkdir -p ~/src/fpga-toolchain
 </code></pre></div><h2 id="icestorm-tools">IceStorm Tools</h2>
 <p>IceStorm tools create and analyse bitstream files for iCE40 FPGAs as well as programming boards. Learn more from <a href="http://www.clifford.at/icestorm/">Project IceStorm</a>.</p>
+<p>Make sure you&rsquo;ve <a href="#build-prerequisites">installed prerequisites</a> then run the following:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">cd ~/src/fpga-toolchain
 
 git clone https://github.com/cliffordwolf/icestorm.git icestorm
@@ -156,6 +157,7 @@ make install
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">ACTION<span style="color:#f92672">==</span><span style="color:#e6db74">&#34;add&#34;</span>, ATTR<span style="color:#f92672">{</span>idVendor<span style="color:#f92672">}==</span><span style="color:#e6db74">&#34;0403&#34;</span>, ATTR<span style="color:#f92672">{</span>idProduct<span style="color:#f92672">}==</span><span style="color:#e6db74">&#34;6010&#34;</span>, MODE:<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;666&#34;</span>
 </code></pre></div><h2 id="nextpnr">nextpnr</h2>
 <p>nextpnr is a portable FPGA place and route tool that supports iCE40 and ECP5 (with Xilinx support in the works). Learn more from <a href="https://github.com/YosysHQ/nextpnr">nextpnr GitHub</a>.</p>
+<p>Make sure you&rsquo;ve <a href="#build-prerequisites">installed prerequisites</a> then run the following:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">cd ~/src/fpga-toolchain
 
 git clone https://github.com/YosysHQ/nextpnr nextpnr
@@ -170,6 +172,7 @@ make install
 <h2 id="iverilog">iVerilog</h2>
 <p>Icarus Verilog is a Verilog simulation and synthesis tool. The Yosys test suite requires iVerilog, so you need to install it to test Yosys, but it isn&rsquo;t needed to build iCE40 designs. Learn more from the <a href="http://iverilog.icarus.com/">Icarus Verilog site</a>.</p>
 <p>For this tool, we build the latest stable release, rather than cloning from git. If you wish to use the git version, it&rsquo;s available from <code>git://github.com/steveicarus/iverilog.git</code>.</p>
+<p>Make sure you&rsquo;ve <a href="#build-prerequisites">installed prerequisites</a>, then run the following:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">cd ~/src/fpga-toolchain
 
 curl -O ftp://ftp.icarus.com/pub/eda/verilog/v11/verilog-11.0.tar.gz
@@ -183,6 +186,7 @@ make install
 </code></pre></div><p>For more options see the <a href="https://iverilog.fandom.com/wiki/Installation_Guide">Icarus Verilog Installation Guide</a>.</p>
 <h2 id="yosys">Yosys</h2>
 <p>Yosys does Verilog RTL synthesis. You can run the test suite if you install iVerilog. Learn more from the <a href="http://www.clifford.at/yosys/">Yosys site</a>.</p>
+<p>Make sure you&rsquo;ve <a href="#build-prerequisites">installed prerequisites</a>, then run the following:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">cd ~/src/fpga-toolchain
 
 git clone https://github.com/YosysHQ/yosys yosys
@@ -192,7 +196,8 @@ make -j<span style="color:#66d9ef">$(</span>nproc<span style="color:#66d9ef">)</
 make test  <span style="color:#75715e"># optional (requires iVerilog)</span>
 make install
 </code></pre></div><h2 id="verilator">Verilator</h2>
-<p>Verilator is a fast Verilog simulation tool that includes comprehensive Verilog linting. Verilator isn&rsquo;t required to build iCE40 designs, but the linting is a <a href="https://projectf.io/posts/verilog-lint-with-verilator/">great way to check your Verilog designs</a> before building. Learn more at the official <a href="https://www.veripool.org/wiki/verilator">Verilator site</a>.</p>
+<p>Verilator is a fast Verilog simulation tool that includes comprehensive linting. Verilator isn&rsquo;t required to build iCE40 designs, but <a href="https://projectf.io/posts/verilog-lint-with-verilator/">linting</a> and <a href="/posts/verilog-sim-verilator-sdl/">graphics simulation</a> are great ways to test your designs. Learn more at the official <a href="https://www.veripool.org/wiki/verilator">Verilator site</a>.</p>
+<p>Make sure you&rsquo;ve <a href="#build-prerequisites">installed prerequisites</a>, then run the following:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">cd ~/src/fpga-toolchain
 
 git clone https://github.com/verilator/verilator
