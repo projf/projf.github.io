@@ -7,9 +7,9 @@
 <title>Hello Nexys - Part 2 | Project F - FPGA Development</title>
 
 <meta property='og:title' content='Hello Nexys - Part 2 - Project F - FPGA Development'>
-<meta property='og:description' content='Welcome back to our three-part FPGA tutorial with SystemVerilog and the Digilent Nexys Video. In part two, we&rsquo;re going to learn about clocks and counting. Along the way, we&rsquo;ll cover maintaining state with flip-flops, timing things with clock dividers, creating our first Verilog module, and controlling LEDs with pulse width modulation.
-New to the series? Start with part 1. This post is also available for the Arty.
-Updated 2021-05-17. Get in touch with @WillFlux or open an issue on GitHub.'>
+<meta property='og:description' content='Welcome back to our three-part FPGA tutorial with SystemVerilog and the Digilent Nexys Video. In part two, we&rsquo;re going to learn about clocks and counting. Along the way, we&rsquo;ll cover maintaining state with flip-flops, timing things with clock dividers, creating our first Verilog module, and controlling LEDs with pulse width modulation. This post is also available for the Arty.
+New to the series? Start with part 1.
+Updated 2021-06-28. Get in touch with @WillFlux or open an issue on GitHub.'>
 <meta property='og:url' content='https://projectf.io/posts/hello-nexys-2/'>
 <meta property='og:site_name' content='Project F - FPGA Development'>
 <meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/hello-nexys/social-card.jpg'><meta property='article:published_time' content='2021-02-11T00:00:00Z'/><meta property='article:modified_time' content='2021-02-11T00:00:00Z'/><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
@@ -119,18 +119,17 @@ Updated 2021-05-17. Get in touch with @WillFlux or open an issue on GitHub.'>
     <h1 class="title">Hello Nexys - Part 2</h1>
     
     <div class="content">
-      <p>Welcome back to our three-part FPGA tutorial with <strong>SystemVerilog</strong> and the <strong>Digilent Nexys Video</strong>. In part two, we&rsquo;re going to learn about clocks and counting. Along the way, we&rsquo;ll cover maintaining state with flip-flops, timing things with clock dividers, creating our first Verilog module, and controlling LEDs with pulse width modulation.</p>
-<p>New to the series? Start with <strong><a href="/posts/hello-nexys-1/">part 1</a></strong>.   This post is also available for the <strong><a href="/posts/hello-arty-2/">Arty</a></strong>.</p>
-<p><em>Updated 2021-05-17. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+      <p>Welcome back to our three-part FPGA tutorial with <strong>SystemVerilog</strong> and the <strong>Digilent Nexys Video</strong>. In part two, we&rsquo;re going to learn about clocks and counting. Along the way, we&rsquo;ll cover maintaining state with flip-flops, timing things with clock dividers, creating our first Verilog module, and controlling LEDs with pulse width modulation. This post is also available for the <strong><a href="/posts/hello-arty-2/">Arty</a></strong>.</p>
+<p>New to the series? Start with <strong><a href="/posts/hello-nexys-1/">part 1</a></strong>.</p>
+<p><em>Updated 2021-06-28. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <h3 id="requirements">Requirements</h3>
-<p>For this series, we are be using the <a href="https://reference.digilentinc.com/reference/programmable-logic/nexys-video/start">Digilent Nexys Video</a>, a $480 dev board based on a <a href="https://www.xilinx.com/products/silicon-devices/fpga/artix-7.html">Xilinx Artix-7 FPGA</a>. This board is widely available and supports Xilinx&rsquo;s latest Vivado software, which runs on Linux and Windows 10.</p>
+<p>For this series, we are be using the <a href="https://reference.digilentinc.com/reference/programmable-logic/nexys-video/start">Digilent Nexys Video</a>, a $480 dev board based on a <a href="https://www.xilinx.com/products/silicon-devices/fpga/artix-7.html">Xilinx Artix-7 FPGA</a>. This board is widely available and supports Xilinx&rsquo;s latest Vivado software, which runs on Linux and Windows.</p>
 <p>For this <em>Hello Nexys</em> series you need:</p>
 <ol>
 <li><a href="https://reference.digilentinc.com/reference/programmable-logic/nexys-video/start">Digilent Nexys Video</a></li>
 <li>Micro USB cable to program the Nexys Video board</li>
 <li>12V power adaptor (EU/US plug is provided by Digilent - UK users will need an adaptor)</li>
-<li>Xilinx Vivado 2019 or later: <a href="https://www.xilinx.com/support/download.html">Download</a> and <a href="https://www.xilinx.com/support/documentation-navigation/see-all-versions.html?xlnxproducttypes=Design%20Tools&amp;xlnxdocumentid=UG973">Install Guide</a><br>
-NB. Linux users need to install cable drivers after running setup</li>
+<li>Xilinx Vivado 2019 or later: <a href="https://www.xilinx.com/support/download.html">Download</a> and <a href="https://www.xilinx.com/support/documentation-navigation/see-all-versions.html?xlnxproducttypes=Design%20Tools&amp;xlnxdocumentid=UG973">Install Guide</a></li>
 <li><a href="https://reference.digilentinc.com/vivado/installing-vivado/start#installing_digilent_board_files">Digilent board files</a></li>
 </ol>
 <h3 id="source">Source</h3>
@@ -160,10 +159,12 @@ NB. Linux users need to install cable drivers after running setup</li>
 </code></pre></div><p>In part 1, we used <code>always_comb</code> blocks. Flip-flips require a new type of block: <strong>always_ff</strong>.</p>
 <p>Our <code>always_ff</code> block has the positive edge (<code>posedge</code>) of the clock (<code>clk</code>) on its <strong>sensitivity list</strong> <code>@(...)</code>. This means the block is triggered on every rising (positive) edge of the clock.</p>
 <p>We&rsquo;re using the 100 MHz oscillator on the Nexys Video board, so we get a rising clock edge every 10 nanoseconds: this is known as the <strong>clock period</strong>. Every 10 ns our counter <code>cnt</code> increments; when it reaches its maximum value, it rolls over to 0 and repeats.</p>
-<p>How many seconds does this counter take to roll over?</p>
+<blockquote>
+<p>How long does it take the 32-bit counter to roll over?</p>
+</blockquote>
 <p>At the <em>same time</em> as our counter is being incremented, one bit of the counter is being copied to a flip-flop that maintains the LED state. Statements in an <code>always_ff</code> block happen independently and in parallel.</p>
 <blockquote>
-<p><strong>Quick Aside: Assignment</strong><br>
+<p><strong>Assignment</strong><br>
 You may have noticed we snuck in a new type of assignment with flip-flops:</p>
 <p><code>always_comb</code> blocks use <code>=</code> for assignment<br>
 <code>always_ff</code> blocks use <code>&lt;=</code> for assignment</p>
@@ -297,11 +298,12 @@ set_property <span style="color:#f92672">-</span>dict <span style="color:#66d9ef
 </code></pre></div><p><em>ProTip: If you only have one statement in a block you don&rsquo;t need <code>begin</code> and <code>end</code>.</em></p>
 <p>This design makes use of an <code>always_comb</code> and an <code>always_ff</code> block. <code>pwm_out</code> only depends on its current inputs, so we use an <code>always_comb</code> block. Whereas the counter <code>cnt</code> needs to maintain state, so has to use an <code>always_ff</code> block.</p>
 <blockquote>
-<p><strong>Quick Aside: Logic Types</strong></p>
-<p><strong>Combinational logic</strong> depends on its present inputs only: it has no memory of the past.
-Combinational logic is created with an <code>always_comb</code> block.</p>
-<p><strong>Synchronous sequential logic</strong> uses a clock and depends on the past sequence of inputs, as well as the present ones.
-Synchronous sequential logic is created with an <code>always_ff</code> block and uses flip-flops.</p>
+<p><strong>Combinational Logic</strong><br>
+Depends on the combination of present inputs; past inputs are irrelevant.
+Combinational outputs change immediately. Combinational logic is created with an <code>always_comb</code> block.</p>
+<p><strong>Sequential Logic</strong><br>
+Depends on the past sequence of inputs, as well as the present ones.
+Sequential outputs change on a clock edge and use flip-flops. Sequential logic is created with an <code>always_ff</code> block.</p>
 <p><em>Don&rsquo;t worry if this doesn&rsquo;t make sense right away. Keep designing and come back to it.</em></p>
 </blockquote>
 <h3 id="duty-to-our-leds">Duty to our LEDs</h3>
