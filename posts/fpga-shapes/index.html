@@ -121,8 +121,8 @@ In this series, we explore graphics at the hardware level and get a feel for the
       <p>Welcome back to <em>Exploring FPGA Graphics</em>. This time we&rsquo;re going to build on our work in <a href="/posts/lines-and-triangles/">lines and triangles</a> by drawing more shapes and filling them in before using our framebuffer to animate them.</p>
 <p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how displays work, race the beam with Pong, animate starfields and sprites, paint Michelangelo&rsquo;s David, simulate life with bitmaps, draw lines and shapes, and finally render simple 3D models. New to the series? Start with <a href="/posts/fpga-graphics/">FPGA Graphics</a>.</p>
 <p><strong>You can watch an <a href="https://www.youtube.com/watch?v=ezJv7pB-UmA" target="_blank">FPGA Graphics demo reel</a> with designs from across this series.</strong></p>
-<p><strong>Draft post: fixes and improvements to come. Designs for iCEBreaker will be added soon.</strong></p>
-<p><em>Updated 2021-05-30. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><strong>DRAFT POST. I&rsquo;m revising the drawing posts during July 2021.</strong></p>
+<p><em>Updated 2021-07-10. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <h3 id="series-outline">Series Outline</h3>
 <ul>
 <li><a href="/posts/fpga-graphics/">FPGA Graphics</a> - learn how displays work and animate simple shapes</li>
@@ -132,8 +132,8 @@ In this series, we explore graphics at the hardware level and get a feel for the
 <li><a href="/posts/framebuffers/">Framebuffers</a> - driving the display from a bitmap in memory</li>
 <li><a href="/posts/life-on-screen/">Life on Screen</a> - the screen comes alive with Conway&rsquo;s Game of Life</li>
 <li><a href="/posts/lines-and-triangles/">Lines and Triangles</a> - drawing lines and triangles with a framebuffer</li>
-<li>2D Shapes (this post) - filling and animating shapes</li>
-<li>Simple 3D - models and wireframe rendering (draft coming soon)</li>
+<li>2D Shapes (this post) - filled shapes and drawing pictures (draft)</li>
+<li>Animated Shapes - animating and rotating shapes (coming soon)</li>
 </ul>
 <h3 id="requirements">Requirements</h3>
 <p>For this series, you need an FPGA board with video output. We&rsquo;ll be working at 640x480, so pretty much any video output will do. It helps to be comfortable with programming your FPGA board and reasonably familiar with Verilog.</p>
@@ -152,13 +152,11 @@ In this series, we explore graphics at the hardware level and get a feel for the
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst,             <span style="color:#75715e">// reset
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> start,           <span style="color:#75715e">// start rectangle drawing
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> oe,              <span style="color:#75715e">// output enable
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x0,  <span style="color:#75715e">// vertex 0 - horizontal position
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] y0,  <span style="color:#75715e">// vertex 0 - vertical position
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x1,  <span style="color:#75715e">// vertex 2 - horizontal position
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] y1,  <span style="color:#75715e">// vertex 2 - vertical position
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x,   <span style="color:#75715e">// horizontal drawing position
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] y,   <span style="color:#75715e">// vertical drawing position
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x0, y0,  <span style="color:#75715e">// vertex 0
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x1, y1,  <span style="color:#75715e">// vertex 2
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x,  y,   <span style="color:#75715e">// drawing position
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> drawing,         <span style="color:#75715e">// rectangle is drawing
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> complete,        <span style="color:#75715e">// rectangle complete (remains high)
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> done             <span style="color:#75715e">// rectangle complete (high for one tick)
 </span><span style="color:#75715e"></span>    );
 
@@ -174,7 +172,9 @@ In this series, we explore graphics at the hardware level and get a feel for the
     <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">case</span> (state)
             INIT: <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// register coordinates
-</span><span style="color:#75715e"></span>                <span style="color:#66d9ef">if</span> (line_id <span style="color:#f92672">==</span> <span style="color:#ae81ff">2</span><span style="color:#ae81ff">&#39;d0</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// (x0,y0) (x1,y0)
+</span><span style="color:#75715e"></span>                state <span style="color:#f92672">&lt;=</span> DRAW;
+                line_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                <span style="color:#66d9ef">if</span> (line_id <span style="color:#f92672">==</span> <span style="color:#ae81ff">2</span><span style="color:#ae81ff">&#39;d0</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// (x0,y0) (x1,y0)
 </span><span style="color:#75715e"></span>                    lx0 <span style="color:#f92672">&lt;=</span> x0; ly0 <span style="color:#f92672">&lt;=</span> y0;
                     lx1 <span style="color:#f92672">&lt;=</span> x1; ly1 <span style="color:#f92672">&lt;=</span> y0;
                 <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (line_id <span style="color:#f92672">==</span> <span style="color:#ae81ff">2</span><span style="color:#ae81ff">&#39;d1</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// (x1,y0) (x1,y1)
@@ -187,35 +187,36 @@ In this series, we explore graphics at the hardware level and get a feel for the
 </span><span style="color:#75715e"></span>                    lx0 <span style="color:#f92672">&lt;=</span> x0; ly0 <span style="color:#f92672">&lt;=</span> y1;
                     lx1 <span style="color:#f92672">&lt;=</span> x0; ly1 <span style="color:#f92672">&lt;=</span> y0;
                 <span style="color:#66d9ef">end</span>
-                state <span style="color:#f92672">&lt;=</span> DRAW;
-                line_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
             <span style="color:#66d9ef">end</span>
             DRAW: <span style="color:#66d9ef">begin</span>
                 line_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
                 <span style="color:#66d9ef">if</span> (line_done) <span style="color:#66d9ef">begin</span>
                     <span style="color:#66d9ef">if</span> (line_id <span style="color:#f92672">==</span> <span style="color:#ae81ff">3</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// final line
-</span><span style="color:#75715e"></span>                        done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-                        state <span style="color:#f92672">&lt;=</span> IDLE;
+</span><span style="color:#75715e"></span>                        state <span style="color:#f92672">&lt;=</span> IDLE;
+                        complete <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                        done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
                     <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
-                        line_id <span style="color:#f92672">&lt;=</span> line_id <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
                         state <span style="color:#f92672">&lt;=</span> INIT;
+                        line_id <span style="color:#f92672">&lt;=</span> line_id <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
                     <span style="color:#66d9ef">end</span>
                 <span style="color:#66d9ef">end</span>
             <span style="color:#66d9ef">end</span>
             <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// IDLE
 </span><span style="color:#75715e"></span>                done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
                 <span style="color:#66d9ef">if</span> (start) <span style="color:#66d9ef">begin</span>
-                    line_id <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
                     state <span style="color:#f92672">&lt;=</span> INIT;
+                    line_id <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                    complete <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
                 <span style="color:#66d9ef">end</span>
             <span style="color:#66d9ef">end</span>
         <span style="color:#66d9ef">endcase</span>
 
         <span style="color:#66d9ef">if</span> (rst) <span style="color:#66d9ef">begin</span>
+            state <span style="color:#f92672">&lt;=</span> IDLE;
             line_id <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
             line_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            complete <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
             done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-            state <span style="color:#f92672">&lt;=</span> IDLE;
         <span style="color:#66d9ef">end</span>
     <span style="color:#66d9ef">end</span>
 
@@ -231,11 +232,12 @@ In this series, we explore graphics at the hardware level and get a feel for the
         .x,
         .y,
         .drawing,
+        .complete(),
         .done(line_done)
     );
 <span style="color:#66d9ef">endmodule</span>
 </code></pre></div><p>This module has similar I/O and state machine to <code>draw_triangle</code>, but a rectangle only needs two pairs of coordinates to define it.</p>
-<p>To demo our rectangle drawing, we&rsquo;re going to draw a series of rectangles inside each other using each colour (except black). The top module is similar to the one we used in the previous part to draw <a href="/posts/lines-and-triangles/">lines and triangles</a>:</p>
+<p>To demo our rectangle drawing, we will draw a series of rectangles inside each other using each colour (except black). The top module is similar to the one we used in the previous part to draw <a href="/posts/lines-and-triangles/">lines and triangles</a>:</p>
 <ul>
 <li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/2d-shapes/xc7/top_rectangles.sv">xc7/top_rectangles.sv</a></strong></li>
 <li>iCEBreaker (iCE40): <em>not yet available</em></li>
@@ -267,16 +269,17 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
 
     <span style="color:#75715e">// display timings
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">16</span>;
+    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx, sy;
     <span style="color:#66d9ef">logic</span> hsync, vsync;
-    <span style="color:#66d9ef">logic</span> de, frame, line;
+    <span style="color:#66d9ef">logic</span> frame, line;
     display_timings_480p #(.CORDW(CORDW)) display_timings_inst (
         .clk_pix,
         .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for pixel clock lock
-</span><span style="color:#75715e"></span>        .sx(),
-        .sy(),
+</span><span style="color:#75715e"></span>        .sx,
+        .sy,
         .hsync,
         .vsync,
-        .de,
+        .de(),
         .frame,
         .line
     );
@@ -287,7 +290,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
 
     <span style="color:#75715e">// framebuffer (FB)
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> FB_WIDTH   <span style="color:#f92672">=</span> <span style="color:#ae81ff">320</span>;
-    <span style="color:#66d9ef">localparam</span> FB_HEIGHT  <span style="color:#f92672">=</span> <span style="color:#ae81ff">240</span>;
+    <span style="color:#66d9ef">localparam</span> FB_HEIGHT  <span style="color:#f92672">=</span> <span style="color:#ae81ff">180</span>;
     <span style="color:#66d9ef">localparam</span> FB_CIDXW   <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;
     <span style="color:#66d9ef">localparam</span> FB_CHANW   <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;
     <span style="color:#66d9ef">localparam</span> FB_SCALE   <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span>;
@@ -312,8 +315,8 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
         .clk_pix,
         .rst_sys(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),
         .rst_pix(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),
-        .de,
-        .frame,
+        .de(sy <span style="color:#f92672">&gt;=</span> <span style="color:#ae81ff">60</span> <span style="color:#f92672">&amp;&amp;</span> sy <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">420</span> <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">&gt;=</span> <span style="color:#ae81ff">0</span>),  <span style="color:#75715e">// 16:9 letterbox
+</span><span style="color:#75715e"></span>        .frame,
         .line,
         .we(fb_we),
         .x(fbx),
@@ -327,8 +330,8 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
 
     <span style="color:#75715e">// draw rectangles in framebuffer
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> SHAPE_CNT<span style="color:#f92672">=</span><span style="color:#ae81ff">15</span>;  <span style="color:#75715e">// number of shapes to draw
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] shape_id;  <span style="color:#75715e">// shape identifier
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] rx0, ry0, rx1, ry1;  <span style="color:#75715e">// shape coords
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] shape_id;     <span style="color:#75715e">// shape identifier
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vx0, vy0, vx1, vy1;  <span style="color:#75715e">// shape coords
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> draw_start, drawing, draw_done;  <span style="color:#75715e">// drawing signals
 </span><span style="color:#75715e"></span>
     <span style="color:#75715e">// draw state machine
@@ -338,10 +341,10 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
             INIT: <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// register coordinates and colour
 </span><span style="color:#75715e"></span>                draw_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
                 state <span style="color:#f92672">&lt;=</span> DRAW;
-                rx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">80</span> <span style="color:#f92672">+</span> shape_id;
-                ry0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">60</span> <span style="color:#f92672">+</span> shape_id;
-                rx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">240</span> <span style="color:#f92672">-</span> shape_id;
-                ry1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">180</span> <span style="color:#f92672">-</span> shape_id;
+                vx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">80</span> <span style="color:#f92672">+</span> shape_id;
+                vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">30</span> <span style="color:#f92672">+</span> shape_id;
+                vx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">240</span> <span style="color:#f92672">-</span> shape_id;
+                vy1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">150</span> <span style="color:#f92672">-</span> shape_id;
                 fb_cidx <span style="color:#f92672">&lt;=</span> shape_id <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// skip 1st colour (black)
 </span><span style="color:#75715e"></span>            <span style="color:#66d9ef">end</span>
             DRAW: <span style="color:#66d9ef">begin</span>
@@ -378,13 +381,14 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
         .rst(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),
         .start(draw_start),
         .oe(draw_oe),
-        .x0(rx0),
-        .y0(ry0),
-        .x1(rx1),
-        .y1(ry1),
+        .x0(vx0),
+        .y0(vy0),
+        .x1(vx1),
+        .y1(vy1),
         .x(fbx),
         .y(fby),
         .drawing,
+        .complete(),
         .done(draw_done)
     );
 
@@ -408,20 +412,73 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
 </code></pre></div><h2 id="filled-rectangle">Filled Rectangle</h2>
-<p>For a filled rectangle, we keep drawing horizontal lines in the right position until the shape is complete:</p>
-<p>Create module <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lib/graphics/draw_rectangle_fill.sv">draw_rectangle_fill.sv</a>]</strong>:</p>
+<p>For a filled rectangle, we can draw a series of horizontal lines. We could use our regular <code>draw_line.sv</code> module to do this, but a simpler module will do the trick.</p>
+<p>Create module <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lib/graphics/draw_line_1d.sv">draw_line_1d.sv</a>]</strong>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> draw_line_1d #(<span style="color:#66d9ef">parameter</span> CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>) (  <span style="color:#75715e">// signed coordinate width
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,             <span style="color:#75715e">// clock
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst,             <span style="color:#75715e">// reset
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> start,           <span style="color:#75715e">// start line drawing
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> oe,              <span style="color:#75715e">// output enable
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x0,  <span style="color:#75715e">// point 0
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x1,  <span style="color:#75715e">// point 1
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x,   <span style="color:#75715e">// drawing position
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> drawing,         <span style="color:#75715e">// line is drawing
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> complete,        <span style="color:#75715e">// line complete (remains high)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> done             <span style="color:#75715e">// line done (high for one tick)
+</span><span style="color:#75715e"></span>    );
+
+    <span style="color:#66d9ef">logic</span> in_progress <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// calculation in progress (but only output if oe)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+        drawing <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+        <span style="color:#66d9ef">if</span> (in_progress <span style="color:#f92672">&amp;&amp;</span> oe) drawing <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#66d9ef">enum</span> {IDLE, DRAW} state;
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">case</span> (state)
+            DRAW: <span style="color:#66d9ef">begin</span>
+                <span style="color:#66d9ef">if</span> (oe) <span style="color:#66d9ef">begin</span>
+                    <span style="color:#66d9ef">if</span> (x <span style="color:#f92672">==</span> x1) <span style="color:#66d9ef">begin</span>
+                        state <span style="color:#f92672">&lt;=</span> IDLE;
+                        in_progress <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                        complete <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                        done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                    <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
+                        x <span style="color:#f92672">&lt;=</span> x <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+                    <span style="color:#66d9ef">end</span>
+                <span style="color:#66d9ef">end</span>
+            <span style="color:#66d9ef">end</span>
+            <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// IDLE
+</span><span style="color:#75715e"></span>                done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                <span style="color:#66d9ef">if</span> (start) <span style="color:#66d9ef">begin</span>
+                    state <span style="color:#f92672">&lt;=</span> DRAW;
+                    x <span style="color:#f92672">&lt;=</span> x0;
+                    in_progress <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                    complete <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                <span style="color:#66d9ef">end</span>
+            <span style="color:#66d9ef">end</span>
+        <span style="color:#66d9ef">endcase</span>
+
+        <span style="color:#66d9ef">if</span> (rst) <span style="color:#66d9ef">begin</span>
+            state <span style="color:#f92672">&lt;=</span> IDLE;
+            in_progress <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            complete <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+        <span style="color:#66d9ef">end</span>
+    <span style="color:#66d9ef">end</span>
+<span style="color:#66d9ef">endmodule</span>
+</code></pre></div><p>This module retains the interface of draw_line but simplifies the implementation to one dimension. There&rsquo;s a test bench you can use to exercise the module with Vivado: <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lib/graphics/xc7/draw_line_1d_tb.sv">xc7/draw_line_1d_tb.sv</a>]</strong>.</p>
+<p>Next, create module <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lib/graphics/draw_rectangle_fill.sv">draw_rectangle_fill.sv</a>]</strong>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> draw_rectangle_fill #(<span style="color:#66d9ef">parameter</span> CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>) (  <span style="color:#75715e">// signed coordinate width
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,             <span style="color:#75715e">// clock
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst,             <span style="color:#75715e">// reset
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> start,           <span style="color:#75715e">// start rectangle drawing
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> oe,              <span style="color:#75715e">// output enable
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x0,  <span style="color:#75715e">// vertex 0 - horizontal position
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] y0,  <span style="color:#75715e">// vertex 0 - vertical position
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x1,  <span style="color:#75715e">// vertex 2 - horizontal position
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] y1,  <span style="color:#75715e">// vertex 2 - vertical position
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x,   <span style="color:#75715e">// horizontal drawing position
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] y,   <span style="color:#75715e">// vertical drawing position
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x0, y0,  <span style="color:#75715e">// vertex 0
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x1, y1,  <span style="color:#75715e">// vertex 2
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x,  y,   <span style="color:#75715e">// drawing position
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> drawing,         <span style="color:#75715e">// rectangle is drawing
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> complete,        <span style="color:#75715e">// rectangle complete (remains high)
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> done             <span style="color:#75715e">// rectangle complete (high for one tick)
 </span><span style="color:#75715e"></span>    );
 
@@ -437,61 +494,60 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
         y1s <span style="color:#f92672">=</span> (y0 <span style="color:#f92672">&gt;</span> y1) <span style="color:#f92672">?</span> y0 <span style="color:#f92672">:</span> y1;  <span style="color:#75715e">// last line
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">end</span>
 
-    <span style="color:#75715e">// line coordinates - horizontal lines, so only one y-value
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lx0, lx1, ly;
+    <span style="color:#75715e">// horizontal line coordinates
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lx0, lx1;
 
     <span style="color:#66d9ef">enum</span> {IDLE, INIT, DRAW} state;
     <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">case</span> (state)
             INIT: <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// register coordinates
-</span><span style="color:#75715e"></span>                <span style="color:#75715e">// x-coordinates don&#39;t change for a given filled rectangle
-</span><span style="color:#75715e"></span>                lx0 <span style="color:#f92672">&lt;=</span> (x0 <span style="color:#f92672">&gt;</span> x1) <span style="color:#f92672">?</span> x1 <span style="color:#f92672">:</span> x0;  <span style="color:#75715e">// draw left-to-right
-</span><span style="color:#75715e"></span>                lx1 <span style="color:#f92672">&lt;=</span> (x0 <span style="color:#f92672">&gt;</span> x1) <span style="color:#f92672">?</span> x0 <span style="color:#f92672">:</span> x1;
-                ly <span style="color:#f92672">&lt;=</span> y0s <span style="color:#f92672">+</span> line_id;  <span style="color:#75715e">// vertical position
 </span><span style="color:#75715e"></span>                state <span style="color:#f92672">&lt;=</span> DRAW;
                 line_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-            <span style="color:#66d9ef">end</span>
+                <span style="color:#75715e">// x-coordinates don&#39;t change for a given filled rectangle
+</span><span style="color:#75715e"></span>                lx0 <span style="color:#f92672">&lt;=</span> (x0 <span style="color:#f92672">&gt;</span> x1) <span style="color:#f92672">?</span> x1 <span style="color:#f92672">:</span> x0;  <span style="color:#75715e">// draw left-to-right
+</span><span style="color:#75715e"></span>                lx1 <span style="color:#f92672">&lt;=</span> (x0 <span style="color:#f92672">&gt;</span> x1) <span style="color:#f92672">?</span> x0 <span style="color:#f92672">:</span> x1;
+                y <span style="color:#f92672">&lt;=</span> y0s <span style="color:#f92672">+</span> line_id;  <span style="color:#75715e">// vertical position
+</span><span style="color:#75715e"></span>            <span style="color:#66d9ef">end</span>
             DRAW: <span style="color:#66d9ef">begin</span>
                 line_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
                 <span style="color:#66d9ef">if</span> (line_done) <span style="color:#66d9ef">begin</span>
-                    <span style="color:#66d9ef">if</span> (ly <span style="color:#f92672">==</span> y1s) <span style="color:#66d9ef">begin</span>
-                        done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                    <span style="color:#66d9ef">if</span> (y <span style="color:#f92672">==</span> y1s) <span style="color:#66d9ef">begin</span>
                         state <span style="color:#f92672">&lt;=</span> IDLE;
+                        done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
                     <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
-                        line_id <span style="color:#f92672">&lt;=</span> line_id <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
                         state <span style="color:#f92672">&lt;=</span> INIT;
+                        line_id <span style="color:#f92672">&lt;=</span> line_id <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
                     <span style="color:#66d9ef">end</span>
                 <span style="color:#66d9ef">end</span>
             <span style="color:#66d9ef">end</span>
             <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// IDLE
 </span><span style="color:#75715e"></span>                done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
                 <span style="color:#66d9ef">if</span> (start) <span style="color:#66d9ef">begin</span>
-                    line_id <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
                     state <span style="color:#f92672">&lt;=</span> INIT;
+                    line_id <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
                 <span style="color:#66d9ef">end</span>
             <span style="color:#66d9ef">end</span>
         <span style="color:#66d9ef">endcase</span>
 
         <span style="color:#66d9ef">if</span> (rst) <span style="color:#66d9ef">begin</span>
+            state <span style="color:#f92672">&lt;=</span> IDLE;
             line_id <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
             line_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            complete <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
             done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-            state <span style="color:#f92672">&lt;=</span> IDLE;
         <span style="color:#66d9ef">end</span>
     <span style="color:#66d9ef">end</span>
 
-    draw_line #(.CORDW(CORDW)) draw_line_inst (
+    draw_line_1d #(.CORDW(CORDW)) draw_line_1d_inst (
         .clk,
         .rst,
         .start(line_start),
         .oe,
         .x0(lx0),
-        .y0(ly),
         .x1(lx1),
-        .y1(ly),
-        .x,
-        .y,
+        .x(x),
         .drawing,
+        .complete(),
         .done(line_done)
     );
 <span style="color:#66d9ef">endmodule</span>
@@ -500,11 +556,11 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
 <li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/2d-shapes/xc7/top_rectangles_fill.sv">xc7/top_rectangles_fill.sv</a></strong></li>
 <li>iCEBreaker (iCE40): <em>not yet available</em></li>
 </ul>
-<p>The Arty version of filled rectangles looks like this:</p>
+<p>The drawing part of the Arty version looks like this:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// draw filled rectangles in framebuffer
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> SHAPE_CNT<span style="color:#f92672">=</span><span style="color:#ae81ff">15</span>;  <span style="color:#75715e">// number of shapes to draw
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] shape_id;  <span style="color:#75715e">// shape identifier
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] rx0, ry0, rx1, ry1;  <span style="color:#75715e">// shape coords
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] shape_id;     <span style="color:#75715e">// shape identifier
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vx0, vy0, vx1, vy1;  <span style="color:#75715e">// shape coords
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> draw_start, drawing, draw_done;  <span style="color:#75715e">// drawing signals
 </span><span style="color:#75715e"></span>
     <span style="color:#75715e">// draw state machine
@@ -514,10 +570,10 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
             INIT: <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// register coordinates and colour
 </span><span style="color:#75715e"></span>                draw_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
                 state <span style="color:#f92672">&lt;=</span> DRAW;
-                rx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">80</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">4</span> <span style="color:#f92672">*</span> shape_id;
-                ry0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">60</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">4</span> <span style="color:#f92672">*</span> shape_id;
-                rx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">160</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">4</span> <span style="color:#f92672">*</span> shape_id;
-                ry1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">140</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">4</span> <span style="color:#f92672">*</span> shape_id;
+                vx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">80</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">4</span> <span style="color:#f92672">*</span> shape_id;
+                vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">20</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">4</span> <span style="color:#f92672">*</span> shape_id;
+                vx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">160</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">4</span> <span style="color:#f92672">*</span> shape_id;
+                vy1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">100</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">4</span> <span style="color:#f92672">*</span> shape_id;
                 fb_cidx <span style="color:#f92672">&lt;=</span> shape_id <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// skip 1st colour (black)
 </span><span style="color:#75715e"></span>            <span style="color:#66d9ef">end</span>
             DRAW: <span style="color:#66d9ef">begin</span>
@@ -541,253 +597,250 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
         .rst(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),
         .start(draw_start),
         .oe(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b1</span>),
-        .x0(rx0),
-        .y0(ry0),
-        .x1(rx1),
-        .y1(ry1),
+        .x0(vx0),
+        .y0(vy0),
+        .x1(vx1),
+        .y1(vy1),
         .x(fbx),
         .y(fby),
         .drawing,
+        .complete(),
         .done(draw_done)
     );
 </code></pre></div><h2 id="filled-triangle">Filled Triangle</h2>
-<p><em>Design in progress</em></p>
-<h2 id="blazing-a-trail">Blazing a Trail</h2>
-<p>Back at the start of the series, we <a href="/posts/fpga-graphics/#bounce">animated bouncing squares</a>; now we&rsquo;re going to do it with a framebuffer.</p>
-<ul>
-<li>Arty (XC7): <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/2d-shapes/xc7/top_fb_bounce_v1.sv">top_fb_bounce_v1.sv</a>]</strong></li>
-<li>iCEBreaker (iCE40): <em>not yet available</em></li>
-</ul>
-<p>Our framebuffer remembers all the square we&rsquo;ve drawn, so the screen gradually fills with striped colour. While this is a fun effect, it&rsquo;s not usually what you want.</p>
-<p>There are three approaches we can take to move an object around the screen cleanly:</p>
-<ol>
-<li>Use <a href="/posts/hardware-sprites/">Hardware Sprites</a> - suitable for simple 2D graphics</li>
-<li>Use a blitter to cut out and move a framebuffer region  - fast and effective for 2D objects</li>
-<li>Clear the framebuffer and draw from scratch - versatile, but requires plenty of bandwidth</li>
-</ol>
-<p>For this post, we&rsquo;ll go with option 3, but more than that, we&rsquo;ll also introduce double buffering.</p>
-<h2 id="double-buffering">Double Buffering</h2>
-<p>We can&rsquo;t draw in a framebuffer while the display controller reads it; otherwise we&rsquo;ll get <a href="https://en.wikipedia.org/wiki/Screen_tearing">tearing</a>. We could limit ourselves to drawing in the vertical blanking interval, but even for 640x480 with its generous blanking, we&rsquo;d only be able to draw for less than 10% of the time. And we still need time to clear the framebuffer every frame, which takes a considerable time, even at 320x180.</p>
-<p>To draw all the time, we can double our framebuffer: drawing in one half while the display controller read from the other one. That way, we can be drawing all the time and avoid screen tearing. The only downsides are the need for twice the memory and the extra frame of latency.</p>
-<p>Add the framebuffer module with double buffering - <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lib/display/framebuffer_db.sv">framebuffer_db.sv</a>]</strong>:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> framebuffer_db #(
-    <span style="color:#66d9ef">parameter</span> CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>,      <span style="color:#75715e">// signed coordinate width (bits)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">160</span>,     <span style="color:#75715e">// width of framebuffer in pixels
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> HEIGHT<span style="color:#f92672">=</span><span style="color:#ae81ff">120</span>,    <span style="color:#75715e">// height of framebuffer in pixels
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> CIDXW<span style="color:#f92672">=</span><span style="color:#ae81ff">4</span>,       <span style="color:#75715e">// colour index data width: 4=16, 8=256 colours
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> CHANW<span style="color:#f92672">=</span><span style="color:#ae81ff">4</span>,       <span style="color:#75715e">// width of RGB colour channels (4 or 8 bit)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> SCALE<span style="color:#f92672">=</span><span style="color:#ae81ff">4</span>,       <span style="color:#75715e">// display output scaling factor (&gt;=1)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> F_IMAGE<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;&#34;</span>,    <span style="color:#75715e">// image file to load into framebuffer
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> F_PALETTE<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;&#34;</span>   <span style="color:#75715e">// palette file to load into CLUT
-</span><span style="color:#75715e"></span>    ) (
-    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_sys,    <span style="color:#75715e">// system clock
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_pix,    <span style="color:#75715e">// pixel clock
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst_sys,    <span style="color:#75715e">// reset (clk_sys)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst_pix,    <span style="color:#75715e">// reset (clk_pix)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> de,         <span style="color:#75715e">// data enable for display (clk_pix)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> frame,      <span style="color:#75715e">// start a new frame (clk_pix)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> line,       <span style="color:#75715e">// start a new screen line (clk_pix)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> we,         <span style="color:#75715e">// write enable
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x,  <span style="color:#75715e">// horizontal pixel coordinate
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] y,  <span style="color:#75715e">// vertical pixel coordinate
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [CIDXW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cidx,   <span style="color:#75715e">// framebuffer colour index
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [CIDXW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] bgidx,  <span style="color:#75715e">// framebuffer background colour index
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clear,              <span style="color:#75715e">// clear write buffer on frame start
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> wready,             <span style="color:#75715e">// ready for writing
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> clip,               <span style="color:#75715e">// pixel coordinate outside buffer
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [CHANW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] red,    <span style="color:#75715e">// colour output to display (clk_pix)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [CHANW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] green,  <span style="color:#75715e">//     &#34;    &#34;    &#34;    &#34;    &#34;
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [CHANW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] blue    <span style="color:#75715e">//     &#34;    &#34;    &#34;    &#34;    &#34;
+<p>A filled triangle requires more thought than a rectangle.
+In summary, we use Bresenham&rsquo;s algorithm to determine the triangle edges, then join them with a horizontal line. <em>More details to follow.</em></p>
+<p>Create module <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lib/graphics/draw_triangle_fill.sv">draw_triangle_fill.sv</a>]</strong>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> draw_triangle_fill #(<span style="color:#66d9ef">parameter</span> CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>) (  <span style="color:#75715e">// signed coordinate width
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,             <span style="color:#75715e">// clock
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst,             <span style="color:#75715e">// reset
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> start,           <span style="color:#75715e">// start triangle drawing
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> oe,              <span style="color:#75715e">// output enable
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x0, y0,  <span style="color:#75715e">// vertex 0
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x1, y1,  <span style="color:#75715e">// vertex 1
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x2, y2,  <span style="color:#75715e">// vertex 2
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x,  y,   <span style="color:#75715e">// drawing position
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> drawing,         <span style="color:#75715e">// triangle is drawing
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> complete,        <span style="color:#75715e">// triangle complete (remains high)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> done             <span style="color:#75715e">// triangle complete (high for one tick)
 </span><span style="color:#75715e"></span>    );
 
-    <span style="color:#66d9ef">logic</span> frame_sys;  <span style="color:#75715e">// start of new frame in system clock domain
-</span><span style="color:#75715e"></span>    xd xd_frame (.clk_i(clk_pix), .clk_o(clk_sys),
-                 .rst_i(rst_pix), .rst_o(rst_sys), .i(frame), .o(frame_sys));
+    <span style="color:#75715e">// sorted input vertices
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x0s, y0s, x1s, y1s, x2s, y2s;
 
-    <span style="color:#75715e">// buffer selection
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> front_buf;
-    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_sys) <span style="color:#66d9ef">begin</span>
-        <span style="color:#66d9ef">if</span> (frame_sys) front_buf <span style="color:#f92672">&lt;=</span> <span style="color:#f92672">~</span>front_buf;  <span style="color:#75715e">// swap every frame
-</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (rst_sys) front_buf <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-    <span style="color:#66d9ef">end</span>
+    <span style="color:#75715e">// line coordinates
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x0a, y0a, x1a, y1a, xa, ya;
+    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x0b, y0b, x1b, y1b, xb, yb;
+    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x0h, x1h, xh;
 
-    <span style="color:#75715e">// framebuffer (FB)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> FB_PIXELS <span style="color:#f92672">=</span> WIDTH <span style="color:#f92672">*</span> HEIGHT;
-    <span style="color:#66d9ef">localparam</span> FB_DEPTH  <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span> <span style="color:#f92672">*</span> FB_PIXELS;  <span style="color:#75715e">// double buffer
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> FB_ADDRW  <span style="color:#f92672">=</span> $clog2(FB_DEPTH);
-    <span style="color:#66d9ef">localparam</span> FB_DATAW  <span style="color:#f92672">=</span> CIDXW;
+    <span style="color:#75715e">// previous y-value for edges
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] prev_y;
 
-    <span style="color:#66d9ef">logic</span> [FB_ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_addr_read, fb_addr_write;
-    <span style="color:#66d9ef">logic</span> [FB_DATAW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_cidx_read, fb_cidx_read_p1;
+    <span style="color:#75715e">// previous x-values for horizontal line
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] prev_xa;
+    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] prev_xb;
 
-    <span style="color:#75715e">// write address components
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x_add;     <span style="color:#75715e">// pixel position on line
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [FB_ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_addr_line;  <span style="color:#75715e">// address of line for writing
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [FB_ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_addr_clr;   <span style="color:#75715e">// address for clearing screen
+    <span style="color:#75715e">// line control signals
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> oe_a, oe_b, oe_h;
+    <span style="color:#66d9ef">logic</span> drawing_h;
+    <span style="color:#66d9ef">logic</span> complete_a, complete_b, complete_h;
+    <span style="color:#66d9ef">logic</span> b_edge;  <span style="color:#75715e">// which B edge are we drawing?
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> right;   <span style="color:#75715e">// whether lines are drawn to the right
 </span><span style="color:#75715e"></span>
-    <span style="color:#75715e">// write state machine
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">enum</span> {IDLE, INIT, CLR, ACTIVE} wstate;
-    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_sys) <span style="color:#66d9ef">begin</span>
-        <span style="color:#66d9ef">case</span> (wstate)
-            INIT: wstate <span style="color:#f92672">&lt;=</span> (clear) <span style="color:#f92672">?</span> CLR <span style="color:#f92672">:</span> ACTIVE;
-            CLR: <span style="color:#66d9ef">if</span> (fb_addr_clr <span style="color:#f92672">==</span> FB_PIXELS<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) wstate <span style="color:#f92672">&lt;=</span> ACTIVE;
-            <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">if</span> (frame_sys) wstate <span style="color:#f92672">&lt;=</span> INIT;  <span style="color:#75715e">// IDLE or ACTIVE
-</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">endcase</span>
-    <span style="color:#66d9ef">end</span>
+    <span style="color:#75715e">// pipeline completion signals to match coordinates
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> complete_p1, done_p1;
 
-    <span style="color:#66d9ef">always_comb</span> wready <span style="color:#f92672">=</span> (wstate <span style="color:#f92672">==</span> ACTIVE);
-
-    <span style="color:#75715e">// calculate write address from pixel coordinates (two stage: mul then add)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_sys) <span style="color:#66d9ef">begin</span>
-        fb_addr_line <span style="color:#f92672">&lt;=</span> WIDTH <span style="color:#f92672">*</span> y;  <span style="color:#75715e">// write address 1st stage
-</span><span style="color:#75715e"></span>        x_add <span style="color:#f92672">&lt;=</span> x;  <span style="color:#75715e">// save x for write address 2nd stage
-</span><span style="color:#75715e"></span>        fb_addr_clr <span style="color:#f92672">&lt;=</span> (wstate <span style="color:#f92672">==</span> INIT) <span style="color:#f92672">?</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">:</span> fb_addr_clr <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-        fb_addr_write <span style="color:#f92672">&lt;=</span> (wstate <span style="color:#f92672">==</span> CLR) <span style="color:#f92672">?</span> fb_addr_clr <span style="color:#f92672">:</span> fb_addr_line <span style="color:#f92672">+</span> x_add;
-    <span style="color:#66d9ef">end</span>
-
-    <span style="color:#75715e">// draw colour and write enable (delay to match address calculation)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> fb_we, we_in_p1;
-    <span style="color:#66d9ef">logic</span> [FB_DATAW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_cidx_write, cidx_in_p1;
-    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_sys) <span style="color:#66d9ef">begin</span>
-        we_in_p1 <span style="color:#f92672">&lt;=</span> (we <span style="color:#f92672">||</span> (wstate <span style="color:#f92672">==</span> CLR));  <span style="color:#75715e">// write enable for input or clear
-</span><span style="color:#75715e"></span>        cidx_in_p1 <span style="color:#f92672">&lt;=</span> (wstate <span style="color:#f92672">==</span> CLR) <span style="color:#f92672">?</span> bgidx <span style="color:#f92672">:</span> cidx;  <span style="color:#75715e">// which draw colour?
-</span><span style="color:#75715e"></span>        clip <span style="color:#f92672">&lt;=</span> (y <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">||</span> y <span style="color:#f92672">&gt;=</span> HEIGHT <span style="color:#f92672">||</span> x <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">||</span> x <span style="color:#f92672">&gt;=</span> WIDTH);  <span style="color:#75715e">// clipped?
-</span><span style="color:#75715e"></span>        fb_we <span style="color:#f92672">&lt;=</span> (clip) <span style="color:#f92672">?</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">:</span> we_in_p1;  <span style="color:#75715e">// write enable if not clipped
-</span><span style="color:#75715e"></span>        fb_cidx_write <span style="color:#f92672">&lt;=</span> cidx_in_p1;
-    <span style="color:#66d9ef">end</span>
-
-    <span style="color:#75715e">// add offset to read and write addresses to match buffer used
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [FB_ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_addr_read_offs, fb_addr_write_offs;
-    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// this could be a performance bottleneck
-</span><span style="color:#75715e"></span>        fb_addr_read_offs  <span style="color:#f92672">=</span> fb_addr_read  <span style="color:#f92672">+</span> ((front_buf) <span style="color:#f92672">?</span> FB_PIXELS <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>);
-        fb_addr_write_offs <span style="color:#f92672">=</span> fb_addr_write <span style="color:#f92672">+</span> ((front_buf) <span style="color:#f92672">?</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">:</span> FB_PIXELS);
-    <span style="color:#66d9ef">end</span>
-
-    <span style="color:#75715e">// framebuffer memory (BRAM)
-</span><span style="color:#75715e"></span>    bram_sdp #(
-        .WIDTH(FB_DATAW),
-        .DEPTH(FB_DEPTH),
-        .INIT_F(F_IMAGE)
-    ) bram_inst (
-        .clk_write(clk_sys),
-        .clk_read(clk_sys),
-        .we(fb_we),
-        .addr_write(fb_addr_write_offs),
-        .addr_read(fb_addr_read_offs),
-        .data_in(fb_cidx_write),
-        .data_out(fb_cidx_read)
-    );
-
-    <span style="color:#75715e">// linebuffer (LB)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_SCALE <span style="color:#f92672">=</span> SCALE;  <span style="color:#75715e">// scale (horizontal and vertical)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_LEN   <span style="color:#f92672">=</span> WIDTH;  <span style="color:#75715e">// line length matches framebuffer
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_BPC   <span style="color:#f92672">=</span> CHANW;  <span style="color:#75715e">// bits per colour channel
-</span><span style="color:#75715e"></span>
-    <span style="color:#75715e">// Load data from FB into LB
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> lb_data_req;  <span style="color:#75715e">// LB requesting data
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(LB_LEN<span style="color:#f92672">+</span><span style="color:#ae81ff">1</span>)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_h;  <span style="color:#75715e">// count pixels in line to read
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_sys) <span style="color:#66d9ef">begin</span>
-        <span style="color:#66d9ef">if</span> (fb_addr_read <span style="color:#f92672">&lt;</span> FB_PIXELS<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
-            <span style="color:#66d9ef">if</span> (lb_data_req) <span style="color:#66d9ef">begin</span>
-                cnt_h <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// start new line
-</span><span style="color:#75715e"></span>            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (cnt_h <span style="color:#f92672">&lt;</span> LB_LEN) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// advance to start of next line
-</span><span style="color:#75715e"></span>                cnt_h <span style="color:#f92672">&lt;=</span> cnt_h <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-                fb_addr_read <span style="color:#f92672">&lt;=</span> fb_addr_read <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+    <span style="color:#66d9ef">enum</span> {IDLE, SORT_0, SORT_1, SORT_2, INIT_A, INIT_B0, INIT_B1, INIT_H,
+            START_A, START_B, START_H, EDGE, H_LINE, DONE} state;
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">case</span> (state)
+            SORT_0: <span style="color:#66d9ef">begin</span>
+                state <span style="color:#f92672">&lt;=</span> SORT_1;
+                <span style="color:#66d9ef">if</span> (y0 <span style="color:#f92672">&gt;</span> y2) <span style="color:#66d9ef">begin</span>
+                    x0s <span style="color:#f92672">&lt;=</span> x2;
+                    y0s <span style="color:#f92672">&lt;=</span> y2;
+                    x2s <span style="color:#f92672">&lt;=</span> x0;
+                    y2s <span style="color:#f92672">&lt;=</span> y0;
+                <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
+                    x0s <span style="color:#f92672">&lt;=</span> x0;
+                    y0s <span style="color:#f92672">&lt;=</span> y0;
+                    x2s <span style="color:#f92672">&lt;=</span> x2;
+                    y2s <span style="color:#f92672">&lt;=</span> y2;
+                <span style="color:#66d9ef">end</span>
             <span style="color:#66d9ef">end</span>
-        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> cnt_h <span style="color:#f92672">&lt;=</span> LB_LEN;
-        <span style="color:#66d9ef">if</span> (frame_sys) fb_addr_read <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// new frame
-</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (rst_sys) <span style="color:#66d9ef">begin</span>
-            fb_addr_read <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-            cnt_h <span style="color:#f92672">&lt;=</span> LB_LEN;  <span style="color:#75715e">// don&#39;t start reading after reset
-</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">end</span>
+            SORT_1: <span style="color:#66d9ef">begin</span>
+                state <span style="color:#f92672">&lt;=</span> SORT_2;
+                <span style="color:#66d9ef">if</span> (y0s <span style="color:#f92672">&gt;</span> y1) <span style="color:#66d9ef">begin</span>
+                    x0s <span style="color:#f92672">&lt;=</span> x1;
+                    y0s <span style="color:#f92672">&lt;=</span> y1;
+                    x1s <span style="color:#f92672">&lt;=</span> x0s;
+                    y1s <span style="color:#f92672">&lt;=</span> y0s;
+                <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
+                    x1s <span style="color:#f92672">&lt;=</span> x1;
+                    y1s <span style="color:#f92672">&lt;=</span> y1;
+                <span style="color:#66d9ef">end</span>
+            <span style="color:#66d9ef">end</span>
+            SORT_2: <span style="color:#66d9ef">begin</span>
+                state <span style="color:#f92672">&lt;=</span> INIT_A;
+                <span style="color:#66d9ef">if</span> (y1s <span style="color:#f92672">&gt;</span> y2s) <span style="color:#66d9ef">begin</span>
+                    x1s <span style="color:#f92672">&lt;=</span> x2;
+                    y1s <span style="color:#f92672">&lt;=</span> y2;
+                    x2s <span style="color:#f92672">&lt;=</span> x1s;
+                    y2s <span style="color:#f92672">&lt;=</span> y1s;
+                <span style="color:#66d9ef">end</span>
+            <span style="color:#66d9ef">end</span>
+            INIT_A: <span style="color:#66d9ef">begin</span>
+                state <span style="color:#f92672">&lt;=</span> INIT_B0;
+                x0a <span style="color:#f92672">&lt;=</span> x0s;
+                y0a <span style="color:#f92672">&lt;=</span> y0s;
+                x1a <span style="color:#f92672">&lt;=</span> x2s;
+                y1a <span style="color:#f92672">&lt;=</span> y2s;
+                prev_xa <span style="color:#f92672">&lt;=</span> x0s;
+                prev_xb <span style="color:#f92672">&lt;=</span> x0s;
+                right <span style="color:#f92672">&lt;=</span> (x1s <span style="color:#f92672">&gt;=</span> x0s);  <span style="color:#75715e">// drawing to the right
+</span><span style="color:#75715e"></span>            <span style="color:#66d9ef">end</span>
+            INIT_B0: <span style="color:#66d9ef">begin</span>
+                state <span style="color:#f92672">&lt;=</span> START_A;
+                b_edge <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                x0b <span style="color:#f92672">&lt;=</span> x0s;
+                y0b <span style="color:#f92672">&lt;=</span> y0s;
+                x1b <span style="color:#f92672">&lt;=</span> x1s;
+                y1b <span style="color:#f92672">&lt;=</span> y1s;
+                prev_y <span style="color:#f92672">&lt;=</span> y0s;
+            <span style="color:#66d9ef">end</span>
+            INIT_B1: <span style="color:#66d9ef">begin</span>
+                state <span style="color:#f92672">&lt;=</span> START_B;  <span style="color:#75715e">// we don&#39;t need to start A again
+</span><span style="color:#75715e"></span>                b_edge <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                x0b <span style="color:#f92672">&lt;=</span> x1s;
+                y0b <span style="color:#f92672">&lt;=</span> y1s;
+                x1b <span style="color:#f92672">&lt;=</span> x2s;
+                y1b <span style="color:#f92672">&lt;=</span> y2s;
+                prev_y <span style="color:#f92672">&lt;=</span> y1s;
+            <span style="color:#66d9ef">end</span>
+            START_A: state <span style="color:#f92672">&lt;=</span> START_B;
+            START_B: state <span style="color:#f92672">&lt;=</span> EDGE;
+            EDGE: <span style="color:#66d9ef">begin</span>
+                <span style="color:#66d9ef">if</span> ((ya <span style="color:#f92672">!=</span> prev_y <span style="color:#f92672">||</span> complete_a) <span style="color:#f92672">&amp;&amp;</span> (yb <span style="color:#f92672">!=</span> prev_y <span style="color:#f92672">||</span> complete_b)) <span style="color:#66d9ef">begin</span>
+                    state <span style="color:#f92672">&lt;=</span> START_H;
+                    x0h <span style="color:#f92672">&lt;=</span> right <span style="color:#f92672">?</span> prev_xa <span style="color:#f92672">:</span> prev_xb;
+                    x1h <span style="color:#f92672">&lt;=</span> right <span style="color:#f92672">?</span> prev_xb <span style="color:#f92672">:</span> prev_xa;
+                <span style="color:#66d9ef">end</span>
+            <span style="color:#66d9ef">end</span>
+            START_H: state <span style="color:#f92672">&lt;=</span> H_LINE;
+            H_LINE: <span style="color:#66d9ef">begin</span>
+                <span style="color:#66d9ef">if</span> (complete_h) <span style="color:#66d9ef">begin</span>
+                    prev_y <span style="color:#f92672">&lt;=</span> yb;  <span style="color:#75715e">// safe to update previous values once h-line done
+</span><span style="color:#75715e"></span>                    prev_xa <span style="color:#f92672">&lt;=</span> xa;
+                    prev_xb <span style="color:#f92672">&lt;=</span> xb;
+                    <span style="color:#66d9ef">if</span> (complete_b) <span style="color:#66d9ef">begin</span>
+                        state <span style="color:#f92672">&lt;=</span> (<span style="color:#f92672">!</span>complete_a <span style="color:#f92672">&amp;&amp;</span> b_edge <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) <span style="color:#f92672">?</span> INIT_B1 <span style="color:#f92672">:</span> DONE;
+                    <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> state <span style="color:#f92672">&lt;=</span> EDGE;
+                <span style="color:#66d9ef">end</span>
+            <span style="color:#66d9ef">end</span>
+            DONE: <span style="color:#66d9ef">begin</span>
+                state <span style="color:#f92672">&lt;=</span> IDLE;
+                done_p1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                complete_p1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+            <span style="color:#66d9ef">end</span>
+            <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// IDLE
+</span><span style="color:#75715e"></span>                <span style="color:#66d9ef">if</span> (start) <span style="color:#66d9ef">begin</span>
+                    state <span style="color:#f92672">&lt;=</span> SORT_0;
+                    complete_p1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                <span style="color:#66d9ef">end</span>
+                done_p1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            <span style="color:#66d9ef">end</span>
+        <span style="color:#66d9ef">endcase</span>
+
+        <span style="color:#66d9ef">if</span> (rst) <span style="color:#66d9ef">begin</span>
+            state <span style="color:#f92672">&lt;=</span> IDLE;
+            complete_p1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            done_p1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            b_edge <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+        <span style="color:#66d9ef">end</span>
     <span style="color:#66d9ef">end</span>
 
-    <span style="color:#75715e">// LB enable (not corrected for latency)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> lb_en_in, lb_en_out;
-    <span style="color:#66d9ef">always_comb</span> lb_en_in  <span style="color:#f92672">=</span> cnt_h <span style="color:#f92672">&lt;</span> LB_LEN;
-    <span style="color:#66d9ef">always_comb</span> lb_en_out <span style="color:#f92672">=</span> de;
-
-    <span style="color:#75715e">// LB enable in: address calc and CLUT reg add three cycles of latency
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LAT <span style="color:#f92672">=</span> <span style="color:#ae81ff">3</span>;  <span style="color:#75715e">// write latency
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [LAT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lb_en_in_sr;
-    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_sys) <span style="color:#66d9ef">begin</span>
-        lb_en_in_sr <span style="color:#f92672">&lt;=</span> {lb_en_in, lb_en_in_sr[LAT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">1</span>]};
-        <span style="color:#66d9ef">if</span> (rst_sys) lb_en_in_sr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+        oe_a <span style="color:#f92672">=</span> (state <span style="color:#f92672">==</span> EDGE <span style="color:#f92672">&amp;&amp;</span> ya <span style="color:#f92672">==</span> prev_y);
+        oe_b <span style="color:#f92672">=</span> (state <span style="color:#f92672">==</span> EDGE <span style="color:#f92672">&amp;&amp;</span> yb <span style="color:#f92672">==</span> prev_y);
+        oe_h <span style="color:#f92672">=</span> oe;
     <span style="color:#66d9ef">end</span>
 
-    <span style="color:#75715e">// LB colour channels
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [LB_BPC<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lb_in_0,  lb_in_1,  lb_in_2;
-    <span style="color:#66d9ef">logic</span> [LB_BPC<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lb_out_0, lb_out_1, lb_out_2;
+    <span style="color:#75715e">// register output
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
+        x <span style="color:#f92672">&lt;=</span> xh;
+        y <span style="color:#f92672">&lt;=</span> prev_y;
+        drawing <span style="color:#f92672">&lt;=</span> drawing_h;
+        complete <span style="color:#f92672">&lt;=</span> complete_p1;
+        done <span style="color:#f92672">&lt;=</span> done_p1;
+    <span style="color:#66d9ef">end</span>
 
-    linebuffer #(
-        .WIDTH(LB_BPC),   <span style="color:#75715e">// data width of each channel
-</span><span style="color:#75715e"></span>        .LEN(LB_LEN),     <span style="color:#75715e">// length of line
-</span><span style="color:#75715e"></span>        .SCALE(LB_SCALE)  <span style="color:#75715e">// scaling factor (&gt;=1)
-</span><span style="color:#75715e"></span>        ) lb_inst (
-        .clk_in(clk_sys),        <span style="color:#75715e">// input clock
-</span><span style="color:#75715e"></span>        .clk_out(clk_pix),       <span style="color:#75715e">// output clock
-</span><span style="color:#75715e"></span>        .rst_in(rst_sys),        <span style="color:#75715e">// reset (clk_in)
-</span><span style="color:#75715e"></span>        .rst_out(rst_pix),       <span style="color:#75715e">// reset (clk_out)
-</span><span style="color:#75715e"></span>        .data_req(lb_data_req),  <span style="color:#75715e">// request input data (clk_in)
-</span><span style="color:#75715e"></span>        .en_in(lb_en_in_sr[<span style="color:#ae81ff">0</span>]),  <span style="color:#75715e">// enable input (clk_in)
-</span><span style="color:#75715e"></span>        .en_out(lb_en_out),      <span style="color:#75715e">// enable output (clk_out)
-</span><span style="color:#75715e"></span>        .frame,                  <span style="color:#75715e">// start a new frame (clk_out)
-</span><span style="color:#75715e"></span>        .line,                   <span style="color:#75715e">// start a new line (clk_out)
-</span><span style="color:#75715e"></span>        .din_0(lb_in_0),         <span style="color:#75715e">// data in (clk_in)
-</span><span style="color:#75715e"></span>        .din_1(lb_in_1),
-        .din_2(lb_in_2),
-        .dout_0(lb_out_0),       <span style="color:#75715e">// data out (clk_out)
-</span><span style="color:#75715e"></span>        .dout_1(lb_out_1),
-        .dout_2(lb_out_2)
+    draw_line #(.CORDW(CORDW)) draw_edge_a (
+        .clk,
+        .rst,
+        .start(state <span style="color:#f92672">==</span> START_A),
+        .oe(oe_a),
+        .x0(x0a),
+        .y0(y0a),
+        .x1(x1a),
+        .y1(y1a),
+        .x(xa),
+        .y(ya),
+        .drawing(),
+        .complete(complete_a),
+        .done()
     );
 
-    <span style="color:#75715e">// improve timing with register between BRAM and async ROM
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_sys) fb_cidx_read_p1 <span style="color:#f92672">&lt;=</span> fb_cidx_read;
-
-    <span style="color:#75715e">// colour lookup table (ROM)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CLUTW <span style="color:#f92672">=</span> <span style="color:#ae81ff">3</span> <span style="color:#f92672">*</span> CHANW;
-    <span style="color:#66d9ef">logic</span> [CLUTW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] clut_colr;
-    rom_async #(
-        .WIDTH(CLUTW),
-        .DEPTH(<span style="color:#ae81ff">2</span><span style="color:#f92672">**</span>CIDXW),
-        .INIT_F(F_PALETTE)
-    ) clut (
-        .addr(fb_cidx_read_p1),
-        .data(clut_colr)
+    draw_line #(.CORDW(CORDW)) draw_edge_b (
+        .clk,
+        .rst,
+        .start(state <span style="color:#f92672">==</span> START_B),
+        .oe(oe_b),
+        .x0(x0b),
+        .y0(y0b),
+        .x1(x1b),
+        .y1(y1b),
+        .x(xb),
+        .y(yb),
+        .drawing(),
+        .complete(complete_b),
+        .done()
     );
 
-    <span style="color:#75715e">// map colour index to palette using CLUT and read into LB
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_sys) {lb_in_2, lb_in_1, lb_in_0} <span style="color:#f92672">&lt;=</span> clut_colr;
-
-    <span style="color:#66d9ef">logic</span> lb_en_out_p1;  <span style="color:#75715e">// LB enable out: reading from LB BRAM takes one cycle
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) lb_en_out_p1 <span style="color:#f92672">&lt;=</span> lb_en_out;
-
-    <span style="color:#75715e">// colour output - combinational because top module should register
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        red   <span style="color:#f92672">=</span> lb_en_out_p1 <span style="color:#f92672">?</span> lb_out_2 <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
-        green <span style="color:#f92672">=</span> lb_en_out_p1 <span style="color:#f92672">?</span> lb_out_1 <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
-        blue  <span style="color:#f92672">=</span> lb_en_out_p1 <span style="color:#f92672">?</span> lb_out_0 <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
-    <span style="color:#66d9ef">end</span>
+    draw_line_1d #(.CORDW(CORDW)) draw_h_line (
+        .clk,
+        .rst,
+        .start(state <span style="color:#f92672">==</span> START_H),
+        .oe(oe_h),
+        .x0(x0h),
+        .x1(x1h),
+        .x(xh),
+        .drawing(drawing_h),
+        .complete(complete_h),
+        .done()
+    );
 <span style="color:#66d9ef">endmodule</span>
-</code></pre></div><p>This double-buffered design is only 30 lines longer than the <a href="/posts/framebuffers/#framebuffer-module">original framebuffer module</a>.</p>
-<p>There&rsquo;s a test bench you can use to exercise the module with Vivado: <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lib/display/xc7/framebuffer_db_tb.sv">xc7/framebuffer_db_tb.sv</a>]</strong>.</p>
-<p><em>Details of the changes will be added shortly.</em></p>
-<h3 id="hip-to-be-square-redux">Hip to be Square Redux</h3>
-<p>We can cleanly animate a square using our new double-buffered framebuffer:</p>
+</code></pre></div><blockquote>
+<p><strong>Top &amp; Left</strong><br>
+Two triangles share an edge; we need a mechanism to determine which triangle gets drawn.
+The standard approach is for top and left edges to be drawn. We won&rsquo;t be handling this just yet.</p>
+</blockquote>
+<p>Here are are a couple of designs using filled triangles:</p>
 <ul>
-<li>Arty (XC7): <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/2d-shapes/xc7/top_fb_bounce.sv">top_fb_bounce.sv</a>]</strong></li>
+<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/2d-shapes/xc7/top_triangles_fill.sv">xc7/top_triangles_fill.sv</a></strong></li>
+<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/2d-shapes/xc7/top_cube_fill.sv">xc7/top_cube_fill.sv</a></strong></li>
 <li>iCEBreaker (iCE40): <em>not yet available</em></li>
 </ul>
-<p>That seems like a lot of work to replicate what we did in a few lines back at the start of the series, but drawing shapes in a framebuffer is far more versatile.</p>
-<h2 id="tunnel-vision">Tunnel Vision</h2>
-<p><img src="/img/posts/fpga-shapes/tunnel.png" alt="Animated Square Tunnel"></p>
-<p>Using our new framebuffer and a few animated rectangles, we can create the illusion of flying down a tunnel:</p>
+<p><em>More details to follow.</em></p>
+<h2 id="circles">Circles</h2>
+<p><em>We&rsquo;ll be drawing circles later in 2021.</em></p>
+<h2 id="drawing-a-scene">Drawing a Scene</h2>
+<p>We can combine different shapes to draw simple scenes. I knocked up this castle on graph paper.</p>
 <ul>
-<li>Arty (XC7): <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/2d-shapes/xc7/top_tunnel.sv">top_tunnel.sv</a>]</strong></li>
+<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/2d-shapes/xc7/top_castle.sv">xc7/top_castle.sv</a></strong></li>
 <li>iCEBreaker (iCE40): <em>not yet available</em></li>
 </ul>
-<p>The Arty version of the tunnel looks like this:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_tunnel (
+<p>Arty version:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_castle (
     <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_100m,     <span style="color:#75715e">// 100 MHz clock
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_rst,      <span style="color:#75715e">// reset button (active low)
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> vga_hsync,    <span style="color:#75715e">// horizontal sync
@@ -809,13 +862,14 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
 
     <span style="color:#75715e">// display timings
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">16</span>;
+    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx, sy;
     <span style="color:#66d9ef">logic</span> hsync, vsync;
     <span style="color:#66d9ef">logic</span> de, frame, line;
     display_timings_480p #(.CORDW(CORDW)) display_timings_inst (
         .clk_pix,
         .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for pixel clock lock
-</span><span style="color:#75715e"></span>        .sx(),
-        .sy(),
+</span><span style="color:#75715e"></span>        .sx,
+        .sy,
         .hsync,
         .vsync,
         .de,
@@ -829,19 +883,19 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
 
     <span style="color:#75715e">// framebuffer (FB)
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> FB_WIDTH   <span style="color:#f92672">=</span> <span style="color:#ae81ff">320</span>;
-    <span style="color:#66d9ef">localparam</span> FB_HEIGHT  <span style="color:#f92672">=</span> <span style="color:#ae81ff">240</span>;
+    <span style="color:#66d9ef">localparam</span> FB_HEIGHT  <span style="color:#f92672">=</span> <span style="color:#ae81ff">180</span>;
     <span style="color:#66d9ef">localparam</span> FB_CIDXW   <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;
     <span style="color:#66d9ef">localparam</span> FB_CHANW   <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;
     <span style="color:#66d9ef">localparam</span> FB_SCALE   <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span>;
     <span style="color:#66d9ef">localparam</span> FB_IMAGE   <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;&#34;</span>;
-    <span style="color:#66d9ef">localparam</span> FB_PALETTE <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;tunnel_16_colr_4bit_palette.mem&#34;</span>;
+    <span style="color:#66d9ef">localparam</span> FB_PALETTE <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;16_colr_4bit_palette.mem&#34;</span>;
 
-    <span style="color:#66d9ef">logic</span> fb_we, fb_wready;
+    <span style="color:#66d9ef">logic</span> fb_we;
     <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fbx, fby;  <span style="color:#75715e">// framebuffer coordinates
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [FB_CIDXW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_cidx;
     <span style="color:#66d9ef">logic</span> [FB_CHANW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_red, fb_green, fb_blue;  <span style="color:#75715e">// colours for display
 </span><span style="color:#75715e"></span>
-    framebuffer_db #(
+    framebuffer #(
         .WIDTH(FB_WIDTH),
         .HEIGHT(FB_HEIGHT),
         .CIDXW(FB_CIDXW),
@@ -851,117 +905,170 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
         .F_PALETTE(FB_PALETTE)
     ) fb_inst (
         .clk_sys(clk_100m),
-        .clk_pix(clk_pix),
+        .clk_pix,
         .rst_sys(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),
         .rst_pix(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),
-        .de,
-        .frame,
+        .de(sy <span style="color:#f92672">&gt;=</span> <span style="color:#ae81ff">60</span> <span style="color:#f92672">&amp;&amp;</span> sy <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">420</span> <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">&gt;=</span> <span style="color:#ae81ff">0</span>),  <span style="color:#75715e">// 16:9 letterbox
+</span><span style="color:#75715e"></span>        .frame,
         .line,
         .we(fb_we),
         .x(fbx),
         .y(fby),
         .cidx(fb_cidx),
-        .bgidx(<span style="color:#ae81ff">0</span>),
-        .clear(<span style="color:#ae81ff">0</span>),  <span style="color:#75715e">// tunnel doesn&#39;t need clearing
-</span><span style="color:#75715e"></span>        .wready(fb_wready),
         .clip(),
         .red(fb_red),
         .green(fb_green),
         .blue(fb_blue)
     );
 
-    <span style="color:#75715e">// animation steps
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> ANIM_CNT<span style="color:#f92672">=</span><span style="color:#ae81ff">5</span>;    <span style="color:#75715e">// five different frames in animation
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> ANIM_SPEED<span style="color:#f92672">=</span><span style="color:#ae81ff">5</span>;  <span style="color:#75715e">// display each animation step five times (12 FPS)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(ANIM_CNT)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_anim;
-    <span style="color:#66d9ef">logic</span> [$clog2(ANIM_SPEED)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_anim_speed;
-    <span style="color:#66d9ef">logic</span> [FB_CIDXW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] colr_offs;  <span style="color:#75715e">// colour offset
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_100m) <span style="color:#66d9ef">begin</span>
-        <span style="color:#66d9ef">if</span> (frame_sys) <span style="color:#66d9ef">begin</span>
-            <span style="color:#66d9ef">if</span> (cnt_anim_speed <span style="color:#f92672">==</span> ANIM_SPEED<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
-                <span style="color:#66d9ef">if</span> (cnt_anim <span style="color:#f92672">==</span> ANIM_CNT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
-                    cnt_anim <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-                    colr_offs <span style="color:#f92672">&lt;=</span> colr_offs <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-                <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> cnt_anim <span style="color:#f92672">&lt;=</span> cnt_anim <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-                cnt_anim_speed <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> cnt_anim_speed <span style="color:#f92672">&lt;=</span> cnt_anim_speed <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-        <span style="color:#66d9ef">end</span>
-    <span style="color:#66d9ef">end</span>
-
-    <span style="color:#75715e">// draw squares in framebuffer
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> SHAPE_CNT<span style="color:#f92672">=</span><span style="color:#ae81ff">7</span>;  <span style="color:#75715e">// number of shapes to draw
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] shape_id;  <span style="color:#75715e">// shape identifier
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] dx0, dy0, dx1, dy1;  <span style="color:#75715e">// shape coords
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> draw_start, drawing, draw_done;  <span style="color:#75715e">// drawing signals
+    <span style="color:#75715e">// draw shapes in framebuffer
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> SHAPE_CNT<span style="color:#f92672">=</span><span style="color:#ae81ff">19</span>;  <span style="color:#75715e">// number of shapes to draw
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">4</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] shape_id;     <span style="color:#75715e">// shape identifier
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vx0, vy0, vx1, vy1, vx2, vy2;  <span style="color:#75715e">// shape coords
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fbx_tri, fby_tri;    <span style="color:#75715e">// tri framebuffer coordinates
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fbx_rect, fby_rect;  <span style="color:#75715e">// rect framebuffer coordinates
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> drawing, draw_done;  <span style="color:#75715e">// combined drawing signals
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> draw_start_tri, drawing_tri, draw_done_tri;  <span style="color:#75715e">// drawing tri
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> draw_start_rect, drawing_rect, draw_done_rect;  <span style="color:#75715e">// drawing rect
 </span><span style="color:#75715e"></span>
     <span style="color:#75715e">// draw state machine
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">enum</span> {IDLE, INIT, CLEAR, DRAW, DONE} state;
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">enum</span> {IDLE, INIT, DRAW, DONE} state;
     <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_100m) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">case</span> (state)
             INIT: <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// register coordinates and colour
-</span><span style="color:#75715e"></span>                <span style="color:#66d9ef">if</span> (fb_wready) <span style="color:#66d9ef">begin</span>
-                    draw_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-                    state <span style="color:#f92672">&lt;=</span> DRAW;
-                    <span style="color:#66d9ef">case</span> (shape_id)
-                        <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d0</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>
-                            dx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">40</span> <span style="color:#f92672">-</span> cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">12</span>;
-                            dy0 <span style="color:#f92672">&lt;=</span>   <span style="color:#ae81ff">0</span> <span style="color:#f92672">-</span> cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">12</span>;
-                            dx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">279</span> <span style="color:#f92672">+</span> cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">12</span>;
-                            dy1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">279</span> <span style="color:#f92672">+</span> cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">12</span>;
-                            fb_cidx <span style="color:#f92672">&lt;=</span> colr_offs;
-                        <span style="color:#66d9ef">end</span>
-                        <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d1</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// 8 pixels per anim step
-</span><span style="color:#75715e"></span>                            dx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">80</span> <span style="color:#f92672">-</span> cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">8</span>;
-                            dy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">40</span> <span style="color:#f92672">-</span> cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">8</span>;
-                            dx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">239</span> <span style="color:#f92672">+</span> cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">8</span>;
-                            dy1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">199</span> <span style="color:#f92672">+</span> cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">8</span>;
-                            fb_cidx <span style="color:#f92672">&lt;=</span> colr_offs <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-                        <span style="color:#66d9ef">end</span>
-                        <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d2</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// 5 pixels per anim step
-</span><span style="color:#75715e"></span>                            dx0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">105</span> <span style="color:#f92672">-</span> cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">5</span>;
-                            dy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">65</span> <span style="color:#f92672">-</span> cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">5</span>;
-                            dx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">214</span> <span style="color:#f92672">+</span> cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">5</span>;
-                            dy1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">174</span> <span style="color:#f92672">+</span> cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">5</span>;
-                            fb_cidx <span style="color:#f92672">&lt;=</span> colr_offs <span style="color:#f92672">+</span> <span style="color:#ae81ff">2</span>;
-                        <span style="color:#66d9ef">end</span>
-                        <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d3</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// 4 pixels per anim step
-</span><span style="color:#75715e"></span>                            dx0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">125</span> <span style="color:#f92672">-</span> cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">4</span>;
-                            dy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">85</span> <span style="color:#f92672">-</span> cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">4</span>;
-                            dx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">194</span> <span style="color:#f92672">+</span> cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">4</span>;
-                            dy1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">154</span> <span style="color:#f92672">+</span> cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">4</span>;
-                            fb_cidx <span style="color:#f92672">&lt;=</span> colr_offs <span style="color:#f92672">+</span> <span style="color:#ae81ff">3</span>;
-                        <span style="color:#66d9ef">end</span>
-                        <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d4</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// 3 pixels per anim step
-</span><span style="color:#75715e"></span>                            dx0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">140</span> <span style="color:#f92672">-</span> cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">3</span>;
-                            dy0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">100</span> <span style="color:#f92672">-</span> cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">3</span>;
-                            dx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">179</span> <span style="color:#f92672">+</span> cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">3</span>;
-                            dy1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">139</span> <span style="color:#f92672">+</span> cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">3</span>;
-                            fb_cidx <span style="color:#f92672">&lt;=</span> colr_offs <span style="color:#f92672">+</span> <span style="color:#ae81ff">4</span>;
-                        <span style="color:#66d9ef">end</span>
-                        <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d5</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// 2 pixels per anim step
-</span><span style="color:#75715e"></span>                            dx0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">150</span> <span style="color:#f92672">-</span> cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">2</span>;
-                            dy0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">110</span> <span style="color:#f92672">-</span> cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">2</span>;
-                            dx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">169</span> <span style="color:#f92672">+</span> cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">2</span>;
-                            dy1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">129</span> <span style="color:#f92672">+</span> cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">2</span>;
-                            fb_cidx <span style="color:#f92672">&lt;=</span> colr_offs <span style="color:#f92672">+</span> <span style="color:#ae81ff">5</span>;
-                        <span style="color:#66d9ef">end</span>
-                        <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d6</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// 1 pixel per anim step
-</span><span style="color:#75715e"></span>                            dx0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">155</span> <span style="color:#f92672">-</span> cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">1</span>;
-                            dy0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">115</span> <span style="color:#f92672">-</span> cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">1</span>;
-                            dx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">164</span> <span style="color:#f92672">+</span> cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">1</span>;
-                            dy1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">124</span> <span style="color:#f92672">+</span> cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">1</span>;
-                            fb_cidx <span style="color:#f92672">&lt;=</span> colr_offs <span style="color:#f92672">+</span> <span style="color:#ae81ff">6</span>;
-                        <span style="color:#66d9ef">end</span>
-                        <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// should never occur
-</span><span style="color:#75715e"></span>                            dx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">10</span>; dy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">10</span>;
-                            dx1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">20</span>; dy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">20</span>;
-                            fb_cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">4&#39;h7</span>;  <span style="color:#75715e">// white
-</span><span style="color:#75715e"></span>                        <span style="color:#66d9ef">end</span>
-                    <span style="color:#66d9ef">endcase</span>
-                <span style="color:#66d9ef">end</span>
+</span><span style="color:#75715e"></span>                state <span style="color:#f92672">&lt;=</span> DRAW;
+                <span style="color:#66d9ef">case</span> (shape_id)
+                    <span style="color:#ae81ff">5</span><span style="color:#ae81ff">&#39;d0</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// main building
+</span><span style="color:#75715e"></span>                        draw_start_rect <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                        vx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">60</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">70</span>;
+                        vx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">190</span>; vy1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">120</span>;
+                        fb_cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">4&#39;h5</span>;  <span style="color:#75715e">// dark grey
+</span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+                    <span style="color:#ae81ff">5</span><span style="color:#ae81ff">&#39;d1</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// drawbridge
+</span><span style="color:#75715e"></span>                        draw_start_rect <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                        vx0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">110</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">90</span>;
+                        vx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">140</span>; vy1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">120</span>;
+                        fb_cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">4&#39;h4</span>;  <span style="color:#75715e">// brown
+</span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+                    <span style="color:#ae81ff">5</span><span style="color:#ae81ff">&#39;d2</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// arch left
+</span><span style="color:#75715e"></span>                        draw_start_tri <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                        vx0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">110</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">90</span>;
+                        vx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">120</span>; vy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">90</span>;
+                        vx2 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">110</span>; vy2 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">100</span>;
+                        fb_cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">4&#39;h5</span>;  <span style="color:#75715e">// dark grey
+</span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+                    <span style="color:#ae81ff">5</span><span style="color:#ae81ff">&#39;d3</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// arch right
+</span><span style="color:#75715e"></span>                        draw_start_tri <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                        vx0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">130</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">90</span>;
+                        vx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">140</span>; vy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">90</span>;
+                        vx2 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">140</span>; vy2 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">100</span>;
+                        fb_cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">4&#39;h5</span>;  <span style="color:#75715e">// dark grey
+</span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+                    <span style="color:#ae81ff">5</span><span style="color:#ae81ff">&#39;d4</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// left tower
+</span><span style="color:#75715e"></span>                        draw_start_rect <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                        vx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">40</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">45</span>;
+                        vx1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">60</span>; vy1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">120</span>;
+                        fb_cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">4&#39;h5</span>;  <span style="color:#75715e">// dark grey
+</span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+                    <span style="color:#ae81ff">5</span><span style="color:#ae81ff">&#39;d5</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// middle tower
+</span><span style="color:#75715e"></span>                        draw_start_rect <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                        vx0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">110</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">40</span>;
+                        vx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">140</span>; vy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">70</span>;
+                        fb_cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">4&#39;h5</span>;  <span style="color:#75715e">// dark grey
+</span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+                    <span style="color:#ae81ff">5</span><span style="color:#ae81ff">&#39;d6</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// right tower
+</span><span style="color:#75715e"></span>                        draw_start_rect <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                        vx0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">190</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">45</span>;
+                        vx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">210</span>; vy1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">120</span>;
+                        fb_cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">4&#39;h5</span>;  <span style="color:#75715e">// dark grey
+</span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+                    <span style="color:#ae81ff">5</span><span style="color:#ae81ff">&#39;d7</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// left roof
+</span><span style="color:#75715e"></span>                        draw_start_tri <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                        vx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">50</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">25</span>;
+                        vx1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">65</span>; vy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">45</span>;
+                        vx2 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">35</span>; vy2 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">45</span>;
+                        fb_cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">4&#39;h2</span>;  <span style="color:#75715e">// dark-purple
+</span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+                    <span style="color:#ae81ff">5</span><span style="color:#ae81ff">&#39;d8</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// middle roof
+</span><span style="color:#75715e"></span>                        draw_start_tri <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                        vx0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">125</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">10</span>;
+                        vx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">145</span>; vy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">40</span>;
+                        vx2 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">105</span>; vy2 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">40</span>;
+                        fb_cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">4&#39;h2</span>;  <span style="color:#75715e">// dark-purple
+</span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+                    <span style="color:#ae81ff">5</span><span style="color:#ae81ff">&#39;d9</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// right roof
+</span><span style="color:#75715e"></span>                        draw_start_tri <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                        vx0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">200</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">25</span>;
+                        vx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">215</span>; vy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">45</span>;
+                        vx2 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">185</span>; vy2 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">45</span>;
+                        fb_cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">4&#39;h2</span>;  <span style="color:#75715e">// dark-purple
+</span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+                    <span style="color:#ae81ff">5</span><span style="color:#ae81ff">&#39;d10</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// left window
+</span><span style="color:#75715e"></span>                        draw_start_rect <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                        vx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">46</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">50</span>;
+                        vx1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">54</span>; vy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">65</span>;
+                        fb_cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">4&#39;h1</span>;  <span style="color:#75715e">// dark blue
+</span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+                    <span style="color:#ae81ff">5</span><span style="color:#ae81ff">&#39;d11</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// middle window
+</span><span style="color:#75715e"></span>                        draw_start_rect <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                        vx0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">120</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">45</span>;
+                        vx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">130</span>; vy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">65</span>;
+                        fb_cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">4&#39;h1</span>;  <span style="color:#75715e">// dark blue
+</span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+                    <span style="color:#ae81ff">5</span><span style="color:#ae81ff">&#39;d12</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// right window
+</span><span style="color:#75715e"></span>                        draw_start_rect <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                        vx0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">196</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">50</span>;
+                        vx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">204</span>; vy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">65</span>;
+                        fb_cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">4&#39;h1</span>;  <span style="color:#75715e">// dark blue
+</span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+                    <span style="color:#ae81ff">5</span><span style="color:#ae81ff">&#39;d13</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// battlement 1
+</span><span style="color:#75715e"></span>                        draw_start_rect <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                        vx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">63</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">62</span>;
+                        vx1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">72</span>; vy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">70</span>;
+                        fb_cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">4&#39;h5</span>;  <span style="color:#75715e">// dark grey
+</span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+                    <span style="color:#ae81ff">5</span><span style="color:#ae81ff">&#39;d14</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// battlement 2
+</span><span style="color:#75715e"></span>                        draw_start_rect <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                        vx0 <span style="color:#f92672">&lt;=</span>   <span style="color:#ae81ff">80</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">62</span>;
+                        vx1 <span style="color:#f92672">&lt;=</span>   <span style="color:#ae81ff">89</span>; vy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">70</span>;
+                        fb_cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">4&#39;h5</span>;  <span style="color:#75715e">// dark grey
+</span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+                    <span style="color:#ae81ff">5</span><span style="color:#ae81ff">&#39;d15</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// battlement 3
+</span><span style="color:#75715e"></span>                        draw_start_rect <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                        vx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">97</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">62</span>;
+                        vx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">106</span>; vy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">70</span>;
+                        fb_cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">4&#39;h5</span>;  <span style="color:#75715e">// dark grey
+</span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+                    <span style="color:#ae81ff">5</span><span style="color:#ae81ff">&#39;d16</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// battlement 4
+</span><span style="color:#75715e"></span>                        draw_start_rect <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                        vx0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">144</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">62</span>;
+                        vx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">153</span>; vy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">70</span>;
+                        fb_cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">4&#39;h5</span>;  <span style="color:#75715e">// dark grey
+</span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+                    <span style="color:#ae81ff">5</span><span style="color:#ae81ff">&#39;d17</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// battlement 5
+</span><span style="color:#75715e"></span>                        draw_start_rect <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                        vx0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">161</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">62</span>;
+                        vx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">170</span>; vy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">70</span>;
+                        fb_cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">4&#39;h5</span>;  <span style="color:#75715e">// dark grey
+</span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+                    <span style="color:#ae81ff">5</span><span style="color:#ae81ff">&#39;d18</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// battlement 6
+</span><span style="color:#75715e"></span>                        draw_start_rect <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                        vx0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">178</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">62</span>;
+                        vx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">187</span>; vy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">70</span>;
+                        fb_cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">4&#39;h5</span>;  <span style="color:#75715e">// dark grey
+</span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+                    <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// should never occur
+</span><span style="color:#75715e"></span>                        draw_start_tri <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                        vx0 <span style="color:#f92672">&lt;=</span>   <span style="color:#ae81ff">10</span>; vy0 <span style="color:#f92672">&lt;=</span>   <span style="color:#ae81ff">10</span>;
+                        vx1 <span style="color:#f92672">&lt;=</span>   <span style="color:#ae81ff">10</span>; vy1 <span style="color:#f92672">&lt;=</span>   <span style="color:#ae81ff">30</span>;
+                        vx2 <span style="color:#f92672">&lt;=</span>   <span style="color:#ae81ff">20</span>; vy2 <span style="color:#f92672">&lt;=</span>   <span style="color:#ae81ff">20</span>;
+                        fb_cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">4&#39;h7</span>;  <span style="color:#75715e">// white
+</span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+                <span style="color:#66d9ef">endcase</span>
             <span style="color:#66d9ef">end</span>
             DRAW: <span style="color:#66d9ef">begin</span>
-                draw_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                draw_start_rect <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                draw_start_tri <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
                 <span style="color:#66d9ef">if</span> (draw_done) <span style="color:#66d9ef">begin</span>
                     <span style="color:#66d9ef">if</span> (shape_id <span style="color:#f92672">==</span> SHAPE_CNT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
                         state <span style="color:#f92672">&lt;=</span> DONE;
@@ -971,31 +1078,53 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
                     <span style="color:#66d9ef">end</span>
                 <span style="color:#66d9ef">end</span>
             <span style="color:#66d9ef">end</span>
-            DONE: state <span style="color:#f92672">&lt;=</span> IDLE;
-            <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">if</span> (frame_sys) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// IDLE
-</span><span style="color:#75715e"></span>                state <span style="color:#f92672">&lt;=</span> INIT;
-                shape_id <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-            <span style="color:#66d9ef">end</span>
-        <span style="color:#66d9ef">endcase</span>
+            DONE: state <span style="color:#f92672">&lt;=</span> DONE;
+            <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">if</span> (frame_sys) state <span style="color:#f92672">&lt;=</span> INIT;  <span style="color:#75715e">// IDLE
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">endcase</span>
     <span style="color:#66d9ef">end</span>
+
+    draw_triangle_fill #(.CORDW(CORDW)) draw_triangle_inst (
+        .clk(clk_100m),
+        .rst(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),
+        .start(draw_start_tri),
+        .oe(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b1</span>),
+        .x0(vx0),
+        .y0(vy0),
+        .x1(vx1),
+        .y1(vy1),
+        .x2(vx2),
+        .y2(vy2),
+        .x(fbx_tri),
+        .y(fby_tri),
+        .drawing(drawing_tri),
+        .complete(),
+        .done(draw_done_tri)
+    );
 
     draw_rectangle_fill #(.CORDW(CORDW)) draw_rectangle_inst (
         .clk(clk_100m),
         .rst(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),
-        .start(draw_start),
+        .start(draw_start_rect),
         .oe(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b1</span>),
-        .x0(dx0),
-        .y0(dy0),
-        .x1(dx1),
-        .y1(dy1),
-        .x(fbx),
-        .y(fby),
-        .drawing,
-        .done(draw_done)
+        .x0(vx0),
+        .y0(vy0),
+        .x1(vx1),
+        .y1(vy1),
+        .x(fbx_rect),
+        .y(fby_rect),
+        .drawing(drawing_rect),
+        .complete(),
+        .done(draw_done_rect)
     );
 
     <span style="color:#75715e">// write to framebuffer when drawing
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> fb_we <span style="color:#f92672">=</span> drawing;
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_100m) <span style="color:#66d9ef">begin</span>
+        drawing <span style="color:#f92672">&lt;=</span> drawing_tri <span style="color:#f92672">||</span> drawing_rect;
+        fb_we <span style="color:#f92672">&lt;=</span> drawing;
+        draw_done <span style="color:#f92672">&lt;=</span> draw_done_tri <span style="color:#f92672">||</span> draw_done_rect;
+        fbx <span style="color:#f92672">&lt;=</span> drawing_tri <span style="color:#f92672">?</span> fbx_tri <span style="color:#f92672">:</span> fbx_rect;
+        fby <span style="color:#f92672">&lt;=</span> drawing_tri <span style="color:#f92672">?</span> fby_tri <span style="color:#f92672">:</span> fby_rect;
+    <span style="color:#66d9ef">end</span>
 
     <span style="color:#75715e">// reading from FB takes one cycle: delay display signals to match
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> hsync_p1, vsync_p1;
@@ -1004,20 +1133,39 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
         vsync_p1 <span style="color:#f92672">&lt;=</span> vsync;
     <span style="color:#66d9ef">end</span>
 
+    <span style="color:#75715e">// background colour (sy doesn&#39;t account for letterbox)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] bg_colr;
+    <span style="color:#66d9ef">logic</span> show_bg;
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">if</span> (line) <span style="color:#66d9ef">begin</span>
+            <span style="color:#66d9ef">if</span>      (sy <span style="color:#f92672">==</span>   <span style="color:#ae81ff">0</span>) bg_colr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">12&#39;h000</span>;
+            <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span>  <span style="color:#ae81ff">60</span>) bg_colr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">12&#39;h239</span>;
+            <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> <span style="color:#ae81ff">130</span>) bg_colr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">12&#39;h24A</span>;
+            <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> <span style="color:#ae81ff">175</span>) bg_colr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">12&#39;h25B</span>;
+            <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> <span style="color:#ae81ff">210</span>) bg_colr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">12&#39;h26C</span>;
+            <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> <span style="color:#ae81ff">240</span>) bg_colr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">12&#39;h27D</span>;
+            <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> <span style="color:#ae81ff">265</span>) bg_colr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">12&#39;h29E</span>;
+            <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> <span style="color:#ae81ff">285</span>) bg_colr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">12&#39;h2BF</span>;
+            <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> <span style="color:#ae81ff">300</span>) bg_colr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">12&#39;h260</span>;
+            <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> <span style="color:#ae81ff">420</span>) bg_colr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">12&#39;h000</span>;
+        <span style="color:#66d9ef">end</span>
+        show_bg <span style="color:#f92672">&lt;=</span> (de <span style="color:#f92672">&amp;&amp;</span> {fb_red,fb_green,fb_blue} <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>);
+    <span style="color:#66d9ef">end</span>
+
     <span style="color:#75715e">// VGA output
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
         vga_hsync <span style="color:#f92672">&lt;=</span> hsync_p1;
         vga_vsync <span style="color:#f92672">&lt;=</span> vsync_p1;
-        vga_r <span style="color:#f92672">&lt;=</span> fb_red;
-        vga_g <span style="color:#f92672">&lt;=</span> fb_green;
-        vga_b <span style="color:#f92672">&lt;=</span> fb_blue;
+        vga_r <span style="color:#f92672">&lt;=</span> show_bg <span style="color:#f92672">?</span> bg_colr[<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">8</span>] <span style="color:#f92672">:</span> fb_red;
+        vga_g <span style="color:#f92672">&lt;=</span> show_bg <span style="color:#f92672">?</span> bg_colr[<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">4</span>]  <span style="color:#f92672">:</span> fb_green;
+        vga_b <span style="color:#f92672">&lt;=</span> show_bg <span style="color:#f92672">?</span> bg_colr[<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>]  <span style="color:#f92672">:</span> fb_blue;
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
 </code></pre></div><h2 id="explore">Explore</h2>
 <p>I hope you enjoyed this instalment of <em>Exploring FPGA Graphics</em>, but nothing beats creating your own designs. Here are a few suggestions to get you started:</p>
 <p><em>Suggestions will be added soon</em></p>
 <h2 id="next-time">Next Time</h2>
-<p>Next time we move into the third dimension with wireframe models, including the Blender monkey and Utah teapot (draft coming soon).</p>
+<p>Next time, we&rsquo;ll be moving around with Animated Shapes (coming soon).</p>
 <p><em>Constructive feedback is always welcome. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 
       

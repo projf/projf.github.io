@@ -121,7 +121,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
       <p>Welcome back to <em>Exploring FPGA Graphics</em>. It&rsquo;s time to turn our attention to drawing. Most modern computer graphics come down to drawing triangles and colouring them in. So, it seems fitting to begin our tour of drawing with triangles and the straight lines that form them. This post will implement Bresenham&rsquo;s line algorithm in Verilog, creating lines, triangles, and even a cube (our first sort-of-3D graphic).</p>
 <p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how displays work, race the beam with Pong, animate starfields and sprites, paint Michelangelo&rsquo;s David, simulate life with bitmaps, draw lines and shapes, and finally render simple 3D models. New to the series? Start with <a href="/posts/fpga-graphics/">FPGA Graphics</a>.</p>
 <p><strong>You can watch an <a href="https://www.youtube.com/watch?v=ezJv7pB-UmA" target="_blank">FPGA Graphics demo reel</a> with designs from across this series.</strong></p>
-<p><em>Updated 2021-05-26. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><em>Updated 2021-07-10. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <h3 id="series-outline">Series Outline</h3>
 <ul>
 <li><a href="/posts/fpga-graphics/">FPGA Graphics</a> - learn how displays work and animate simple shapes</li>
@@ -131,8 +131,8 @@ In this series, we explore graphics at the hardware level and get a feel for the
 <li><a href="/posts/framebuffers/">Framebuffers</a> - driving the display from a bitmap in memory</li>
 <li><a href="/posts/life-on-screen/">Life on Screen</a> - the screen comes alive with Conway&rsquo;s Game of Life</li>
 <li>Lines and Triangles (this post) - drawing lines and triangles with a framebuffer</li>
-<li><a href="/posts/fpga-shapes/">2D Shapes</a> - filling and animating shapes</li>
-<li>Simple 3D - models and wireframe rendering (draft coming soon)</li>
+<li><a href="/posts/fpga-shapes/">2D Shapes</a> - filled shapes and drawing pictures (draft)</li>
+<li>Animated Shapes - animating and rotating shapes (coming soon)</li>
 </ul>
 <h3 id="requirements">Requirements</h3>
 <p>For this series, you need an FPGA board with video output. We&rsquo;ll be working at 640x480, so pretty much any video output will do. It helps to be comfortable with programming your FPGA board and reasonably familiar with Verilog.</p>
@@ -145,18 +145,22 @@ In this series, we explore graphics at the hardware level and get a feel for the
 <p>The SystemVerilog designs featured in this series are available from the <a href="https://github.com/projf/projf-explore/">projf-explore</a> git repo under the open-source MIT licence: build on them to your heart&rsquo;s content. The rest of the blog content is subject to standard copyright restrictions: don&rsquo;t republish it without permission.</p>
 <h2 id="an-address-for-every-pixel">An Address for Every Pixel</h2>
 <p>Let&rsquo;s start by reminding ourselves how a framebuffer works. A framebuffer memory location backs every pixel on the screen. To update a pixel, we convert its coordinates into a memory address and write the colour to that address.</p>
-<p>For this post, we&rsquo;ll be using:</p>
+<p>For this post, we&rsquo;ll be using a 16:9 framebuffer:</p>
 <ul>
-<li>Arty: <code>320 x 240</code> pixels</li>
-<li>iCEBreaker: <code>160 x 120</code> pixels</li>
+<li>Arty: <code>320 x 180</code> pixels</li>
+<li>iCEBreaker: <code>160 x 90</code> pixels</li>
 </ul>
-<p>Our framebuffer module takes care of turning coordinates into memory addresses for us. We just supply the colour and the (x,y) position of the pixel, and the framebuffer module does the rest. Take a look at the post on <a href="/posts/framebuffers/">Framebuffers</a> if you need a reminder on how this works.</p>
+<p>Our framebuffer module takes care of turning coordinates into memory addresses for us. We supply the colour and the (x,y) position of the pixel, and the framebuffer module does the rest. Take a look at the post on <a href="/posts/framebuffers/">Framebuffers</a> if you need a reminder on how this works.</p>
+<blockquote>
+<p><strong>iCEBreaker Framebuffer &amp; SPRAM</strong><br>
+I am working on supporting iCE40 SPRAM. With SPRAM, we&rsquo;ll have enough capacity for a 320x180 framebuffer in 16 colours. Stay tuned.</p>
+</blockquote>
 <h2 id="many-colours">Many Colours?</h2>
 <p>In our previous posts, we loaded an image and picked a palette to match. Now we&rsquo;re drawing; we want the freedom to choose from a wide range of colours. However, we also want to leave enough BRAM for double-buffering when we start animating, so we&rsquo;ll settle for four colours (2 bit) on iCEBreaker and 16 colours (4 bit) on Arty.</p>
 <p>A single framebuffer requires:</p>
 <ul>
-<li><code>4 * 320 * 240 = 307,200 bits</code> (12 of 50 BRAMs on Arty)</li>
-<li><code>2 * 160 * 120 =  38,400 bits</code> (10 of 30 BRAMs on iCEBreaker)</li>
+<li><code>4 * 320 * 180 = 230,400 bits</code> (8 of 50 BRAMs on Arty)</li>
+<li><code>2 * 160 *  90 =  28,800 bits</code> (8 of 30 BRAMs on iCEBreaker)</li>
 </ul>
 <p>I have selected these two palettes to get you started, but use anything you like.</p>
 <h3 id="16-colour-palette">16 Colour Palette</h3>
@@ -234,7 +238,7 @@ FA0  // 1 - orange
 </code></pre></div><p>At first glance, it looks OK, and your tools will almost certainly build it without complaint. Experienced Verilog engineers are probably rolling their eyes, but it&rsquo;s worth thinking through why this won&rsquo;t work.</p>
 <p>Consider what happens if <code>(e2 &gt;= dy)</code> and <code>(e2 &lt;= dx)</code> are <em>both</em> true?</p>
 <p><code>x</code> and <code>y</code> are incremented correctly, but <code>err &lt;= err + dy;</code> is ignored. Huh?!</p>
-<p>The <code>&lt;=</code> assignment is <strong>non-blocking</strong> and non-blocking assignments happen in parallel. The Verilog standard says that if a variable has multiple non-blocking assignments, <strong>the last assignment wins</strong>.</p>
+<p>The <code>&lt;=</code> assignment is <strong>non-blocking</strong>, and non-blocking assignments happen in parallel. The Verilog standard says that if a variable has multiple non-blocking assignments, <strong>the last assignment wins</strong>.</p>
 <p>We can&rsquo;t calculate the error with just a combinatorial block either: the new error value depends on the previous one (we need to maintain state). Instead, we use a combinational block, with <strong>blocking</strong> assignment, to calculate the change in error, then add it to the previous value in a clocked <code>always_ff</code> block:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW:<span style="color:#ae81ff">0</span>] err, derr;
 <span style="color:#66d9ef">logic</span> movx, movy;  <span style="color:#75715e">// move in x and/or y required
@@ -329,8 +333,8 @@ FA0  // 1 - orange
 </code></pre></div><p>We&rsquo;ve got a good start here, but our module has a couple of significant problems we should tackle.</p>
 <h3 id="oh-dear-i-shall-be-too-late">Oh dear! I shall be too late!</h3>
 <p>Line drawing crops up all over the place; if it&rsquo;s slow, it&rsquo;ll be a significant break on graphics performance.</p>
-<p>Our current line drawing module makes direct use of relatively complex combinational logic. For example, we use <code>movy</code> to control whether to move our drawing position vertically. <code>movy</code> depends on <code>dx</code>, which depends on <code>right</code>. All these signals are purely combinational, with nothing stored in registers (flip-flops). Unsurprisingly, my tests showed this path was the limiting factor in line drawing speed.</p>
-<p>Our first improvement is straightforward: we register the values of <code>dx</code> and <code>dy</code> in an <code>always_ff</code> block. Even better, because <code>dx</code> and <code>dy</code> don&rsquo;t change for a given line, we only have to do this once and don&rsquo;t suffer a latency penalty:</p>
+<p>Our current line drawing module makes direct use of relatively complex combinational logic. For example, we use <code>movy</code> to control whether to move our drawing position vertically. <code>movy</code> depends on <code>dx</code>, which depends on <code>right</code>. All these signals are purely combinational, with nothing stored in registers (flip-flops). Unsurprisingly, my tests showed this path was the limiting factor for line drawing speed.</p>
+<p>Our first improvement is straightforward: we register <code>dx</code> and <code>dy</code> in an <code>always_ff</code> block. Even better, because <code>dx</code> and <code>dy</code> don&rsquo;t change for a given line, we only have to do this once and don&rsquo;t suffer a latency penalty:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
     right <span style="color:#f92672">=</span> (x0 <span style="color:#f92672">&lt;</span> x1);
     down  <span style="color:#f92672">=</span> (y0 <span style="color:#f92672">&lt;</span> y1);
@@ -364,8 +368,8 @@ FA0  // 1 - orange
             <span style="color:#66d9ef">end</span>
         <span style="color:#66d9ef">end</span>
     <span style="color:#66d9ef">end</span>
-</code></pre></div><p>This Verilog seems overly verbose compared to the combinational <code>derr</code>, but the timing is much better on simpler FPGAs, such as the iCE40. For example, the cube design we will discuss  shortly, improves from 22.55 MHz to 27.70 MHz with this change (we need 25.125 MHz to meet timing).</p>
-<p>With experience, you&rsquo;ll get a feel for when registering a signal makes sense. For example, back in 2020 I learnt that iCE40 subtraction takes two layers of logic, making registering the initial line values all the more valuable. Both Vivado (Arty) and nextpnr (iCEBreaker) provide timing reports to help you improve the performance of your designs.</p>
+</code></pre></div><p>This Verilog seems overly verbose compared to the combinational <code>derr</code>, but the timing is much better on simpler FPGAs, such as the iCE40. For example, the cube design we will discuss shortly improves from ~22 MHz to ~28 MHz with these changes (we need 25 MHz to meet timing).</p>
+<p>With experience, you&rsquo;ll get a feel for when registering a signal makes sense. For example, back in 2020, I learnt that iCE40 subtraction takes two layers of logic, making registering the initial line values all the more valuable. Both Vivado (Arty) and nextpnr (iCEBreaker) provide timing reports to help you improve the performance of your designs.</p>
 <h3 id="breaking-symmetry">Breaking Symmetry</h3>
 <p>Bresenham&rsquo;s line algorithm is not symmetrical: drawing from <code>(x0,y0)</code> to <code>(x1,y1)</code> is not necessarily the same as drawing from <code>(x1,y1)</code> to <code>(x0,y0)</code>.</p>
 <p>For example, I drew the triangle (2,2) (6,2) (4,6) clockwise then anticlockwise:</p>
@@ -373,52 +377,56 @@ FA0  // 1 - orange
 <p>Variations in rendering may not matter if you&rsquo;re drawing a single shape, but what happens if we draw two shapes next to each other? We don&rsquo;t want any gaps between the shapes. To ensure one unique rendering of the line <code>(x0,y0)</code> to <code>(x1,y1)</code>, we need a consistent way to order the points. I have chosen to draw <em>down</em> the screen; that is, with the y-coordinate increasing. To achieve this, we look at the y-coordinates and swap them if <code>y0</code> is greater than <code>y1</code>.</p>
 <p>That leaves horizontal lines: the y-coordinate is the same for both points in this case. However, it does not matter which direction we draw horizontal lines: Bresenham&rsquo;s line algorithm is the same in both directions.</p>
 <p>The swapping logic looks like this:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#75715e">// line properties
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> right, swap;  <span style="color:#75715e">// drawing direction
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] xa, ya;  <span style="color:#75715e">// starting point
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] xb, yb;  <span style="color:#75715e">// ending point
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-    swap <span style="color:#f92672">=</span> (y0 <span style="color:#f92672">&gt;</span> y1);  <span style="color:#75715e">// swap points if y0 is below y1
-</span><span style="color:#75715e"></span>    xa <span style="color:#f92672">=</span> swap <span style="color:#f92672">?</span> x1 <span style="color:#f92672">:</span> x0;
-    xb <span style="color:#f92672">=</span> swap <span style="color:#f92672">?</span> x0 <span style="color:#f92672">:</span> x1;
-    ya <span style="color:#f92672">=</span> swap <span style="color:#f92672">?</span> y1 <span style="color:#f92672">:</span> y0;
-    yb <span style="color:#f92672">=</span> swap <span style="color:#f92672">?</span> y0 <span style="color:#f92672">:</span> y1;
-    right <span style="color:#f92672">=</span> (xa <span style="color:#f92672">&lt;</span> xb);  <span style="color:#75715e">// draw right to left?
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">end</span>
-</code></pre></div><p>The logic for <code>right</code> is now more complex, while <code>dy</code> is simplified because we always draw down the screen:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
-    dx <span style="color:#f92672">&lt;=</span> right <span style="color:#f92672">?</span> x1 <span style="color:#f92672">-</span> x0 <span style="color:#f92672">:</span> x0 <span style="color:#f92672">-</span> x1;  <span style="color:#75715e">// dx =  abs(x1 - x0)
-</span><span style="color:#75715e"></span>    dy <span style="color:#f92672">&lt;=</span> ya <span style="color:#f92672">-</span> yb;  <span style="color:#75715e">// dy = -abs(yb - ya)
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">end</span>
-</code></pre></div><h3 id="ready-to-draw">Ready to Draw</h3>
-<p>We&rsquo;re now ready to use our improved line drawing module <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lib/graphics/draw_line.sv">draw_line.sv</a>]</strong>:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> draw_line #(<span style="color:#66d9ef">parameter</span> CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>) (  <span style="color:#75715e">// signed coordinate width
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,             <span style="color:#75715e">// clock
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst,             <span style="color:#75715e">// reset
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> start,           <span style="color:#75715e">// start line drawing
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> oe,              <span style="color:#75715e">// output enable
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x0,  <span style="color:#75715e">// point 0 - horizontal position
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] y0,  <span style="color:#75715e">// point 0 - vertical position
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x1,  <span style="color:#75715e">// point 1 - horizontal position
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] y1,  <span style="color:#75715e">// point 1 - vertical position
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x,   <span style="color:#75715e">// horizontal drawing position
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] y,   <span style="color:#75715e">// vertical drawing position
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> drawing,         <span style="color:#75715e">// line is drawing
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> done             <span style="color:#75715e">// line complete (high for one tick)
-</span><span style="color:#75715e"></span>    );
-
-    <span style="color:#75715e">// line properties
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> right, swap;  <span style="color:#75715e">// drawing direction
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] xa, ya;  <span style="color:#75715e">// starting point
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] xb, yb;  <span style="color:#75715e">// ending point
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// line properties
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> swap;   <span style="color:#75715e">// swap points to ensure y1 &gt;= y0
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> right;  <span style="color:#75715e">// drawing direction
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] xa, ya;  <span style="color:#75715e">// start point
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] xb, yb;  <span style="color:#75715e">// end point
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x_end, y_end;  <span style="color:#75715e">// register end point
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
         swap <span style="color:#f92672">=</span> (y0 <span style="color:#f92672">&gt;</span> y1);  <span style="color:#75715e">// swap points if y0 is below y1
 </span><span style="color:#75715e"></span>        xa <span style="color:#f92672">=</span> swap <span style="color:#f92672">?</span> x1 <span style="color:#f92672">:</span> x0;
         xb <span style="color:#f92672">=</span> swap <span style="color:#f92672">?</span> x0 <span style="color:#f92672">:</span> x1;
         ya <span style="color:#f92672">=</span> swap <span style="color:#f92672">?</span> y1 <span style="color:#f92672">:</span> y0;
         yb <span style="color:#f92672">=</span> swap <span style="color:#f92672">?</span> y0 <span style="color:#f92672">:</span> y1;
-        right <span style="color:#f92672">=</span> (xa <span style="color:#f92672">&lt;</span> xb);  <span style="color:#75715e">// draw right to left?
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">end</span>
+    <span style="color:#66d9ef">end</span>
+</code></pre></div><p>If we use these new combinational signals directly, our timing will suffer.
+To avoid this, we can register the end coordinate and drawing direction:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
+    <span style="color:#75715e">// ...
+</span><span style="color:#75715e"></span>    x_end <span style="color:#f92672">&lt;=</span> xb;
+    y_end <span style="color:#f92672">&lt;=</span> yb;
+
+    <span style="color:#75715e">// ...
+</span><span style="color:#75715e"></span>    right <span style="color:#f92672">&lt;=</span> (xa <span style="color:#f92672">&lt;</span> xb);  <span style="color:#75715e">// draw right to left?
+</span></code></pre></div><h3 id="ready-to-draw">Ready to Draw</h3>
+<p>We&rsquo;re now ready to use our improved line drawing module <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lib/graphics/draw_line.sv">draw_line.sv</a>]</strong>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> draw_line #(<span style="color:#66d9ef">parameter</span> CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>) (  <span style="color:#75715e">// signed coordinate width
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,             <span style="color:#75715e">// clock
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst,             <span style="color:#75715e">// reset
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> start,           <span style="color:#75715e">// start line drawing
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> oe,              <span style="color:#75715e">// output enable
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x0, y0,  <span style="color:#75715e">// point 0
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x1, y1,  <span style="color:#75715e">// point 1
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x,  y,   <span style="color:#75715e">// drawing position
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> drawing,         <span style="color:#75715e">// line is drawing
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> complete,        <span style="color:#75715e">// line complete (remains high)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> done             <span style="color:#75715e">// line done (high for one tick)
+</span><span style="color:#75715e"></span>    );
+
+    <span style="color:#75715e">// line properties
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> swap;   <span style="color:#75715e">// swap points to ensure y1 &gt;= y0
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> right;  <span style="color:#75715e">// drawing direction
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] xa, ya;  <span style="color:#75715e">// start point
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] xb, yb;  <span style="color:#75715e">// end point
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x_end, y_end;  <span style="color:#75715e">// register end point
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+        swap <span style="color:#f92672">=</span> (y0 <span style="color:#f92672">&gt;</span> y1);  <span style="color:#75715e">// swap points if y0 is below y1
+</span><span style="color:#75715e"></span>        xa <span style="color:#f92672">=</span> swap <span style="color:#f92672">?</span> x1 <span style="color:#f92672">:</span> x0;
+        xb <span style="color:#f92672">=</span> swap <span style="color:#f92672">?</span> x0 <span style="color:#f92672">:</span> x1;
+        ya <span style="color:#f92672">=</span> swap <span style="color:#f92672">?</span> y1 <span style="color:#f92672">:</span> y0;
+        yb <span style="color:#f92672">=</span> swap <span style="color:#f92672">?</span> y0 <span style="color:#f92672">:</span> y1;
+    <span style="color:#66d9ef">end</span>
 
     <span style="color:#75715e">// error values
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW:<span style="color:#ae81ff">0</span>] err;  <span style="color:#75715e">// a bit wider as signed
@@ -435,15 +443,16 @@ FA0  // 1 - orange
         <span style="color:#66d9ef">if</span> (in_progress <span style="color:#f92672">&amp;&amp;</span> oe) drawing <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
     <span style="color:#66d9ef">end</span>
 
-    <span style="color:#66d9ef">enum</span> {IDLE, INIT, DRAW} state;
+    <span style="color:#66d9ef">enum</span> {IDLE, INIT_0, INIT_1, DRAW} state;
     <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">case</span> (state)
             DRAW: <span style="color:#66d9ef">begin</span>
                 <span style="color:#66d9ef">if</span> (oe) <span style="color:#66d9ef">begin</span>
-                    <span style="color:#66d9ef">if</span> (x <span style="color:#f92672">==</span> xb <span style="color:#f92672">&amp;&amp;</span> y <span style="color:#f92672">==</span> yb) <span style="color:#66d9ef">begin</span>
-                        in_progress <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-                        done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                    <span style="color:#66d9ef">if</span> (x <span style="color:#f92672">==</span> x_end <span style="color:#f92672">&amp;&amp;</span> y <span style="color:#f92672">==</span> y_end) <span style="color:#66d9ef">begin</span>
                         state <span style="color:#f92672">&lt;=</span> IDLE;
+                        in_progress <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                        complete <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                        done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
                     <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
                         <span style="color:#66d9ef">if</span> (movx) <span style="color:#66d9ef">begin</span>
                             x <span style="color:#f92672">&lt;=</span> right <span style="color:#f92672">?</span> x <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> x <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;
@@ -455,38 +464,46 @@ FA0  // 1 - orange
                         <span style="color:#66d9ef">end</span>
                         <span style="color:#66d9ef">if</span> (movx <span style="color:#f92672">&amp;&amp;</span> movy) <span style="color:#66d9ef">begin</span>
                             x <span style="color:#f92672">&lt;=</span> right <span style="color:#f92672">?</span> x <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> x <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;
-                            y <span style="color:#f92672">&lt;=</span> y <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// always down
-</span><span style="color:#75715e"></span>                            err <span style="color:#f92672">&lt;=</span> err <span style="color:#f92672">+</span> dy <span style="color:#f92672">+</span> dx;
+                            y <span style="color:#f92672">&lt;=</span> y <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+                            err <span style="color:#f92672">&lt;=</span> err <span style="color:#f92672">+</span> dy <span style="color:#f92672">+</span> dx;
                         <span style="color:#66d9ef">end</span>
                     <span style="color:#66d9ef">end</span>
                 <span style="color:#66d9ef">end</span>
             <span style="color:#66d9ef">end</span>
-            INIT: <span style="color:#66d9ef">begin</span>
+            INIT_0: <span style="color:#66d9ef">begin</span>
+                state <span style="color:#f92672">&lt;=</span> INIT_1;
+                dx <span style="color:#f92672">&lt;=</span> right <span style="color:#f92672">?</span> xb <span style="color:#f92672">-</span> xa <span style="color:#f92672">:</span> xa <span style="color:#f92672">-</span> xb;  <span style="color:#75715e">// dx = abs(xb - xa)
+</span><span style="color:#75715e"></span>                dy <span style="color:#f92672">&lt;=</span> ya <span style="color:#f92672">-</span> yb;  <span style="color:#75715e">// dy = -abs(yb - ya)
+</span><span style="color:#75715e"></span>            <span style="color:#66d9ef">end</span>
+            INIT_1: <span style="color:#66d9ef">begin</span>
+                state <span style="color:#f92672">&lt;=</span> DRAW;
                 err <span style="color:#f92672">&lt;=</span> dx <span style="color:#f92672">+</span> dy;
                 x <span style="color:#f92672">&lt;=</span> xa;
                 y <span style="color:#f92672">&lt;=</span> ya;
+                x_end <span style="color:#f92672">&lt;=</span> xb;
+                y_end <span style="color:#f92672">&lt;=</span> yb;
                 in_progress <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-                state <span style="color:#f92672">&lt;=</span> DRAW;
             <span style="color:#66d9ef">end</span>
             <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// IDLE
 </span><span style="color:#75715e"></span>                done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
                 <span style="color:#66d9ef">if</span> (start) <span style="color:#66d9ef">begin</span>
-                    dx <span style="color:#f92672">&lt;=</span> right <span style="color:#f92672">?</span> xb <span style="color:#f92672">-</span> xa <span style="color:#f92672">:</span> xa <span style="color:#f92672">-</span> xb;  <span style="color:#75715e">// dx = abs(xb - xa)
-</span><span style="color:#75715e"></span>                    dy <span style="color:#f92672">&lt;=</span> ya <span style="color:#f92672">-</span> yb;  <span style="color:#75715e">// dy = -abs(yb - ya)
-</span><span style="color:#75715e"></span>                    state <span style="color:#f92672">&lt;=</span> INIT;
+                    state <span style="color:#f92672">&lt;=</span> INIT_0;
+                    right <span style="color:#f92672">&lt;=</span> (xa <span style="color:#f92672">&lt;</span> xb);  <span style="color:#75715e">// draw right to left?
+</span><span style="color:#75715e"></span>                    complete <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
                 <span style="color:#66d9ef">end</span>
             <span style="color:#66d9ef">end</span>
         <span style="color:#66d9ef">endcase</span>
 
         <span style="color:#66d9ef">if</span> (rst) <span style="color:#66d9ef">begin</span>
-            in_progress <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-            done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
             state <span style="color:#f92672">&lt;=</span> IDLE;
+            in_progress <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            complete <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
         <span style="color:#66d9ef">end</span>
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
-</code></pre></div><p>The pixel to draw is output as <code>(x,y)</code> and the line coordinates are input as <code>(x0,y0)</code> and <code>(x1,y1)</code>. A high <code>start</code> signal begins drawing, and drawing completion is marked by <code>done</code>. An output enable signal, <code>oe</code>, allows you to pause drawing, handy for multiplexing memory access or slowing down the action to make it visible.</p>
-<p>There&rsquo;s a test bench you can use to exercise the module with Vivado: <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/lines-and-triangles/xc7/draw_line_tb.sv">xc7/draw_line_tb.sv</a>]</strong>.</p>
+</code></pre></div><p>The pixel to draw is output as <code>(x,y)</code>, and the line coordinates are input as <code>(x0,y0)</code> and <code>(x1,y1)</code>. A high <code>start</code> signal begins drawing, and drawing completion is marked by <code>complete</code> (remains high) and <code>done</code> (high for one tick). An output enable signal, <code>oe</code>, allows you to pause drawing, handy for multiplexing memory access or slowing down the action to make it visible.</p>
+<p>There&rsquo;s a test bench you can use to exercise the module with Vivado: <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lib/graphics/xc7/draw_line_tb.sv">xc7/draw_line_tb.sv</a>]</strong>.</p>
 <p>We test several sorts of lines: steep and not steep, drawn upwards, downwards, left to right, and right to left, as well as points, and the longest possible horizontal, vertical, and diagonal lines. A steep line is one in which the vertical change is larger than the horizontal.</p>
 <h3 id="top-of-the-line">Top of the Line</h3>
 <p>It&rsquo;s time to get drawing with actual hardware.</p>
@@ -523,16 +540,17 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/line
 
     <span style="color:#75715e">// display timings
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">16</span>;
+    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx, sy;
     <span style="color:#66d9ef">logic</span> hsync, vsync;
-    <span style="color:#66d9ef">logic</span> de, frame, line;
+    <span style="color:#66d9ef">logic</span> frame, line;
     display_timings_480p #(.CORDW(CORDW)) display_timings_inst (
         .clk_pix,
         .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for pixel clock lock
-</span><span style="color:#75715e"></span>        .sx(),
-        .sy(),
+</span><span style="color:#75715e"></span>        .sx,
+        .sy,
         .hsync,
         .vsync,
-        .de,
+        .de(),
         .frame,
         .line
     );
@@ -543,7 +561,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/line
 
     <span style="color:#75715e">// framebuffer (FB)
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> FB_WIDTH   <span style="color:#f92672">=</span> <span style="color:#ae81ff">320</span>;
-    <span style="color:#66d9ef">localparam</span> FB_HEIGHT  <span style="color:#f92672">=</span> <span style="color:#ae81ff">240</span>;
+    <span style="color:#66d9ef">localparam</span> FB_HEIGHT  <span style="color:#f92672">=</span> <span style="color:#ae81ff">180</span>;
     <span style="color:#66d9ef">localparam</span> FB_CIDXW   <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;
     <span style="color:#66d9ef">localparam</span> FB_CHANW   <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;
     <span style="color:#66d9ef">localparam</span> FB_SCALE   <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span>;
@@ -568,8 +586,8 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/line
         .clk_pix,
         .rst_sys(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),
         .rst_pix(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),
-        .de,
-        .frame,
+        .de(sy <span style="color:#f92672">&gt;=</span> <span style="color:#ae81ff">60</span> <span style="color:#f92672">&amp;&amp;</span> sy <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">420</span> <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">&gt;=</span> <span style="color:#ae81ff">0</span>),  <span style="color:#75715e">// 16:9 letterbox
+</span><span style="color:#75715e"></span>        .frame,
         .line,
         .we(fb_we),
         .x(fbx),
@@ -582,8 +600,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/line
     );
 
     <span style="color:#75715e">// draw line in framebuffer
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lx0, lx1;  <span style="color:#75715e">// line coords (horizontal)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] ly0, ly1;  <span style="color:#75715e">// line coords (vertical)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vx0, vy0, vx1, vy1;  <span style="color:#75715e">// line coords
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> draw_start, drawing, draw_done;  <span style="color:#75715e">// drawing signals
 </span><span style="color:#75715e"></span>
     <span style="color:#75715e">// draw state machine
@@ -591,8 +608,8 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/line
     <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_100m) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">case</span> (state)
             INIT: <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// register coordinates and colour
-</span><span style="color:#75715e"></span>                lx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">40</span>; ly0 <span style="color:#f92672">&lt;=</span>   <span style="color:#ae81ff">0</span>;
-                lx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">279</span>; ly1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">239</span>;
+</span><span style="color:#75715e"></span>                vx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">70</span>; vy0 <span style="color:#f92672">&lt;=</span>   <span style="color:#ae81ff">0</span>;
+                vx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">249</span>; vy1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">179</span>;
                 fb_cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">4&#39;h9</span>;  <span style="color:#75715e">// orange
 </span><span style="color:#75715e"></span>                draw_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
                 state <span style="color:#f92672">&lt;=</span> DRAW;
@@ -611,13 +628,14 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/line
         .rst(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),
         .start(draw_start),
         .oe(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b1</span>),
-        .x0(lx0),
-        .y0(ly0),
-        .x1(lx1),
-        .y1(ly1),
+        .x0(vx0),
+        .y0(vy0),
+        .x1(vx1),
+        .y1(vy1),
         .x(fbx),
         .y(fby),
         .drawing,
+        .complete(),
         .done(draw_done)
     );
 
@@ -643,7 +661,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/line
 </code></pre></div><p>Notice how simple drawing is with a decent framebuffer design.
 On the Arty, we&rsquo;re drawing at 100 MHz with plenty of timing slack.</p>
 <h3 id="that-aint-no-cube">That Ain&rsquo;t No Cube</h3>
-<p>If we can draw one line, we can draw many! Let&rsquo;s draw a cube as you&rsquo;ve probably doodled on paper; this requires nine lines. To see how the drawing works, we&rsquo;ve wired the drawing <em>output enable</em> to the <code>animate</code> signal. For each frame, one new pixel is drawn, with a delay of 300 frames to allow the monitor time to start showing the image.</p>
+<p>If we can draw one line, we can draw many! Let&rsquo;s draw a cube as you&rsquo;ve probably doodled on paper; this requires nine lines. To see how the drawing works, we&rsquo;ve wired the drawing <em>output enable</em> to the <code>animate</code> signal. We draw one pixel each frame, with a delay of 300 frames, to give the monitor time to show the image.</p>
 <ul>
 <li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/lines-and-triangles/xc7/top_cube.sv">xc7/top_cube.sv</a></strong></li>
 <li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/lines-and-triangles/ice40/top_cube.sv">ice40/top_cube.sv</a></strong></li>
@@ -651,8 +669,8 @@ On the Arty, we&rsquo;re drawing at 100 MHz with plenty of timing slack.</p>
 <p>iCEBreaker cube drawing looks like this:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// draw cube in framebuffer
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LINE_CNT<span style="color:#f92672">=</span><span style="color:#ae81ff">9</span>;  <span style="color:#75715e">// number of lines to draw
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] line_id;  <span style="color:#75715e">// line identifier
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lx0, ly0, lx1, ly1;  <span style="color:#75715e">// line coords
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] line_id;    <span style="color:#75715e">// line identifier
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vx0, vy0, vx1, vy1;  <span style="color:#75715e">// line coords
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> draw_start, drawing, draw_done;  <span style="color:#75715e">// drawing signals
 </span><span style="color:#75715e"></span>
     <span style="color:#75715e">// draw state machine
@@ -665,34 +683,34 @@ On the Arty, we&rsquo;re drawing at 100 MHz with plenty of timing slack.</p>
                 fb_cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">2&#39;h2</span>;  <span style="color:#75715e">// green
 </span><span style="color:#75715e"></span>                <span style="color:#66d9ef">case</span> (line_id)
                     <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d0</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>
-                        lx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">65</span>; ly0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">45</span>; lx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">115</span>; ly1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">45</span>;
+                        vx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">65</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">30</span>; vx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">115</span>; vy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">30</span>;
                     <span style="color:#66d9ef">end</span>
                     <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d1</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>
-                        lx0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">115</span>; ly0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">45</span>; lx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">115</span>; ly1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">95</span>;
+                        vx0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">115</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">30</span>; vx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">115</span>; vy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">80</span>;
                     <span style="color:#66d9ef">end</span>
                     <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d2</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>
-                        lx0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">115</span>; ly0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">95</span>; lx1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">65</span>; ly1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">95</span>;
+                        vx0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">115</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">80</span>; vx1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">65</span>; vy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">80</span>;
                     <span style="color:#66d9ef">end</span>
                     <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d3</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>
-                        lx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">65</span>; ly0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">95</span>; lx1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">65</span>; ly1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">45</span>;
+                        vx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">65</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">80</span>; vx1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">65</span>; vy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">30</span>;
                     <span style="color:#66d9ef">end</span>
                     <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d4</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>
-                        lx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">65</span>; ly0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">95</span>; lx1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">45</span>; ly1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">75</span>;
+                        vx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">65</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">80</span>; vx1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">45</span>; vy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">60</span>;
                     <span style="color:#66d9ef">end</span>
                     <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d5</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>
-                        lx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">45</span>; ly0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">75</span>; lx1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">45</span>; ly1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">25</span>;
+                        vx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">45</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">60</span>; vx1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">45</span>; vy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">10</span>;
                     <span style="color:#66d9ef">end</span>
                     <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d6</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>
-                        lx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">45</span>; ly0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">25</span>; lx1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">65</span>; ly1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">45</span>;
+                        vx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">45</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">10</span>; vx1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">65</span>; vy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">30</span>;
                     <span style="color:#66d9ef">end</span>
                     <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d7</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>
-                        lx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">45</span>; ly0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">25</span>; lx1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">95</span>; ly1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">25</span>;
+                        vx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">45</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">10</span>; vx1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">95</span>; vy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">10</span>;
                     <span style="color:#66d9ef">end</span>
                     <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d8</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>
-                        lx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">95</span>; ly0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">25</span>; lx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">115</span>; ly1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">45</span>;
+                        vx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">95</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">10</span>; vx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">115</span>; vy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">30</span>;
                     <span style="color:#66d9ef">end</span>
                     <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// should never occur
-</span><span style="color:#75715e"></span>                        lx0 <span style="color:#f92672">&lt;=</span>   <span style="color:#ae81ff">0</span>; ly0 <span style="color:#f92672">&lt;=</span>   <span style="color:#ae81ff">0</span>; lx1 <span style="color:#f92672">&lt;=</span>   <span style="color:#ae81ff">0</span>; ly1 <span style="color:#f92672">&lt;=</span>   <span style="color:#ae81ff">0</span>;
+</span><span style="color:#75715e"></span>                        vx0 <span style="color:#f92672">&lt;=</span>   <span style="color:#ae81ff">0</span>; vy0 <span style="color:#f92672">&lt;=</span>   <span style="color:#ae81ff">0</span>; vx1 <span style="color:#f92672">&lt;=</span>   <span style="color:#ae81ff">0</span>; vy1 <span style="color:#f92672">&lt;=</span>   <span style="color:#ae81ff">0</span>;
                     <span style="color:#66d9ef">end</span>
                 <span style="color:#66d9ef">endcase</span>
             <span style="color:#66d9ef">end</span>
@@ -731,34 +749,32 @@ On the Arty, we&rsquo;re drawing at 100 MHz with plenty of timing slack.</p>
         .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// must be reset for draw with Yosys
 </span><span style="color:#75715e"></span>        .start(draw_start),
         .oe(draw_oe),
-        .x0(lx0),
-        .y0(ly0),
-        .x1(lx1),
-        .y1(ly1),
+        .x0(vx0),
+        .y0(vy0),
+        .x1(vx1),
+        .y1(vy1),
         .x(fbx),
         .y(fby),
         .drawing,
+        .complete(),
         .done(draw_done)
     );
 </code></pre></div><p><img src="/img/posts/lines-and-triangles/cube.jpg" alt="Ersatz Cube" title="Nine lines make a cube."></p>
 <p>It looks like a cube, but it&rsquo;s an ersatz cube. Our cube has no real depth; it cannot move in 3D space, nor can we apply realistic lighting. We&rsquo;ll cover real 3D models in a later post, but for now, let&rsquo;s turn our attention to the most critical shape in all of computer graphics: the triangle.</p>
 <h2 id="the-triangle">The Triangle</h2>
 <p>As you gaze upon the beautiful 4K vista from a AAA game in 2021, know this: it&rsquo;s all triangles!</p>
-<p>A triangle consists of three lines so that we could issue three draw_line commands, but it&rsquo;s so useful, it deserves its own module <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lib/graphics/draw_triangle.sv">draw_triangle.sv</a>]</strong>:</p>
+<p>A triangle consists of three lines so that we could issue three draw_line commands, but it&rsquo;s so valuable, it deserves its own module <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lib/graphics/draw_triangle.sv">draw_triangle.sv</a>]</strong>:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> draw_triangle #(<span style="color:#66d9ef">parameter</span> CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>) (  <span style="color:#75715e">// signed coordinate width
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,             <span style="color:#75715e">// clock
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst,             <span style="color:#75715e">// reset
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> start,           <span style="color:#75715e">// start triangle drawing
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> oe,              <span style="color:#75715e">// output enable
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x0,  <span style="color:#75715e">// vertex 0 - horizontal position
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] y0,  <span style="color:#75715e">// vertex 0 - vertical position
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x1,  <span style="color:#75715e">// vertex 1 - horizontal position
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] y1,  <span style="color:#75715e">// vertex 1 - vertical position
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x2,  <span style="color:#75715e">// vertex 2 - horizontal position
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] y2,  <span style="color:#75715e">// vertex 2 - vertical position
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x,   <span style="color:#75715e">// horizontal drawing position
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] y,   <span style="color:#75715e">// vertical drawing position
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x0, y0,  <span style="color:#75715e">// vertex 0
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x1, y1,  <span style="color:#75715e">// vertex 1
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x2, y2,  <span style="color:#75715e">// vertex 2
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x,  y,   <span style="color:#75715e">// drawing position
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> drawing,         <span style="color:#75715e">// triangle is drawing
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> complete,        <span style="color:#75715e">// triangle complete (remains high)
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> done             <span style="color:#75715e">// triangle complete (high for one tick)
 </span><span style="color:#75715e"></span>    );
 
@@ -774,7 +790,9 @@ On the Arty, we&rsquo;re drawing at 100 MHz with plenty of timing slack.</p>
     <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">case</span> (state)
             INIT: <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// register coordinates
-</span><span style="color:#75715e"></span>                <span style="color:#66d9ef">if</span> (line_id <span style="color:#f92672">==</span> <span style="color:#ae81ff">2</span><span style="color:#ae81ff">&#39;d0</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// (x0,y0) (x1,y1)
+</span><span style="color:#75715e"></span>                state <span style="color:#f92672">&lt;=</span> DRAW;
+                line_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                <span style="color:#66d9ef">if</span> (line_id <span style="color:#f92672">==</span> <span style="color:#ae81ff">2</span><span style="color:#ae81ff">&#39;d0</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// (x0,y0) (x1,y1)
 </span><span style="color:#75715e"></span>                    lx0 <span style="color:#f92672">&lt;=</span> x0; ly0 <span style="color:#f92672">&lt;=</span> y0;
                     lx1 <span style="color:#f92672">&lt;=</span> x1; ly1 <span style="color:#f92672">&lt;=</span> y1;
                 <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (line_id <span style="color:#f92672">==</span> <span style="color:#ae81ff">2</span><span style="color:#ae81ff">&#39;d1</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// (x1,y1) (x2,y2)
@@ -784,35 +802,36 @@ On the Arty, we&rsquo;re drawing at 100 MHz with plenty of timing slack.</p>
 </span><span style="color:#75715e"></span>                    lx0 <span style="color:#f92672">&lt;=</span> x2; ly0 <span style="color:#f92672">&lt;=</span> y2;
                     lx1 <span style="color:#f92672">&lt;=</span> x0; ly1 <span style="color:#f92672">&lt;=</span> y0;
                 <span style="color:#66d9ef">end</span>
-                state <span style="color:#f92672">&lt;=</span> DRAW;
-                line_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
             <span style="color:#66d9ef">end</span>
             DRAW: <span style="color:#66d9ef">begin</span>
                 line_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
                 <span style="color:#66d9ef">if</span> (line_done) <span style="color:#66d9ef">begin</span>
                     <span style="color:#66d9ef">if</span> (line_id <span style="color:#f92672">==</span> <span style="color:#ae81ff">2</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// final line
-</span><span style="color:#75715e"></span>                        done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-                        state <span style="color:#f92672">&lt;=</span> IDLE;
+</span><span style="color:#75715e"></span>                        state <span style="color:#f92672">&lt;=</span> IDLE;
+                        complete <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                        done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
                     <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
-                        line_id <span style="color:#f92672">&lt;=</span> line_id <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
                         state <span style="color:#f92672">&lt;=</span> INIT;
+                        line_id <span style="color:#f92672">&lt;=</span> line_id <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
                     <span style="color:#66d9ef">end</span>
                 <span style="color:#66d9ef">end</span>
             <span style="color:#66d9ef">end</span>
             <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// IDLE
 </span><span style="color:#75715e"></span>                done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
                 <span style="color:#66d9ef">if</span> (start) <span style="color:#66d9ef">begin</span>
-                    line_id <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
                     state <span style="color:#f92672">&lt;=</span> INIT;
+                    line_id <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                    complete <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
                 <span style="color:#66d9ef">end</span>
             <span style="color:#66d9ef">end</span>
         <span style="color:#66d9ef">endcase</span>
 
         <span style="color:#66d9ef">if</span> (rst) <span style="color:#66d9ef">begin</span>
+            state <span style="color:#f92672">&lt;=</span> IDLE;
             line_id <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
             line_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            complete <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
             done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-            state <span style="color:#f92672">&lt;=</span> IDLE;
         <span style="color:#66d9ef">end</span>
     <span style="color:#66d9ef">end</span>
 
@@ -828,10 +847,11 @@ On the Arty, we&rsquo;re drawing at 100 MHz with plenty of timing slack.</p>
         .x,
         .y,
         .drawing,
+        .complete(),
         .done(line_done)
     );
 <span style="color:#66d9ef">endmodule</span>
-</code></pre></div><p>There&rsquo;s a test bench you can use to exercise the module with Vivado: <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/lines-and-triangles/xc7/draw_triangle_tb.sv">xc7/draw_triangle_tb.sv</a>]</strong>.</p>
+</code></pre></div><p>There&rsquo;s a test bench you can use to exercise the module with Vivado: <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lib/graphics/xc7/draw_triangle_tb.sv">xc7/draw_triangle_tb.sv</a>]</strong>.</p>
 <p>We can tweak our existing top module to draw a few triangles:</p>
 <ul>
 <li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/lines-and-triangles/xc7/top_triangles.sv">xc7/top_triangles.sv</a></strong></li>
@@ -840,8 +860,8 @@ On the Arty, we&rsquo;re drawing at 100 MHz with plenty of timing slack.</p>
 <p>Arty triangles look like this:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// draw triangles in framebuffer
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> SHAPE_CNT<span style="color:#f92672">=</span><span style="color:#ae81ff">3</span>;  <span style="color:#75715e">// number of shapes to draw
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] shape_id;  <span style="color:#75715e">// shape identifier
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] tx0, ty0, tx1, ty1, tx2, ty2;  <span style="color:#75715e">// shape coords
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] shape_id;    <span style="color:#75715e">// shape identifier
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vx0, vy0, vx1, vy1, vx2, vy2;  <span style="color:#75715e">// shape coords
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> draw_start, drawing, draw_done;  <span style="color:#75715e">// drawing signals
 </span><span style="color:#75715e"></span>
     <span style="color:#75715e">// draw state machine
@@ -853,27 +873,27 @@ On the Arty, we&rsquo;re drawing at 100 MHz with plenty of timing slack.</p>
                 state <span style="color:#f92672">&lt;=</span> DRAW;
                 <span style="color:#66d9ef">case</span> (shape_id)
                     <span style="color:#ae81ff">2</span><span style="color:#ae81ff">&#39;d0</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>
-                        tx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">20</span>; ty0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">60</span>;
-                        tx1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">60</span>; ty1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">180</span>;
-                        tx2 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">110</span>; ty2 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">90</span>;
-                        fb_cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">4&#39;h2</span>;  <span style="color:#75715e">// dark purple
+                        vx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">60</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">20</span>;
+                        vx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">280</span>; vy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">80</span>;
+                        vx2 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">160</span>; vy2 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">164</span>;
+                        fb_cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">4&#39;h9</span>;  <span style="color:#75715e">// orange
 </span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
                     <span style="color:#ae81ff">2</span><span style="color:#ae81ff">&#39;d1</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>
-                        tx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">70</span>; ty0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">200</span>;
-                        tx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">240</span>; ty1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">100</span>;
-                        tx2 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">170</span>; ty2 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">10</span>;
+                        vx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">70</span>; vy0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">160</span>;
+                        vx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">220</span>; vy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">90</span>;
+                        vx2 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">170</span>; vy2 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">10</span>;
                         fb_cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">4&#39;hC</span>;  <span style="color:#75715e">// blue
 </span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
                     <span style="color:#ae81ff">2</span><span style="color:#ae81ff">&#39;d2</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>
-                        tx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">60</span>; ty0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">30</span>;
-                        tx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">300</span>; ty1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">80</span>;
-                        tx2 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">160</span>; ty2 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">220</span>;
-                        fb_cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">4&#39;h9</span>;  <span style="color:#75715e">// orange
+                        vx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">22</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">35</span>;
+                        vx1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">62</span>; vy1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">150</span>;
+                        vx2 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">98</span>; vy2 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">96</span>;
+                        fb_cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">4&#39;h2</span>;  <span style="color:#75715e">// dark purple
 </span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
                     <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// should never occur
-</span><span style="color:#75715e"></span>                        tx0 <span style="color:#f92672">&lt;=</span>   <span style="color:#ae81ff">10</span>; ty0 <span style="color:#f92672">&lt;=</span>   <span style="color:#ae81ff">10</span>;
-                        tx1 <span style="color:#f92672">&lt;=</span>   <span style="color:#ae81ff">10</span>; ty1 <span style="color:#f92672">&lt;=</span>   <span style="color:#ae81ff">30</span>;
-                        tx2 <span style="color:#f92672">&lt;=</span>   <span style="color:#ae81ff">20</span>; ty2 <span style="color:#f92672">&lt;=</span>   <span style="color:#ae81ff">20</span>;
+</span><span style="color:#75715e"></span>                        vx0 <span style="color:#f92672">&lt;=</span>   <span style="color:#ae81ff">10</span>; vy0 <span style="color:#f92672">&lt;=</span>   <span style="color:#ae81ff">10</span>;
+                        vx1 <span style="color:#f92672">&lt;=</span>   <span style="color:#ae81ff">10</span>; vy1 <span style="color:#f92672">&lt;=</span>   <span style="color:#ae81ff">30</span>;
+                        vx2 <span style="color:#f92672">&lt;=</span>   <span style="color:#ae81ff">20</span>; vy2 <span style="color:#f92672">&lt;=</span>   <span style="color:#ae81ff">20</span>;
                         fb_cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">4&#39;h7</span>;  <span style="color:#75715e">// white
 </span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
                 <span style="color:#66d9ef">endcase</span>
@@ -912,15 +932,16 @@ On the Arty, we&rsquo;re drawing at 100 MHz with plenty of timing slack.</p>
         .rst(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),
         .start(draw_start),
         .oe(draw_oe),
-        .x0(tx0),
-        .y0(ty0),
-        .x1(tx1),
-        .y1(ty1),
-        .x2(tx2),
-        .y2(ty2),
+        .x0(vx0),
+        .y0(vy0),
+        .x1(vx1),
+        .y1(vy1),
+        .x2(vx2),
+        .y2(vy2),
         .x(fbx),
         .y(fby),
         .drawing,
+        .complete(),
         .done(draw_done)
     );
 </code></pre></div><p>We can draw millions of pixels per second, but drawing 60 per second (one per frame) is fun to watch:</p>
@@ -934,7 +955,7 @@ On the Arty, we&rsquo;re drawing at 100 MHz with plenty of timing slack.</p>
 <li>Draw a landscape with <a href="https://www.youtube.com/watch?v=bjhkxFDvD78">one-point perspective</a> (YouTube example)</li>
 </ul>
 <h2 id="next-time">Next Time</h2>
-<p>Next time, we&rsquo;ll be filling shapes and animating them in <a href="/posts/fpga-shapes/">2D Shapes</a>.</p>
+<p>Next time, we&rsquo;ll be covering filled shapes in <a href="/posts/fpga-shapes/">2D Shapes</a>.</p>
 <p><em>Constructive feedback is always welcome. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 
       
