@@ -121,7 +121,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
       <p>Welcome back to <em>Exploring FPGA Graphics</em>. It&rsquo;s time to turn our attention to drawing. Most modern computer graphics come down to drawing triangles and colouring them in. So, it seems fitting to begin our tour of drawing with triangles and the straight lines that form them. This post will implement Bresenham&rsquo;s line algorithm in Verilog, creating lines, triangles, and even a cube (our first sort-of-3D graphic).</p>
 <p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how displays work, race the beam with Pong, animate starfields and sprites, paint Michelangelo&rsquo;s David, simulate life with bitmaps, draw lines and shapes, and finally render simple 3D models. New to the series? Start with <a href="/posts/fpga-graphics/">FPGA Graphics</a>.</p>
 <p><strong>You can watch an <a href="https://www.youtube.com/watch?v=ezJv7pB-UmA" target="_blank">FPGA Graphics demo reel</a> with designs from across this series.</strong></p>
-<p><em>Updated 2021-07-22. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><em>Updated 2021-07-23. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <h3 id="series-outline">Series Outline</h3>
 <ul>
 <li><a href="/posts/fpga-graphics/">FPGA Graphics</a> - learn how displays work and animate simple shapes</li>
@@ -152,8 +152,9 @@ In this series, we explore graphics at the hardware level and get a feel for the
 </ul>
 <p>Our framebuffer module takes care of turning coordinates into memory addresses for us. We supply the colour and the (x,y) position of the pixel, and the framebuffer module does the rest. Take a look at the post on <a href="/posts/framebuffers/">Framebuffers</a> if you need a reminder on how this works.</p>
 <blockquote>
-<p><strong>iCEBreaker Framebuffer &amp; SPRAM</strong><br>
-I am working on supporting iCE40 SPRAM. With SPRAM, we&rsquo;ll have enough capacity for a 320x180 framebuffer in 16 colours. Stay tuned.</p>
+<p><strong>Screen Coordinates</strong><br>
+Our coordinate system has the origin <code>(0,0)</code> at the top-left of the screen, and the Y-coordinate increases <em>down</em> the screen.
+Many 3D systems, such as OpenGL, have the origin at the bottom-left, and the Y-coordinate increases <em>up</em> the screen.</p>
 </blockquote>
 <h2 id="many-colours">Many Colours?</h2>
 <p>In our previous posts, we loaded an image and picked a palette to match. Now we&rsquo;re drawing; we want the freedom to choose from a wide range of colours. However, we also want to leave enough BRAM for double-buffering when we start animating, so we&rsquo;ll settle for four colours (2 bit) on iCEBreaker and 16 colours (4 bit) on Arty.</p>
@@ -162,6 +163,10 @@ I am working on supporting iCE40 SPRAM. With SPRAM, we&rsquo;ll have enough capa
 <li><code>4 * 320 * 180 = 230,400 bits</code> (8 of 50 BRAMs on Arty)</li>
 <li><code>2 * 160 *  90 =  28,800 bits</code> (8 of 30 BRAMs on iCEBreaker)</li>
 </ul>
+<blockquote>
+<p><strong>iCEBreaker Framebuffer &amp; SPRAM</strong><br>
+I am working on supporting iCE40 SPRAM. With SPRAM, we&rsquo;ll have enough capacity for a 320x180 framebuffer in 16 colours. Stay tuned.</p>
+</blockquote>
 <p>I have selected these two palettes to get you started, but use anything you like.</p>
 <h3 id="16-colour-palette">16 Colour Palette</h3>
 <p>For the 16 colour palette, I&rsquo;ve chosen the <a href="https://lospec.com/palette-list/pico-8">PICO-8 palette</a> (adjusted for 12-bit output):</p>
@@ -332,7 +337,7 @@ FA0  // 1 - orange
 <span style="color:#66d9ef">endmodule</span>
 </code></pre></div><p>We&rsquo;ve got a good start here, but our module has a couple of significant problems we should tackle.</p>
 <h3 id="oh-dear-i-shall-be-too-late">Oh dear! I shall be too late!</h3>
-<p>Line drawing crops up all over the place; if it&rsquo;s slow, it&rsquo;ll be a significant break on graphics performance.</p>
+<p>Line drawing crops up all over the place; if it&rsquo;s slow, it&rsquo;ll be a significant performance bottleneck.</p>
 <p>Our current line drawing module makes direct use of relatively complex combinational logic. For example, we use <code>movy</code> to control whether to move our drawing position vertically. <code>movy</code> depends on <code>dx</code>, which depends on <code>right</code>. All these signals are purely combinational, with nothing stored in registers (flip-flops). Unsurprisingly, my tests showed this path was the limiting factor for line drawing speed.</p>
 <p>Our first improvement is straightforward: we register <code>dx</code> and <code>dy</code> in an <code>always_ff</code> block. Even better, because <code>dx</code> and <code>dy</code> don&rsquo;t change for a given line, we only have to do this once and don&rsquo;t suffer a latency penalty:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
@@ -661,7 +666,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/line
 </code></pre></div><p>Notice how simple drawing is with a decent framebuffer design.
 On the Arty, we&rsquo;re drawing at 100 MHz with plenty of timing slack.</p>
 <h3 id="that-aint-no-cube">That Ain&rsquo;t No Cube</h3>
-<p>If we can draw one line, we can draw many! Let&rsquo;s draw a cube as you&rsquo;ve probably doodled on paper; this requires nine lines. To see how the drawing works, we&rsquo;ve wired the drawing <em>output enable</em> to the <code>animate</code> signal. We draw one pixel each frame, with a delay of 300 frames, to give the monitor time to show the image.</p>
+<p>If we can draw one line, we can draw many! Let&rsquo;s draw a cube as you&rsquo;ve probably doodled on paper; this requires nine lines. To see how the drawing works, we&rsquo;ve linked drawing <em>output enable</em> to the <code>frame_sys</code> signal, which occurs once per frame. We draw one pixel each frame, with a delay of 300 frames, to give the monitor time to show the image.</p>
 <ul>
 <li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/lines-and-triangles/xc7/top_cube.sv">xc7/top_cube.sv</a></strong></li>
 <li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/lines-and-triangles/ice40/top_cube.sv">ice40/top_cube.sv</a></strong></li>
