@@ -616,7 +616,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/line
 </span><span style="color:#75715e"></span>                        <span style="color:#66d9ef">if</span> (clearing <span style="color:#f92672">==</span> <span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
                             <span style="color:#66d9ef">if</span> (fbx_clear <span style="color:#f92672">==</span> FB_WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
                                 fbx_clear <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-                                fby_clear <span style="color:#f92672">&lt;=</span> (fby_clear <span style="color:#f92672">==</span> FB_HEIGHT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#f92672">?</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">:</span> fby_clear <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+                                fby_clear <span style="color:#f92672">&lt;=</span> fby_clear <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
                             <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
                                 fbx_clear <span style="color:#f92672">&lt;=</span> fbx_clear <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
                             <span style="color:#66d9ef">end</span>
@@ -659,10 +659,10 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/line
     );
 
     <span style="color:#75715e">// write to framebuffer when drawing or clearing
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        fb_we <span style="color:#f92672">=</span> drawing <span style="color:#f92672">||</span> clearing;
-        fbx <span style="color:#f92672">=</span> clearing <span style="color:#f92672">?</span> fbx_clear <span style="color:#f92672">:</span> fbx_draw;
-        fby <span style="color:#f92672">=</span> clearing <span style="color:#f92672">?</span> fby_clear <span style="color:#f92672">:</span> fby_draw;
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        fb_we <span style="color:#f92672">&lt;=</span> drawing <span style="color:#f92672">||</span> clearing;
+        fbx <span style="color:#f92672">&lt;=</span> clearing <span style="color:#f92672">?</span> fbx_clear <span style="color:#f92672">:</span> fbx_draw;
+        fby <span style="color:#f92672">&lt;=</span> clearing <span style="color:#f92672">?</span> fby_clear <span style="color:#f92672">:</span> fby_draw;
     <span style="color:#66d9ef">end</span>
 
     <span style="color:#75715e">// reading from FB takes one cycle: delay display signals to match
@@ -701,7 +701,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/line
 <li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/lines-and-triangles/xc7/top_cube.sv">xc7/top_cube.sv</a></strong></li>
 <li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/lines-and-triangles/ice40/top_cube.sv">ice40/top_cube.sv</a></strong></li>
 </ul>
-<p>Arty cube drawing looks like this (the iCEBreaker version is very similar):</p>
+<p>Arty cube drawing looks like this:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// draw cube in framebuffer
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LINE_CNT<span style="color:#f92672">=</span><span style="color:#ae81ff">9</span>;  <span style="color:#75715e">// number of lines to draw
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] line_id;    <span style="color:#75715e">// line identifier
@@ -891,39 +891,17 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/line
 <li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/lines-and-triangles/xc7/top_triangles.sv">xc7/top_triangles.sv</a></strong></li>
 <li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/lines-and-triangles/ice40/top_triangles.sv">ice40/top_triangles.sv</a></strong></li>
 </ul>
-<p>iCEBreaker triangles look like this (the Arty version is very similar):</p>
+<p>Arty triangles look like this:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// draw triangles in framebuffer
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> SHAPE_CNT<span style="color:#f92672">=</span><span style="color:#ae81ff">3</span>;  <span style="color:#75715e">// number of shapes to draw
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] shape_id;    <span style="color:#75715e">// shape identifier
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vx0, vy0, vx1, vy1, vx2, vy2;  <span style="color:#75715e">// shape coords
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> draw_start, drawing, draw_done;  <span style="color:#75715e">// drawing signals
 </span><span style="color:#75715e"></span>
-    <span style="color:#75715e">// clear FB before use (contents are not initialized)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fbx_clear, fby_clear;  <span style="color:#75715e">// framebuffer clearing coordinates
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> clearing;  <span style="color:#75715e">// high when we&#39;re clearing
-</span><span style="color:#75715e"></span>
     <span style="color:#75715e">// draw state machine
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">enum</span> {IDLE, CLEAR, INIT, DRAW, DONE} state;
-    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">enum</span> {IDLE, INIT, DRAW, DONE} state;
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_100m) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">case</span> (state)
-            CLEAR: <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// we need to initialize SPRAM values to zero
-</span><span style="color:#75715e"></span>                fb_cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">4&#39;h0</span>;  <span style="color:#75715e">// black
-</span><span style="color:#75715e"></span>                <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>fb_busy) <span style="color:#66d9ef">begin</span>
-                    <span style="color:#66d9ef">if</span> (fby_clear <span style="color:#f92672">==</span> FB_HEIGHT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span> <span style="color:#f92672">&amp;&amp;</span> fbx_clear <span style="color:#f92672">==</span> FB_WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
-                        clearing <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-                        state <span style="color:#f92672">&lt;=</span> INIT;
-                    <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// iterate over all pixels
-</span><span style="color:#75715e"></span>                        <span style="color:#66d9ef">if</span> (clearing <span style="color:#f92672">==</span> <span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
-                            <span style="color:#66d9ef">if</span> (fbx_clear <span style="color:#f92672">==</span> FB_WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
-                                fbx_clear <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-                                fby_clear <span style="color:#f92672">&lt;=</span> (fby_clear <span style="color:#f92672">==</span> FB_HEIGHT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#f92672">?</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">:</span> fby_clear <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-                            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
-                                fbx_clear <span style="color:#f92672">&lt;=</span> fbx_clear <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-                            <span style="color:#66d9ef">end</span>
-                        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> clearing <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-                    <span style="color:#66d9ef">end</span>
-                <span style="color:#66d9ef">end</span>
-            <span style="color:#66d9ef">end</span>
             INIT: <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// register coordinates and colour
 </span><span style="color:#75715e"></span>                draw_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
                 state <span style="color:#f92672">&lt;=</span> DRAW;
@@ -966,29 +944,27 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/line
                 <span style="color:#66d9ef">end</span>
             <span style="color:#66d9ef">end</span>
             DONE: state <span style="color:#f92672">&lt;=</span> DONE;
-            <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">if</span> (frame) state <span style="color:#f92672">&lt;=</span> CLEAR;  <span style="color:#75715e">// IDLE
+            <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">if</span> (frame_sys) state <span style="color:#f92672">&lt;=</span> INIT;  <span style="color:#75715e">// IDLE
 </span><span style="color:#75715e"></span>        <span style="color:#66d9ef">endcase</span>
-        <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>clk_locked) state <span style="color:#f92672">&lt;=</span> IDLE;
     <span style="color:#66d9ef">end</span>
 
     <span style="color:#75715e">// control drawing speed with output enable
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> FRAME_WAIT <span style="color:#f92672">=</span> <span style="color:#ae81ff">300</span>;  <span style="color:#75715e">// wait this many frames to start drawing
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(FRAME_WAIT)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_frame_wait;
     <span style="color:#66d9ef">logic</span> draw_req;  <span style="color:#75715e">// draw requested
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_100m) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>fb_busy) draw_req <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// disable after FB available, so 1 pix per frame
-</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (frame) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// once per frame
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (frame_sys) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// once per frame
 </span><span style="color:#75715e"></span>            <span style="color:#66d9ef">if</span> (cnt_frame_wait <span style="color:#f92672">!=</span> FRAME_WAIT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
                 cnt_frame_wait <span style="color:#f92672">&lt;=</span> cnt_frame_wait <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
             <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> draw_req <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// request drawing
 </span><span style="color:#75715e"></span>        <span style="color:#66d9ef">end</span>
     <span style="color:#66d9ef">end</span>
 
-    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fbx_draw, fby_draw;  <span style="color:#75715e">// framebuffer drawing coordinates
-</span><span style="color:#75715e"></span>    draw_triangle #(.CORDW(CORDW)) draw_triangle_inst (
-        .clk(clk_pix),
-        .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// must be reset for draw with Yosys
-</span><span style="color:#75715e"></span>        .start(draw_start),
+    draw_triangle #(.CORDW(CORDW)) draw_triangle_inst (
+        .clk(clk_100m),
+        .rst(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),
+        .start(draw_start),
         .oe(draw_req <span style="color:#f92672">&amp;&amp;</span> <span style="color:#f92672">!</span>fb_busy),  <span style="color:#75715e">// draw if requested when framebuffer is available
 </span><span style="color:#75715e"></span>        .x0(vx0),
         .y0(vy0),
@@ -996,8 +972,8 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/line
         .y1(vy1),
         .x2(vx2),
         .y2(vy2),
-        .x(fbx_draw),
-        .y(fby_draw),
+        .x(fbx),
+        .y(fby),
         .drawing,
         .complete(),
         .done(draw_done)

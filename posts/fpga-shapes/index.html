@@ -121,8 +121,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
       <p>Welcome back to <em>Exploring FPGA Graphics</em>. This time we&rsquo;re going to build on our work in <a href="/posts/lines-and-triangles/">lines and triangles</a> with rectangles, circles, and filled shapes. We&rsquo;ll finish off this part by drawing a castle using our shapes.</p>
 <p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how displays work, race the beam with Pong, animate starfields and sprites, paint Michelangelo&rsquo;s David, simulate life with bitmaps, draw lines and shapes, and finally render simple 3D models. New to the series? Start with <a href="/posts/fpga-graphics/">FPGA Graphics</a>.</p>
 <p><strong>You can watch an <a href="https://www.youtube.com/watch?v=ezJv7pB-UmA" target="_blank">FPGA Graphics demo reel</a> with designs from across this series.</strong></p>
-<p><strong>More shapes content will be added during August 2021.</strong></p>
-<p><em>Updated 2021-07-24. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><em>Updated 2021-08-02. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <h3 id="series-outline">Series Outline</h3>
 <ul>
 <li><a href="/posts/fpga-graphics/">FPGA Graphics</a> - learn how displays work and draw your first graphics</li>
@@ -139,13 +138,9 @@ In this series, we explore graphics at the hardware level and get a feel for the
 <p>For this series, you need an FPGA board with video output. We&rsquo;ll be working at 640x480, so pretty much any video output will do. It helps to be comfortable with programming your FPGA board and reasonably familiar with Verilog.</p>
 <p>We&rsquo;ll be demoing with these boards:</p>
 <ul>
-<li><strong><a href="https://docs.icebreaker-fpga.org/hardware/icebreaker/">iCEBreaker</a></strong> (Lattice iCE40) with <strong><a href="https://docs.icebreaker-fpga.org/hardware/pmod/dvi/">12-Bit DVI Pmod</a></strong> - being worked on (see below)</li>
+<li><strong><a href="https://docs.icebreaker-fpga.org/hardware/icebreaker/">iCEBreaker</a></strong> (Lattice iCE40) with <strong><a href="https://docs.icebreaker-fpga.org/hardware/pmod/dvi/">12-Bit DVI Pmod</a></strong></li>
 <li><strong><a href="https://reference.digilentinc.com/reference/programmable-logic/arty-a7/reference-manual">Digilent Arty A7-35T</a></strong> (Xilinx Artix-7) with <strong><a href="https://reference.digilentinc.com/reference/pmod/pmodvga/reference-manual">Pmod VGA</a></strong></li>
 </ul>
-<blockquote>
-<p><strong>iCEBreaker Support</strong><br>
-I am working on iCEBreaker framebuffer support using iCE40 SPRAM. With SPRAM, we&rsquo;ll have enough capacity for a 320x180 framebuffer in 16 colours. Stay tuned.</p>
-</blockquote>
 <h3 id="source">Source</h3>
 <p>The SystemVerilog designs featured in this series are available from the <a href="https://github.com/projf/projf-explore/">projf-explore</a> git repo under the open-source MIT licence: build on them to your heart&rsquo;s content. The rest of the blog content is subject to standard copyright restrictions: don&rsquo;t republish it without permission.</p>
 <h2 id="the-rectangle">The Rectangle</h2>
@@ -244,7 +239,7 @@ I am working on iCEBreaker framebuffer support using iCE40 SPRAM. With SPRAM, we
 <p>To demo our rectangle drawing, we will draw a series of rectangles inside each other using each colour in the 16-colour palette.</p>
 <ul>
 <li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/2d-shapes/xc7/top_rectangles.sv">xc7/top_rectangles.sv</a></strong></li>
-<li>iCEBreaker (iCE40): <em>not yet available</em></li>
+<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/2d-shapes/ice40/top_rectangles.sv">ice40/top_rectangles.sv</a></strong></li>
 </ul>
 <blockquote>
 <p><strong>Building the Designs</strong><br>
@@ -301,12 +296,13 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
     <span style="color:#66d9ef">localparam</span> FB_IMAGE   <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;&#34;</span>;
     <span style="color:#66d9ef">localparam</span> FB_PALETTE <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;16_colr_4bit_palette.mem&#34;</span>;
 
-    <span style="color:#66d9ef">logic</span> fb_we;
-    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fbx, fby;  <span style="color:#75715e">// framebuffer coordinates
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [FB_CIDXW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_cidx;
-    <span style="color:#66d9ef">logic</span> [FB_CHANW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_red, fb_green, fb_blue;  <span style="color:#75715e">// colours for display
+    <span style="color:#66d9ef">logic</span> fb_we;  <span style="color:#75715e">// write enable
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fbx, fby;  <span style="color:#75715e">// draw coordinates
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [FB_CIDXW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_cidx;  <span style="color:#75715e">// draw colour index
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> fb_busy;  <span style="color:#75715e">// when framebuffer is busy it cannot accept writes
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [FB_CHANW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_red, fb_green, fb_blue;  <span style="color:#75715e">// colours for display output
 </span><span style="color:#75715e"></span>
-    framebuffer #(
+    framebuffer_bram #(
         .WIDTH(FB_WIDTH),
         .HEIGHT(FB_HEIGHT),
         .CIDXW(FB_CIDXW),
@@ -327,14 +323,15 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
         .y(fby),
         .cidx(fb_cidx),
         .clip(),
+        .busy(fb_busy),
         .red(fb_red),
         .green(fb_green),
         .blue(fb_blue)
     );
 
     <span style="color:#75715e">// draw rectangles in framebuffer
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> SHAPE_CNT<span style="color:#f92672">=</span><span style="color:#ae81ff">63</span>;  <span style="color:#75715e">// number of shapes to draw
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">5</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] shape_id;     <span style="color:#75715e">// shape identifier
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> SHAPE_CNT<span style="color:#f92672">=</span><span style="color:#ae81ff">64</span>;  <span style="color:#75715e">// number of shapes to draw
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(SHAPE_CNT<span style="color:#f92672">+</span><span style="color:#ae81ff">1</span>)<span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] shape_id;  <span style="color:#75715e">// shape identifier
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vx0, vy0, vx1, vy1;  <span style="color:#75715e">// shape coords
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> draw_start, drawing, draw_done;  <span style="color:#75715e">// drawing signals
 </span><span style="color:#75715e"></span>
@@ -372,24 +369,27 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> PIX_FRAME  <span style="color:#f92672">=</span> <span style="color:#ae81ff">200</span>;  <span style="color:#75715e">// draw this many pixels per frame
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(FRAME_WAIT)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_frame_wait;
     <span style="color:#66d9ef">logic</span> [$clog2(PIX_FRAME)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_pix_frame;
-    <span style="color:#66d9ef">logic</span> draw_oe;
+    <span style="color:#66d9ef">logic</span> draw_req;
     <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_100m) <span style="color:#66d9ef">begin</span>
+        draw_req <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
         <span style="color:#66d9ef">if</span> (frame_sys) <span style="color:#66d9ef">begin</span>
             <span style="color:#66d9ef">if</span> (cnt_frame_wait <span style="color:#f92672">!=</span> FRAME_WAIT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) cnt_frame_wait <span style="color:#f92672">&lt;=</span> cnt_frame_wait <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
             cnt_pix_frame <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// reset pixel counter every frame
 </span><span style="color:#75715e"></span>        <span style="color:#66d9ef">end</span>
-        <span style="color:#66d9ef">if</span> (cnt_pix_frame <span style="color:#f92672">!=</span> PIX_FRAME<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
-            draw_oe <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-            cnt_pix_frame <span style="color:#f92672">&lt;=</span> cnt_pix_frame <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> draw_oe <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+        <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>fb_busy) <span style="color:#66d9ef">begin</span>
+            <span style="color:#66d9ef">if</span> (cnt_frame_wait <span style="color:#f92672">==</span> FRAME_WAIT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span> <span style="color:#f92672">&amp;&amp;</span> cnt_pix_frame <span style="color:#f92672">!=</span> PIX_FRAME<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
+                draw_req <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                cnt_pix_frame <span style="color:#f92672">&lt;=</span> cnt_pix_frame <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+            <span style="color:#66d9ef">end</span>
+        <span style="color:#66d9ef">end</span>
     <span style="color:#66d9ef">end</span>
 
     draw_rectangle #(.CORDW(CORDW)) draw_rectangle_inst (
         .clk(clk_100m),
         .rst(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),
         .start(draw_start),
-        .oe(draw_oe),
-        .x0(vx0),
+        .oe(draw_req <span style="color:#f92672">&amp;&amp;</span> <span style="color:#f92672">!</span>fb_busy),  <span style="color:#75715e">// draw if requested when framebuffer is available
+</span><span style="color:#75715e"></span>        .x0(vx0),
         .y0(vy0),
         .x1(vx1),
         .y1(vy1),
@@ -564,26 +564,50 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
 </code></pre></div><p>For a simple demo of overlapping squares using the filled rectangle module, create a new top module:</p>
 <ul>
 <li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/2d-shapes/xc7/top_rectangles_fill.sv">xc7/top_rectangles_fill.sv</a></strong></li>
-<li>iCEBreaker (iCE40): <em>not yet available</em></li>
+<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/2d-shapes/ice40/top_rectangles_fill.sv">ice40/top_rectangles_fill.sv</a></strong></li>
 </ul>
-<p>The drawing state machine for filled rectangles looks like this in the Arty version:</p>
+<p>The drawing state machine for filled rectangles looks like this in the iCE40 version:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// draw filled rectangles in framebuffer
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> SHAPE_CNT<span style="color:#f92672">=</span><span style="color:#ae81ff">15</span>;  <span style="color:#75715e">// number of shapes to draw
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] shape_id;     <span style="color:#75715e">// shape identifier
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(SHAPE_CNT<span style="color:#f92672">+</span><span style="color:#ae81ff">1</span>)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] shape_id;  <span style="color:#75715e">// shape identifier
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vx0, vy0, vx1, vy1;  <span style="color:#75715e">// shape coords
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> draw_start, drawing, draw_done;  <span style="color:#75715e">// drawing signals
 </span><span style="color:#75715e"></span>
+    <span style="color:#75715e">// clear FB before use (contents are not initialized)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fbx_clear, fby_clear;  <span style="color:#75715e">// framebuffer clearing coordinates
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> clearing;  <span style="color:#75715e">// high when we&#39;re clearing
+</span><span style="color:#75715e"></span>
     <span style="color:#75715e">// draw state machine
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">enum</span> {IDLE, INIT, DRAW, DONE} state;
-    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_100m) <span style="color:#66d9ef">begin</span>
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">enum</span> {IDLE, CLEAR, INIT, DRAW, DONE} state;
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">case</span> (state)
+            CLEAR: <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// we need to initialize SPRAM values to zero
+</span><span style="color:#75715e"></span>                fb_cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">4&#39;h0</span>;  <span style="color:#75715e">// black
+</span><span style="color:#75715e"></span>                <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>fb_busy) <span style="color:#66d9ef">begin</span>
+                    <span style="color:#66d9ef">if</span> (fby_clear <span style="color:#f92672">==</span> FB_HEIGHT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span> <span style="color:#f92672">&amp;&amp;</span> fbx_clear <span style="color:#f92672">==</span> FB_WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
+                        clearing <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                        state <span style="color:#f92672">&lt;=</span> INIT;
+                    <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// iterate over all pixels
+</span><span style="color:#75715e"></span>                        <span style="color:#66d9ef">if</span> (clearing <span style="color:#f92672">==</span> <span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
+                            <span style="color:#66d9ef">if</span> (fbx_clear <span style="color:#f92672">==</span> FB_WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
+                                fbx_clear <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                                fby_clear <span style="color:#f92672">&lt;=</span> fby_clear <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+                            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
+                                fbx_clear <span style="color:#f92672">&lt;=</span> fbx_clear <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+                            <span style="color:#66d9ef">end</span>
+                        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> clearing <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                    <span style="color:#66d9ef">end</span>
+                <span style="color:#66d9ef">end</span>
+            <span style="color:#66d9ef">end</span>
             INIT: <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// register coordinates and colour
 </span><span style="color:#75715e"></span>                draw_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
                 state <span style="color:#f92672">&lt;=</span> DRAW;
+                <span style="color:#75715e">/* verilator lint_off WIDTH */</span>
                 vx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">80</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">4</span> <span style="color:#f92672">*</span> shape_id;
                 vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">20</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">4</span> <span style="color:#f92672">*</span> shape_id;
                 vx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">160</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">4</span> <span style="color:#f92672">*</span> shape_id;
                 vy1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">100</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">4</span> <span style="color:#f92672">*</span> shape_id;
+                <span style="color:#75715e">/* verilator lint_on WIDTH */</span>
                 fb_cidx <span style="color:#f92672">&lt;=</span> shape_id <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// skip 1st colour (black)
 </span><span style="color:#75715e"></span>            <span style="color:#66d9ef">end</span>
             DRAW: <span style="color:#66d9ef">begin</span>
@@ -598,8 +622,9 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
                 <span style="color:#66d9ef">end</span>
             <span style="color:#66d9ef">end</span>
             DONE: state <span style="color:#f92672">&lt;=</span> DONE;
-            <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">if</span> (frame_sys) state <span style="color:#f92672">&lt;=</span> INIT;  <span style="color:#75715e">// IDLE
+            <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">if</span> (frame) state <span style="color:#f92672">&lt;=</span> CLEAR;  <span style="color:#75715e">// IDLE
 </span><span style="color:#75715e"></span>        <span style="color:#66d9ef">endcase</span>
+        <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>clk_locked) state <span style="color:#f92672">&lt;=</span> IDLE;
     <span style="color:#66d9ef">end</span>
 </code></pre></div><h2 id="filled-triangle">Filled Triangle</h2>
 <p>A filled triangle requires more thought than a rectangle. There are several quite different approaches, for example barycentric coordinates can be used to render many pixels in parallel. We&rsquo;re going to stick with Bresenham&rsquo;s algorithm, as it&rsquo;s light on FPGA resources and can still draw over a million small triangles per second (based on 100 MHz Arty drawing clock and a 36-pixel triangle taking 97 clock cycles).</p>
@@ -817,7 +842,8 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
 <ul>
 <li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/2d-shapes/xc7/top_triangles_fill.sv">xc7/top_triangles_fill.sv</a></strong></li>
 <li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/2d-shapes/xc7/top_cube_fill.sv">xc7/top_cube_fill.sv</a></strong></li>
-<li>iCEBreaker (iCE40): <em>not yet available</em></li>
+<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/2d-shapes/ice40/top_triangles_fill.sv">ice40/top_triangles_fill.sv</a></strong></li>
+<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/2d-shapes/ice40/top_cube_fill.sv">ice40/top_cube_fill.sv</a></strong></li>
 </ul>
 <p>For <code>top_triangles_fill</code>, we draw 50 pixels per frame so you can clearly see the algorithm working. For <code>top_cube_fill</code> we draw at full speed.</p>
 <p><img src="/img/posts/fpga-shapes/filled-cube.png" alt="Filled Cube" title="A cube from six triangles captured from my FPGA board."></p>
@@ -832,9 +858,9 @@ The standard approach is for top and left edges to be drawn. We won&rsquo;t be h
 <p>We can combine different shapes to draw simple scenes. I knocked up this castle on graph paper.</p>
 <ul>
 <li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/2d-shapes/xc7/top_castle.sv">xc7/top_castle.sv</a></strong></li>
-<li>iCEBreaker (iCE40): <em>not yet available</em></li>
+<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/2d-shapes/ice40/top_castle.sv">ice40/top_castle.sv</a></strong></li>
 </ul>
-<p>Arty version:</p>
+<p>Arty version of castle drawing:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_castle (
     <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_100m,     <span style="color:#75715e">// 100 MHz clock
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_rst,      <span style="color:#75715e">// reset button (active low)
@@ -885,12 +911,13 @@ The standard approach is for top and left edges to be drawn. We won&rsquo;t be h
     <span style="color:#66d9ef">localparam</span> FB_IMAGE   <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;&#34;</span>;
     <span style="color:#66d9ef">localparam</span> FB_PALETTE <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;16_colr_4bit_palette.mem&#34;</span>;
 
-    <span style="color:#66d9ef">logic</span> fb_we;
-    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fbx, fby;  <span style="color:#75715e">// framebuffer coordinates
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [FB_CIDXW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_cidx;
-    <span style="color:#66d9ef">logic</span> [FB_CHANW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_red, fb_green, fb_blue;  <span style="color:#75715e">// colours for display
+    <span style="color:#66d9ef">logic</span> fb_we;  <span style="color:#75715e">// write enable
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fbx, fby;  <span style="color:#75715e">// draw coordinates
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [FB_CIDXW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_cidx;  <span style="color:#75715e">// draw colour index
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> fb_busy;  <span style="color:#75715e">// when framebuffer is busy it cannot accept writes
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [FB_CHANW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_red, fb_green, fb_blue;  <span style="color:#75715e">// colours for display output
 </span><span style="color:#75715e"></span>
-    framebuffer #(
+    framebuffer_bram #(
         .WIDTH(FB_WIDTH),
         .HEIGHT(FB_HEIGHT),
         .CIDXW(FB_CIDXW),
@@ -911,6 +938,7 @@ The standard approach is for top and left edges to be drawn. We won&rsquo;t be h
         .y(fby),
         .cidx(fb_cidx),
         .clip(),
+        .busy(fb_busy),
         .red(fb_red),
         .green(fb_green),
         .blue(fb_blue)
@@ -918,7 +946,7 @@ The standard approach is for top and left edges to be drawn. We won&rsquo;t be h
 
     <span style="color:#75715e">// draw shapes in framebuffer
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> SHAPE_CNT<span style="color:#f92672">=</span><span style="color:#ae81ff">19</span>;  <span style="color:#75715e">// number of shapes to draw
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">4</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] shape_id;     <span style="color:#75715e">// shape identifier
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(SHAPE_CNT<span style="color:#f92672">+</span><span style="color:#ae81ff">1</span>)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] shape_id;  <span style="color:#75715e">// shape identifier
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vx0, vy0, vx1, vy1, vx2, vy2;  <span style="color:#75715e">// shape coords
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fbx_tri, fby_tri;    <span style="color:#75715e">// tri framebuffer coordinates
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fbx_rect, fby_rect;  <span style="color:#75715e">// rect framebuffer coordinates
@@ -1089,24 +1117,27 @@ The standard approach is for top and left edges to be drawn. We won&rsquo;t be h
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> PIX_FRAME  <span style="color:#f92672">=</span>  <span style="color:#ae81ff">20</span>;  <span style="color:#75715e">// draw this many pixels per frame
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(FRAME_WAIT)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_frame_wait;
     <span style="color:#66d9ef">logic</span> [$clog2(PIX_FRAME)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_pix_frame;
-    <span style="color:#66d9ef">logic</span> draw_oe;
+    <span style="color:#66d9ef">logic</span> draw_req;
     <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_100m) <span style="color:#66d9ef">begin</span>
+        draw_req <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
         <span style="color:#66d9ef">if</span> (frame_sys) <span style="color:#66d9ef">begin</span>
             <span style="color:#66d9ef">if</span> (cnt_frame_wait <span style="color:#f92672">!=</span> FRAME_WAIT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) cnt_frame_wait <span style="color:#f92672">&lt;=</span> cnt_frame_wait <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
             cnt_pix_frame <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// reset pixel counter every frame
 </span><span style="color:#75715e"></span>        <span style="color:#66d9ef">end</span>
-        <span style="color:#66d9ef">if</span> (cnt_frame_wait <span style="color:#f92672">==</span> FRAME_WAIT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span> <span style="color:#f92672">&amp;&amp;</span> cnt_pix_frame <span style="color:#f92672">!=</span> PIX_FRAME<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
-            draw_oe <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-            cnt_pix_frame <span style="color:#f92672">&lt;=</span> cnt_pix_frame <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> draw_oe <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+        <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>fb_busy) <span style="color:#66d9ef">begin</span>
+            <span style="color:#66d9ef">if</span> (cnt_frame_wait <span style="color:#f92672">==</span> FRAME_WAIT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span> <span style="color:#f92672">&amp;&amp;</span> cnt_pix_frame <span style="color:#f92672">!=</span> PIX_FRAME<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
+                draw_req <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                cnt_pix_frame <span style="color:#f92672">&lt;=</span> cnt_pix_frame <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+            <span style="color:#66d9ef">end</span>
+        <span style="color:#66d9ef">end</span>
     <span style="color:#66d9ef">end</span>
 
     draw_triangle_fill #(.CORDW(CORDW)) draw_triangle_inst (
         .clk(clk_100m),
         .rst(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),
         .start(draw_start_tri),
-        .oe(draw_oe),
-        .x0(vx0),
+        .oe(draw_req <span style="color:#f92672">&amp;&amp;</span> <span style="color:#f92672">!</span>fb_busy),  <span style="color:#75715e">// draw if requested when framebuffer is available
+</span><span style="color:#75715e"></span>        .x0(vx0),
         .y0(vy0),
         .x1(vx1),
         .y1(vy1),
@@ -1123,8 +1154,8 @@ The standard approach is for top and left edges to be drawn. We won&rsquo;t be h
         .clk(clk_100m),
         .rst(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),
         .start(draw_start_rect),
-        .oe(draw_oe),
-        .x0(vx0),
+        .oe(draw_req <span style="color:#f92672">&amp;&amp;</span> <span style="color:#f92672">!</span>fb_busy),  <span style="color:#75715e">// draw if requested when framebuffer is available
+</span><span style="color:#75715e"></span>        .x0(vx0),
         .y0(vy0),
         .x1(vx1),
         .y1(vy1),
