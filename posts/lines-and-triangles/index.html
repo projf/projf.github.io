@@ -121,7 +121,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
       <p>Welcome back to <em>Exploring FPGA Graphics</em>. It&rsquo;s time to turn our attention to drawing. Most modern computer graphics come down to drawing triangles and colouring them in. So, it seems fitting to begin our tour of drawing with triangles and the straight lines that form them. This post will implement Bresenham&rsquo;s line algorithm in Verilog, creating lines, triangles, and even a cube (our first sort-of-3D graphic).</p>
 <p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how displays work, race the beam with Pong, animate starfields and sprites, paint Michelangelo&rsquo;s David, simulate life with bitmaps, draw lines and shapes, and finally render simple 3D models. New to the series? Start with <a href="/posts/fpga-graphics/">FPGA Graphics</a>.</p>
 <p><strong>You can watch an <a href="https://www.youtube.com/watch?v=ezJv7pB-UmA" target="_blank">FPGA Graphics demo reel</a> with designs from across this series.</strong></p>
-<p><em>Updated 2021-08-01. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><em>Updated 2021-08-02. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <h3 id="series-outline">Series Outline</h3>
 <ul>
 <li><a href="/posts/fpga-graphics/">FPGA Graphics</a> - learn how displays work and draw your first graphics</li>
@@ -160,8 +160,10 @@ Many 3D systems, such as OpenGL, have the origin at the bottom-left, and the Y-c
 </blockquote>
 <h2 id="many-colours">Many Colours?</h2>
 <p>In our previous posts, we loaded an image and picked a palette to match. Now we&rsquo;re drawing; we want the freedom to choose from a wide range of colours. However, we also want to leave enough memory for double-buffering when we start animating, so we&rsquo;ll go for 16 colours.</p>
+<h3 id="framebuffer-memory">Framebuffer Memory</h3>
 <p>A single framebuffer requires: <code>4 * 320 * 180 = 230,400 bits (225 Kb)</code></p>
-<p>On the Arty our framebuffers requires a comfortable 8 of 50 BRAMs, but what about iCEBreaker? The iCE40UP5K FPGA on iCEBreaker has only 120 Kb of BRAM, but it also includes 1 Mb of single-port memory (SPRAM). The SPRAM is organised as four 256 Kb blocks and supports 4-bit writes, so is ideal for our framebuffer. Learn more from <a href="/posts/spram-ice40-fpga/">SPRAM on iCE40 FPGA</a>.</p>
+<p>225 Kb uses 8 of the 50 BRAMs on the Arty, but what about iCEBreaker?</p>
+<p>The iCE40UP5K FPGA has 120 Kb of BRAM, but it also includes 1 Mb of single-port memory: <strong>SPRAM</strong>. The SPRAM is organised as four 256 Kb blocks and supports 4-bit writes, so it&rsquo;s ideal for our purposes. Learn more from <a href="/posts/spram-ice40-fpga/">SPRAM on iCE40 FPGA</a>.</p>
 <h3 id="16-colour-palette">16 Colour Palette</h3>
 <p>For the 16 colour palette, I&rsquo;ve chosen the <a href="https://lospec.com/palette-list/pico-8">PICO-8 palette</a> (adjusted for 12-bit output):</p>
 <p><img src="/img/posts/lines-and-triangles/pico8-palette.png" alt="PICO-8 Palette" title="Sixteen lovely colours"></p>
@@ -182,7 +184,8 @@ FF2  // A - yellow
 87A  // D - indigo
 F7B  // E - pink
 FCA  // F - peach
-</code></pre></div><h2 id="from-point-to-line">From Point to Line</h2>
+</code></pre></div><p>It&rsquo;s easy to create your own palette: the three hex digits represent red, green, and blue intensity. I recommend leaving the first entry as black (<code>000</code>).</p>
+<h2 id="from-point-to-line">From Point to Line</h2>
 <p>We can draw a point by writing to a single memory address, but we want to draw a line <em>between</em> two points. Bresenham&rsquo;s line algorithm is the definitive way to do this, and <a href="http://members.chello.at/~easyfilter/bresenham.html">The Beauty of Bresenham&rsquo;s Algorithm</a> has just what we need: a clearly written version of the algorithm using integers.</p>
 <p>Here&rsquo;s the C design:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">plotLine</span>(<span style="color:#66d9ef">int</span> x0, <span style="color:#66d9ef">int</span> y0, <span style="color:#66d9ef">int</span> x1, <span style="color:#66d9ef">int</span> y1)
