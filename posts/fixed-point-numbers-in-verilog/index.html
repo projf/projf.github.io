@@ -128,7 +128,7 @@ This post is part of a series of handy recipes to solve common FPGA development 
 <p>We can do the same thing in binary and use the bits to represent any powers of two we like.</p>
 <p>For example, we can think of <code>4.75</code> as being <code>4 + 1/2 + 1/4</code>.</p>
 <p>In binary terms this can be visualized as:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">8    4    2    1   1/2  1/4  1/8  1/16
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">8    4    2    1   1/2  1/4  1/8  1/16
 ^    ^    ^    ^    ^    ^    ^    ^
 0    1    0    0    1    1    0    0
 </code></pre></div><p>Or, with a handy point to mark the fractional part: <code>0100.1100</code>.</p>
@@ -140,15 +140,15 @@ This post is part of a series of handy recipes to solve common FPGA development 
 <p>All the usual binary maths work when used with fixed-point numbers. Verilog can generally synthesize addition, subtraction, and multiplication on an FPGA. We cannot synthesize division automatically, but we can multiply by fractional numbers, e.g. multiply by 0.1 instead of dividing by 10.</p>
 <h3 id="addition--subtraction">Addition &amp; Subtraction</h3>
 <p>Addition works in exactly the same way as for integers:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">  0011.1010        3.6250
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">  0011.1010        3.6250
 + 0100.0001      + 4.0625
 = 0111.1011      = 7.6875
 </code></pre></div><p>We can also do subtraction using <a href="https://en.wikipedia.org/wiki/Two%27s_complement">two&rsquo;s complement</a> to express the negative number:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">  0011.1010        3.6250
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">  0011.1010        3.6250
 + 1110.1000      - 1.5000
 = 0010.0010      = 2.1250
 </code></pre></div><p>How did we get the two&rsquo;s complement for -1.5?</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">1.5 = 1 + 1/2 = 0001.1000
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">1.5 = 1 + 1/2 = 0001.1000
 
 Start:  0001.1000 (1.5)
 Invert: 1110.0111
@@ -156,28 +156,28 @@ Add 1:  0000.0001
 Result: 1110.1000 (-1.5)
 </code></pre></div><h3 id="multiplication">Multiplication</h3>
 <p>Multiplication works as expected too, but the product contains twice the number of bits. Multiplying two Q4.4 numbers results in a Q8.8 product:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">  0011.0100        3.2500
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">  0011.0100        3.2500
 x 0010.0001        2.0625
 </code></pre></div><p>You can do the long multiplication to produce:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">00000110.10110100 = 6.703125
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">00000110.10110100 = 6.703125
 </code></pre></div><p>We can round this to our original Q4.4 format by taking the eight middle bits:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">0000[0110.1011]0100 = 0110.1011 = 6.6875
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">0000[0110.1011]0100 = 0110.1011 = 6.6875
 </code></pre></div><p>You can see we lost some precision there; this often happens when you convert to the original precision after multiplication. If our result had been 8 or higher, it would have overflowed our Q4.4 format because the largest digit we can represent with four bits in two&rsquo;s complement is 7. We discuss range and precision in more detail below.</p>
 <h3 id="division">Division</h3>
 <p>Division is less straightforward. You can&rsquo;t synthesize it with regular Verilog unless it&rsquo;s by a power of two, which uses a right shift. A right shift truncates the result, so we lose the fractional part:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">0111    7
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">0111    7
  &gt;&gt;1    right-shift 1 bit
 0011    3
 </code></pre></div><p>However, with fractional numbers, we can do accurate division by a constant using multiplication.</p>
 <p>For example, to divide by 2 we multiple by 0.5:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">  0111.1000             7.5000
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">  0111.1000             7.5000
 x 0000.1000             0.5000
 = 00000011.11000000     3.7500
 </code></pre></div><p>Back in Q4.4: <code>0011.1100</code>. In this case, our answer is exact.</p>
 <p>To be able to divide arbitrary fixed-point numbers see: <a href="/posts/division-in-verilog/">Division in Verilog</a>.</p>
 <h2 id="in-verilog">In Verilog</h2>
 <p>You can&rsquo;t use a point &lsquo;.&rsquo; in Verilog binary literals, but you can use an underscore. The following module demonstrates all the calculations we performed above:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> fixedtest();
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> fixedtest();
     <span style="color:#66d9ef">reg</span> <span style="color:#66d9ef">signed</span> [<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] a, b, c;
     <span style="color:#66d9ef">reg</span> <span style="color:#66d9ef">signed</span> [<span style="color:#ae81ff">15</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] ab;  <span style="color:#75715e">// large enough for product
 </span><span style="color:#75715e"></span>
@@ -215,7 +215,7 @@ x 0000.1000             0.5000
 <p>If the numbers you&rsquo;re using are very small or large, you can improve your accuracy by scaling them so that they fit comfortably into the range of your fixed-point numbers.</p>
 <p>Let&rsquo;s say we want to perform the following: <code>3/256 x 7</code>.</p>
 <p>The smallest fraction we can represent in Q4.4 is 1/16, so 3/256 can&rsquo;t be expressed. Rather than use a larger precision we can scale the smaller number up. If we multiply 3/256 by 2<sup>6</sup> we get 0.75, which comfortably fits within our precision. Because we&rsquo;ve multiplied one of our numbers by 2<sup>6</sup> we need to add this to the scaling factor, making it 2<sup>10</sup> (that&rsquo;s 4 bits for our Q4.4 format and 6 bits for adjusted scaling):</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">a <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b0000</span>_1100;  <span style="color:#75715e">// 0.7500  (0.75 = 3/256 x 2^6)
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">a <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b0000</span>_1100;  <span style="color:#75715e">// 0.7500  (0.75 = 3/256 x 2^6)
 </span><span style="color:#75715e"></span>b <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b0111</span>_0000;  <span style="color:#75715e">// 7.0000
 </span><span style="color:#75715e"></span>ab <span style="color:#f92672">=</span> a <span style="color:#f92672">*</span> b;        <span style="color:#75715e">// 00000101.01000000
 </span><span style="color:#75715e"></span>c <span style="color:#f92672">=</span> ab[<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">4</span>];      <span style="color:#75715e">// take middle 8 bits: 0101.1010
@@ -226,12 +226,12 @@ x 0000.1000             0.5000
 <h3 id="q44">Q4.4</h3>
 <p>Using two&rsquo;s complement, a 4-bit value ranges from -8 (<code>1000</code>) to +7 (<code>0111</code>).
 A 4-bit fraction can represent numbers as small as 1/16 (<code>0001</code>) and as large as 15/16 (<code>1111</code>).</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">Range:      -8 to 7.9375 (7 + 15/16)
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">Range:      -8 to 7.9375 (7 + 15/16)
 Precision:  0.0625 (1/16)
 </code></pre></div><h3 id="q1616">Q16.16</h3>
 <p>Using two&rsquo;s compliment a 16-bit value ranges from -32,768 to +32,767.
 A 16-bit fraction can represent numbers as small as 1/65,536 and as large as 65,535/65,536.</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">Range:      -32,768 to 32,767.9999847...
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">Range:      -32,768 to 32,767.9999847...
 Precision:  0.0000152...
 </code></pre></div><p>According to <a href="https://en.wikipedia.org/wiki/Fixed-point_arithmetic">Wikipedia</a>, <strong>Doom</strong> used a Q16.16 representation:</p>
 <blockquote>
@@ -239,34 +239,34 @@ Precision:  0.0000152...
 </blockquote>
 <h3 id="overflow">Overflow</h3>
 <p>All results so far have fitted in our Q4.4 representation, but this doesn&rsquo;t always happen. Let&rsquo;s consider what happens when we multiply 6.5 by 4:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">  0110.1000        6.5000
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">  0110.1000        6.5000
 x 0100.0000        4.0000
 00011010.00000000 26.0000
 </code></pre></div><p>If we take the eight middle bits, we get 1010.0000, which is -6. Our Q4.4 representation can&rsquo;t hold 26.
 For a Q4.4 product, if any of the first four bits contain <code>1</code>, then we&rsquo;ve overflowed. You can also check for a loss of precision by looking for any 1s in the four least significant bits.</p>
 <p>Overflow can also happen with addition:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">  0110.1010        6.6250
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">  0110.1010        6.6250
 + 0100.0001     +  4.0625
 = 1010.1011     = -5.3125 ?!
 </code></pre></div><p>And if our result is less than -8 it will overflow in the negative direction:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">  1010.0000       -6.0000
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">  1010.0000       -6.0000
 + 1010.0000     + -6.0000
 = 0100.0000     =  4.0000 ?!
 </code></pre></div><p>Thankfully it&rsquo;s not too hard to detect this. If both our operands are positive and the result is negative, then overflow must have occurred. Similarly, if both our operands are negative and the result is positive, then it has overflowed too.</p>
 <h2 id="converting-to-and-from-integers">Converting to and from Integers</h2>
 <p>Conversion to and from regular binary integers simply requires using the appropriate left or right shift. For example, if we&rsquo;re using Q16.16 format we need to left-shift an integer 16 positions to create the Q16.16 fixed-point number:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">101010  // decimal 42
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">101010  // decimal 42
 &lt;&lt; 16   // left shift 16 positions
 101010000000000000000
 0000000000101010.0000000000000000  // with all bits shown in Q16.16 notation
 </code></pre></div><p>To make long binary numbers easier to read it&rsquo;s common practice to include spaces. For example, we could represent decimal 42 in Q16.16 as:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">0000 0000 0010 1010.0000 0000 0000 0000
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">0000 0000 0010 1010.0000 0000 0000 0000
 </code></pre></div><p>We can then perform all the usual arithmetic operators on it with other Q16.16 numbers. For example, let&rsquo;s add decimal 2.875:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">0000 0000 0010 1010.0000 0000 0000 0000  //  42
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">0000 0000 0010 1010.0000 0000 0000 0000  //  42
 0000 0000 0000 0010.1110 0000 0000 0000  // + 2.875
 0000 0000 0010 1100.1110 0000 0000 0000  //  44.875
 </code></pre></div><p>If you need to convert a Q16.16 number back to a regular integer, you right shift 16 positions:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">0000 0000 0001 0111.1110 0000 0000 0000  // 44.875
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">0000 0000 0001 0111.1110 0000 0000 0000  // 44.875
 &gt;&gt; 16  // right shift 16 positions
 0000 0000 0010 1100 // 44
 </code></pre></div><p>This removes (truncates) the fractional part, so the answer ends up being <code>101100</code> (decimal 44).</p>

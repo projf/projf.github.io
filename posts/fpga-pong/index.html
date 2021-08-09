@@ -151,7 +151,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
 <h2 id="a-square-ball">A Square Ball</h2>
 <p>Pong uses a square ball, so we can reuse our design from <a href="/posts/fpga-graphics/">FPGA Graphics</a>. We&rsquo;re going to start off looking at the Arty (Xilinx) version, but links to designs for both boards can be found below the source listing.</p>
 <p>We generate our pixel clock and display timings, then set up a ball and update its position once per frame. For now the ball bounces off all four sides of the screen.</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_pong_v1 (
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_pong_v1 (
     <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_100m,     <span style="color:#75715e">// 100 MHz clock
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_rst,      <span style="color:#75715e">// reset button (active low)
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> vga_hsync,    <span style="color:#75715e">// horizontal sync
@@ -252,7 +252,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/pong
 <h2 id="paddle-paddle">Paddle, Paddle</h2>
 <p>Next, we need to add some paddles. The paddles are simple rectangles that move vertically on the left and right sides of the screen. These paddles have a crude AI that moves in the direction of the ball. We check if the paddles have reached the screen edge, but not whether they&rsquo;ve have collided with the ball.</p>
 <p>The paddles are added to the top module in a very similar way to the ball:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// paddles
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// paddles
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> P_H <span style="color:#f92672">=</span> <span style="color:#ae81ff">40</span>;         <span style="color:#75715e">// height in pixels
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> P_W <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>;         <span style="color:#75715e">// width in pixels
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> P_SP <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;         <span style="color:#75715e">// speed
@@ -302,7 +302,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/pong
 <h2 id="collide">Collide</h2>
 <p>It&rsquo;s briefly fun to watch the ball crawl around the screen with the paddles, but this isn&rsquo;t exactly a game, even a demo of one: the ball shows a blatant disregard for the paddles.</p>
 <p>To test for paddle collision, we take advantage of the drawing signals: if we&rsquo;re drawing the ball and a paddle at the same time, then there&rsquo;s a collision. The collision occurs during the drawing process, so we need to store it (in <code>p1_col</code> and <code>p2_col</code>) and use it to adjust the direction of the ball when we next animate:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// paddle collision detection
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// paddle collision detection
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">if</span> (animate) <span style="color:#66d9ef">begin</span>
             p1_col <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
@@ -314,7 +314,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/pong
     <span style="color:#66d9ef">end</span>
 </code></pre></div><p>We reset the collision detection when we receive the <code>animate</code> signal. However, the value of <code>p1_col</code> and <code>p2_col</code> is available until the next clock tick, so the ball animation logic can still use it.</p>
 <p>Update the horizontal ball animation to check for paddle collisions:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// ball animation
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// ball animation
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">if</span> (animate) <span style="color:#66d9ef">begin</span>
             <span style="color:#66d9ef">if</span> (p1_col) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// left paddle collision
@@ -341,7 +341,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/pong
         <span style="color:#66d9ef">end</span>
     <span style="color:#66d9ef">end</span>
 </code></pre></div><p>We can also speed up the ball and paddles by editing the following values:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] spx <span style="color:#f92672">=</span> <span style="color:#ae81ff">6</span>;  <span style="color:#75715e">// horizontal speed
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] spx <span style="color:#f92672">=</span> <span style="color:#ae81ff">6</span>;  <span style="color:#75715e">// horizontal speed
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] spy <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;  <span style="color:#75715e">// vertical speed
 </span><span style="color:#75715e"></span>
     <span style="color:#66d9ef">localparam</span> P_SP <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;  <span style="color:#75715e">// speed
@@ -354,7 +354,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/pong
 <h2 id="buttons">Buttons</h2>
 <p>So far the FPGA has been playing against itself. To get in on the action, we&rsquo;re going to use three buttons: up, control, and down.</p>
 <p>Add the buttons to the top module ports:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_up,       <span style="color:#75715e">// up button
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_up,       <span style="color:#75715e">// up button
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_ctrl,     <span style="color:#75715e">// control button
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_dn,       <span style="color:#75715e">// down button
 </span></code></pre></div><p>We need to map these buttons to FPGA pins in the constraints file. You&rsquo;ll be happy to hear I&rsquo;ve already done this for you in the constraints:</p>
@@ -375,7 +375,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/pong
 <li>BTN3 - up</li>
 </ul>
 <p>To safely use buttons in our design, we need to debounce them. Debouncing ensures we get a single, clean, transition from button presses. The debounce module looks like this <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lib/essential/debounce.sv">debounce.sv</a>]</strong>:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> debounce (
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> debounce (
     <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,   <span style="color:#75715e">// clock
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> in,    <span style="color:#75715e">// signal input
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> out,   <span style="color:#75715e">// signal output (debounced)
@@ -407,7 +407,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/pong
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
 </code></pre></div><p>We want continuous signals for up and down, but a one-off event for the control button:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// debounce buttons
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// debounce buttons
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> sig_ctrl, move_up, move_dn;
     debounce deb_ctrl
         (.clk(clk_pix), .in(btn_ctrl), .out(), .ondn(), .onup(sig_ctrl));
@@ -423,7 +423,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/pong
 </ul>
 <p>Pressing the control button switches between these states, while the up and down buttons are used to control the paddle.</p>
 <p>We define the state using an enum and a simple finite state machine. This is overkill for two states but makes it easy to expand our game to include other concepts, such as the end of a point.</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// game state
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// game state
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">enum</span> {IDLE, PLAY} state, state_next;
     <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">case</span> (state)
@@ -438,7 +438,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/pong
     <span style="color:#66d9ef">end</span>
 </code></pre></div><p><em>ProTip: Using SystemVerilog enums makes finite state machines easier to understand and debug.</em></p>
 <p>The logic for paddle 1 needs updating to allow for human control:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// paddle animation
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// paddle animation
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">if</span> (animate) <span style="color:#66d9ef">begin</span>
             <span style="color:#66d9ef">if</span> (state <span style="color:#f92672">==</span> PLAY) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// human paddle 1
@@ -487,7 +487,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/pong
 <li><strong>POINT_END</strong> - ball has collided with left or right edge of the screen, so stop</li>
 </ul>
 <p>Add these to your top module:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// game state
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// game state
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">enum</span> {INIT, IDLE, START, PLAY, POINT_END} state, state_next;
     <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">case</span> (state)
@@ -502,7 +502,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/pong
 </code></pre></div><p>Once a point has ended, the player presses the control button to set up the game for the next point. Pressing the control button no longer switches to demo mode.</p>
 <p>You&rsquo;ll notice that the PLAY state transitions to POINT_END if <code>lft_col</code> or <code>rgt_col</code> are high. We need to set these signals when the ball collides with the left or right edge of the screen. We also need to update the ball and paddle animations to support the new <code>INIT</code> and <code>START</code> states.</p>
 <p>The new ball animation looks like this:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// ball animation
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// ball animation
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">if</span> (state <span style="color:#f92672">==</span> INIT <span style="color:#f92672">||</span> state <span style="color:#f92672">==</span> START) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// reset ball position
 </span><span style="color:#75715e"></span>            bx <span style="color:#f92672">&lt;=</span> (H_RES <span style="color:#f92672">-</span> B_SIZE) <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">1</span>;
@@ -523,7 +523,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/pong
 
             <span style="color:#75715e">// ...
 </span></code></pre></div><p>And paddle animation like this:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// paddle animation
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// paddle animation
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">if</span> (state <span style="color:#f92672">==</span> INIT <span style="color:#f92672">||</span> state <span style="color:#f92672">==</span> START) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// reset paddle positions
 </span><span style="color:#75715e"></span>            p1y <span style="color:#f92672">&lt;=</span> (V_RES <span style="color:#f92672">-</span> P_H) <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">1</span>;
@@ -534,7 +534,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/pong
             <span style="color:#75715e">// ...
 </span></code></pre></div><h2 id="bouncing-mad">Bouncing Mad</h2>
 <p>To make the game more interesting, we can change the bounce angle depending on where the ball hits the paddle. A simple way to do this is to update the vertical direction depending on where the ball hits the paddle. If the ball strikes the top half of the paddle, it goes up, if it strikes the bottom half it goes down. We need to add this for collisions with either paddle. The final ball animation looks like this:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// ball animation
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// ball animation
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">if</span> (state <span style="color:#f92672">==</span> INIT <span style="color:#f92672">||</span> state <span style="color:#f92672">==</span> START) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// reset ball position
 </span><span style="color:#75715e"></span>            bx <span style="color:#f92672">&lt;=</span> (H_RES <span style="color:#f92672">-</span> B_SIZE) <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">1</span>;
@@ -568,7 +568,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/pong
         <span style="color:#66d9ef">end</span>
     <span style="color:#66d9ef">end</span>
 </code></pre></div><p>We can also increase the ball speed over time by counting the number of collisions:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// ball speed control
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// ball speed control
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> SPEED_STEP <span style="color:#f92672">=</span> <span style="color:#ae81ff">5</span>;  <span style="color:#75715e">// speed up after this many collisions
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(SPEED_STEP)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_sp;  <span style="color:#75715e">// speed counter
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
@@ -595,7 +595,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/pong
 <li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/pong/ice40/top_pong.sv">ice40/top_pong.sv</a></strong></li>
 </ul>
 <p>The complete iCE40 version is shown below:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_pong (
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_pong (
     <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_12m,      <span style="color:#75715e">// 12 MHz clock
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_rst,      <span style="color:#75715e">// reset button (active high)
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_up,       <span style="color:#75715e">// up button

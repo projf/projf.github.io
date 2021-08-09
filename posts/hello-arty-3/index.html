@@ -179,13 +179,13 @@ A good place to start is with <a href="https://web.mit.edu/6.111/www/f2017/hando
 <h3 id="enums">Enums</h3>
 <p>We use an <strong>enum</strong> to define our states. Enums are one of the small but useful features added in SystemVerilog. As in software programming, an enum creates a variable with a fixed list of named values.</p>
 <p>For example, you could represent the days of the week:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">enum</span> {SUN, MON, TUE, WED, THU, FRI, SAT} week_day;
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">enum</span> {SUN, MON, TUE, WED, THU, FRI, SAT} week_day;
 </code></pre></div><p>Using an enum makes your finite state machine less error-prone and easier to debug.</p>
 <h3 id="state-transitions">State Transitions</h3>
 <p>To handle state transitions, we use combinational logic with a <strong>case statement</strong>.</p>
 <p>A case statement allows you to select between several different options, again much in the same way as software programming. In C, you have the <a href="https://en.wikipedia.org/wiki/Switch_statement">switch</a> statement.</p>
 <p>We handle our state transitions using the conditional operator we learnt about in <a href="/posts/hello-arty-1/#conditional-love">part 1</a>:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">enum</span> {IDLE, INIT, SET_TIME, COUNTDOWN, DONE} state, state_next;
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">enum</span> {IDLE, INIT, SET_TIME, COUNTDOWN, DONE} state, state_next;
 <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
     <span style="color:#66d9ef">case</span> (state)
         IDLE:      state_next <span style="color:#f92672">=</span> (sig_ctrl) <span style="color:#f92672">?</span> INIT <span style="color:#f92672">:</span> IDLE;
@@ -206,12 +206,12 @@ A good place to start is with <a href="https://web.mit.edu/6.111/www/f2017/hando
 <li><code>cnt_flash</code> - flashing counter</li>
 </ul>
 <p>Combinational logic doesn&rsquo;t maintain state, so we register the FSM state in an <code>always_ff</code> block:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#75715e">// move to next FSM state
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#75715e">// move to next FSM state
 </span><span style="color:#75715e"></span><span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) state <span style="color:#f92672">&lt;=</span> state_next;
 </code></pre></div><p>We have a working FSM, but it doesn&rsquo;t do anything useful: we need some logic to handle the behaviour of each operating modes.</p>
 <h3 id="initialization">Initialization</h3>
 <p>The <code>INIT</code> state allows us to do initialization when our FSM starts. In this design, we use <code>INIT</code> to set a default timer length and the counter for the flashing LEDs. We can use <code>led</code> to hold the time remaining as we want to display this in binary on the LEDs anyway.</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">localparam</span> DEF_TIME <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;b1000</span>;  <span style="color:#75715e">// default timer in seconds
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">localparam</span> DEF_TIME <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;b1000</span>;  <span style="color:#75715e">// default timer in seconds
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> FLASH_TIME <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span>;      <span style="color:#75715e">// seconds to flash when done
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(FLASH_TIME<span style="color:#f92672">+</span><span style="color:#ae81ff">1</span>)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_flash;  <span style="color:#75715e">// counter for done flashing
 </span><span style="color:#75715e"></span>
@@ -237,7 +237,7 @@ A good place to start is with <a href="https://web.mit.edu/6.111/www/f2017/hando
 <p>In practice, a button rarely makes a single clean contact when pressed. Instead, a button will &lsquo;bounce&rsquo;, making several brief contacts before making a definite connection. Hence the need to &ldquo;debounce&rdquo; a button before using it in a design.</p>
 <h4 id="debounce">Debounce</h4>
 <p>We have three buttons to handle, so we create a module to handle debouncing. Add a new module called <code>debounce.sv</code> to your project with  <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hello/hello-arty/K/debounce.sv">src</a>]</strong>:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> debounce (
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> debounce (
     <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,   <span style="color:#75715e">// clock
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> in,    <span style="color:#75715e">// signal input
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> out,   <span style="color:#75715e">// signal output (debounced)
@@ -269,7 +269,7 @@ A good place to start is with <a href="https://web.mit.edu/6.111/www/f2017/hando
 </code></pre></div><p>This module synchronizes the button press with our clock, then waits for 10 ms before considering a button to be pressed. You can easily tweak the width of <code>cnt</code> if you want to adjust the delay. If the delay is too short, you risk getting phantom button presses; if the delay is too long, we could miss a press, and the interface doesn&rsquo;t feel responsive.</p>
 <p>The debounce module provides an <code>onup</code> signal that is high for one clock tick after a button is released.</p>
 <p>We have three buttons, and each needs a separate instance of the debounce module:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// debounce each button using the debounce module
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// debounce each button using the debounce module
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> sig_ctrl, sig_0, sig_1;  <span style="color:#75715e">// button press signals
 </span><span style="color:#75715e"></span>    debounce deb_ctrl (.clk, .in(btn_ctrl), .out(), .onup(sig_ctrl));
     debounce deb_0 (.clk, .in(btn_0), .out(), .onup(sig_0));
@@ -281,14 +281,14 @@ A good place to start is with <a href="https://web.mit.edu/6.111/www/f2017/hando
 <h5 id="concat">Concat</h5>
 <p>In Verilog, we don&rsquo;t need anything special to create a shift register. We use the <strong>Concatenation</strong> operator <code>{a,b}</code> to left (or right) shift a variable.</p>
 <p>Concatenation combines the bits of two (or more) variables. For example, if we concat a two-bit value and a four-bit value, we get a six-bit value:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">{<span style="color:#ae81ff">2</span><span style="color:#ae81ff">&#39;b10</span>, <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;b1001</span>} <span style="color:#f92672">==</span> <span style="color:#ae81ff">6</span><span style="color:#ae81ff">&#39;b101001</span>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">{<span style="color:#ae81ff">2</span><span style="color:#ae81ff">&#39;b10</span>, <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;b1001</span>} <span style="color:#f92672">==</span> <span style="color:#ae81ff">6</span><span style="color:#ae81ff">&#39;b101001</span>
 </code></pre></div><p>To left-shift <code>1</code> into <code>led</code>, we combine it with three existing bits from <code>led</code> and discard <code>led[3]</code>:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">led <span style="color:#f92672">&lt;=</span> {led[<span style="color:#ae81ff">2</span>], led[<span style="color:#ae81ff">1</span>], led[<span style="color:#ae81ff">0</span>], <span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b1</span>};
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">led <span style="color:#f92672">&lt;=</span> {led[<span style="color:#ae81ff">2</span>], led[<span style="color:#ae81ff">1</span>], led[<span style="color:#ae81ff">0</span>], <span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b1</span>};
 </code></pre></div><p>We can express this more compactly:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">led <span style="color:#f92672">&lt;=</span> {led[<span style="color:#ae81ff">2</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>], <span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b1</span>};
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">led <span style="color:#f92672">&lt;=</span> {led[<span style="color:#ae81ff">2</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>], <span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b1</span>};
 </code></pre></div><h5 id="shift-logic">Shift Logic</h5>
 <p>Numerical input comes from two separate buttons, so we need to handle both:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    SET_TIME: <span style="color:#66d9ef">begin</span>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    SET_TIME: <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">if</span> (sig_0) led <span style="color:#f92672">&lt;=</span> {led[<span style="color:#ae81ff">2</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>], <span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>};       <span style="color:#75715e">// user pressed 0
 </span><span style="color:#75715e"></span>        <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sig_1) led <span style="color:#f92672">&lt;=</span> {led[<span style="color:#ae81ff">2</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>], <span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b1</span>};  <span style="color:#75715e">// user pressed 1
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">end</span>
@@ -300,9 +300,9 @@ A good place to start is with <a href="https://web.mit.edu/6.111/www/f2017/hando
 <h3 id="counting-down">Counting Down</h3>
 <p>After the complexity of user input, counting is straightforward.</p>
 <p><code>led</code> holds the remaining time. Every time <code>stb</code> is high, we decrement the time:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    COUNTDOWN: <span style="color:#66d9ef">if</span> (stb) led <span style="color:#f92672">&lt;=</span> led <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    COUNTDOWN: <span style="color:#66d9ef">if</span> (stb) led <span style="color:#f92672">&lt;=</span> led <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;
 </code></pre></div><p>The one-second strobe should be familiar from <a href="/posts/hello-arty-2/#every-second-counts">part 2</a>:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// generate 1 second strobe from 100 MHz clock
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// generate 1 second strobe from 100 MHz clock
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> DIV_BY <span style="color:#f92672">=</span> <span style="color:#ae81ff">27</span><span style="color:#ae81ff">&#39;d100</span>_000_000;  <span style="color:#75715e">// 100 million
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> stb;
     <span style="color:#66d9ef">logic</span> [$clog2(DIV_BY)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_stb;
@@ -319,7 +319,7 @@ A good place to start is with <a href="https://web.mit.edu/6.111/www/f2017/hando
 <p>When the timer reaches zero, we flash all four LEDs.</p>
 <p>We take a bit from the counter to set the flash rate;
 I&rsquo;ve chosen the 23rd bit, but you can easily adjust this with <code>FLASH_BIT</code>:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">localparam</span> FLASH_BIT <span style="color:#f92672">=</span> <span style="color:#ae81ff">23</span>;
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">localparam</span> FLASH_BIT <span style="color:#f92672">=</span> <span style="color:#ae81ff">23</span>;
 
     DONE: <span style="color:#66d9ef">begin</span>
         led <span style="color:#f92672">&lt;=</span> {<span style="color:#ae81ff">4</span>{cnt_stb[FLASH_BIT]}};  <span style="color:#75715e">// flash all four LEDs
@@ -327,11 +327,11 @@ I&rsquo;ve chosen the 23rd bit, but you can easily adjust this with <code>FLASH_
     <span style="color:#66d9ef">end</span>
 </code></pre></div><p>We&rsquo;re using the concat operator again, this time to replicate a bit to drive all four LEDs.</p>
 <p>Replication is easiest to understand with a couple of examples:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">{<span style="color:#ae81ff">4</span>{<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b1</span>}}  <span style="color:#f92672">==</span> <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;b1111</span>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">{<span style="color:#ae81ff">4</span>{<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b1</span>}}  <span style="color:#f92672">==</span> <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;b1111</span>
 {<span style="color:#ae81ff">4</span>{<span style="color:#ae81ff">2</span><span style="color:#ae81ff">&#39;b10</span>}} <span style="color:#f92672">==</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b10101010</span>
 </code></pre></div><h3 id="top-timer">Top Timer</h3>
 <p>The finished timer <code>top.sv</code> looks like this <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hello/hello-arty/K/top.sv">src</a>]</strong>:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top (
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top (
     <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,
     <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_ctrl,
     <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_0,
@@ -402,7 +402,7 @@ I&rsquo;ve chosen the 23rd bit, but you can easily adjust this with <code>FLASH_
 <span style="color:#66d9ef">endmodule</span>
 </code></pre></div><h3 id="building-your-timer">Building Your Timer</h3>
 <p>We need some constraints, including the three buttons. Save the following as <code>arty.xdc</code> <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hello/hello-arty/K/arty.xdc">src</a>]</strong>:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-tcl" data-lang="tcl"><span style="color:#75715e">## FPGA Configuration I/O Options
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-tcl" data-lang="tcl"><span style="color:#75715e">## FPGA Configuration I/O Options
 </span><span style="color:#75715e"></span>set_property CONFIG_VOLTAGE <span style="color:#ae81ff">3.3</span> <span style="color:#66d9ef">[</span>current_design<span style="color:#66d9ef">]</span>
 set_property CFGBVS VCCO <span style="color:#66d9ef">[</span>current_design<span style="color:#66d9ef">]</span>
 
@@ -452,19 +452,19 @@ set_property <span style="color:#f92672">-</span>dict <span style="color:#66d9ef
 <li>2 seconds of amber after green, before turning red</li>
 </ul>
 <p>We store these times in parameters, so they&rsquo;re easy to edit and debug:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// traffic light phases in seconds
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// traffic light phases in seconds
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> T_RED <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
     <span style="color:#66d9ef">localparam</span> T_RED_AMBER <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
     <span style="color:#66d9ef">localparam</span> T_GREEN_MAIN <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>;
     <span style="color:#66d9ef">localparam</span> T_GREEN_SIDE <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;
     <span style="color:#66d9ef">localparam</span> T_AMBER <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span>;
 </code></pre></div><p>We need a register to track how long each phase is lasting:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_phase;  <span style="color:#75715e">// 4-bit allows up to 15 second phase
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_phase;  <span style="color:#75715e">// 4-bit allows up to 15 second phase
 </span></code></pre></div><p>And a register to track which set of lights is active:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">logic</span> light_set;  <span style="color:#75715e">// active lights: 0 = main, 1 = side
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">logic</span> light_set;  <span style="color:#75715e">// active lights: 0 = main, 1 = side
 </span></code></pre></div><h3 id="light-fsm">Light FSM</h3>
 <p>For this FSM, we&rsquo;re going to use a single process combining state change and behaviour:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">enum</span> {IDLE, INIT, RED, RED_AMBER, GREEN, AMBER} state;
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">enum</span> {IDLE, INIT, RED, RED_AMBER, GREEN, AMBER} state;
     <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">case</span> (state)
             IDLE: state <span style="color:#f92672">&lt;=</span> INIT;
@@ -505,7 +505,7 @@ set_property <span style="color:#f92672">-</span>dict <span style="color:#66d9ef
 <h3 id="light--colour">Light &amp; Colour</h3>
 <p>A regular traffic light has three bulbs: red, amber, and green. We have four RGB LEDs but want to model two (or more) sets of traffic lights, so we&rsquo;ll use one RGB LED per traffic light, switching it between the different colours. For red + amber, I&rsquo;ll use a colour intermediate between red and amber.</p>
 <p>We&rsquo;re going to use PWM with our RGB LEDs, just like we did in <a href="/posts/hello-arty-2/#duty-cycle-module">part 2</a>. Create a new module called <code>pwm.sv</code> using the following <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hello/hello-arty/L/pwm.sv">src</a>]</strong>:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> pwm (
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> pwm (
     <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,
     <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] duty,
     <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> pwm_out
@@ -521,7 +521,7 @@ set_property <span style="color:#f92672">-</span>dict <span style="color:#66d9ef
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
 </code></pre></div><p>We control the light colours like so:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// PWM duty values are 8-bit
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// PWM duty values are 8-bit
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] duty_main_r, duty_main_g;
     <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] duty_side_r, duty_side_g;
 
@@ -572,7 +572,7 @@ set_property <span style="color:#f92672">-</span>dict <span style="color:#66d9ef
 <p>We keep the system safe by having both sets of lights be red by default and using an <code>if ... else</code> block such that only one set of lights can have their colour altered from red.</p>
 <h2 id="traffic-control">Traffic Control</h2>
 <p>Our finished traffic light <code>top.sv</code> looks like this <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hello/hello-arty/L/top.sv">src</a>]</strong>:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top (
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top (
     <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,
     <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> led_main_r,
     <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> led_main_g,
@@ -693,7 +693,7 @@ set_property <span style="color:#f92672">-</span>dict <span style="color:#66d9ef
 <span style="color:#66d9ef">endmodule</span>
 </code></pre></div><h3 id="build-your-lights">Build Your Lights</h3>
 <p>We need some constraints. Save the following as <code>arty.xdc</code> <strong>[<a href="https://github.com/projf/projf-explore/blob/master/hello/hello-arty/L/arty.xdc">src</a>]</strong>:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-tcl" data-lang="tcl"><span style="color:#75715e">## FPGA Configuration I/O Options
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-tcl" data-lang="tcl"><span style="color:#75715e">## FPGA Configuration I/O Options
 </span><span style="color:#75715e"></span>set_property CONFIG_VOLTAGE <span style="color:#ae81ff">3.3</span> <span style="color:#66d9ef">[</span>current_design<span style="color:#66d9ef">]</span>
 set_property CFGBVS VCCO <span style="color:#66d9ef">[</span>current_design<span style="color:#66d9ef">]</span>
 

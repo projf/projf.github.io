@@ -150,7 +150,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
 <p>We&rsquo;ll load the sprite into FPGA memory using a simple text format. Each line is simply composed of eight 1s or 0s separated by spaces. I&rsquo;m going to start with the letter &lsquo;F&rsquo; and a full stop (period) as a sprite. It&rsquo;s a simple, asymmetric, design, making it easier to spot bugs (such as incorrect orientation or pixels being missed off):</p>
 <p><img src="/img/posts/hardware-sprites/letter-f.png" alt="F." title="F for Project F"></p>
 <p>The text file to initialize the sprite memory looks like this <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/hardware-sprites/res/simple/letter_f.mem">letter_f.mem</a>]</strong>:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">1 1 1 1 1 1 0 0
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">1 1 1 1 1 1 0 0
 1 1 0 0 0 0 0 0
 1 1 0 0 0 0 0 0
 1 1 1 1 1 0 0 0
@@ -170,7 +170,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
 <li>Sprite is complete</li>
 </ol>
 <p>This process is well represented by our old friend, the finite state machine (FSM). In fact, our first sprite design is little more than a simple finite state machine with a small ROM for the graphic <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/hardware-sprites/sprite_v1.sv">sprite_v1.sv</a>]</strong>:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> sprite_v1 #(
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> sprite_v1 #(
     <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,            <span style="color:#75715e">// graphic width in pixels
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> HEIGHT<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,           <span style="color:#75715e">// graphic height in pixels
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> SPR_FILE<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;&#34;</span>,        <span style="color:#75715e">// file to load sprite graphic from
@@ -262,7 +262,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
 <p><code>DRAW:       state_next = !last_pixel ? DRAW : (!last_line ? NEXT_LINE : IDLE);</code></p>
 <p>In the next-state logic, we&rsquo;ve nested a conditional operator. Nested conditional operators are confusing, so best avoided. However, in this case, I think it reads naturally. If we&rsquo;re not reached the last pixel, keep drawing. If we&rsquo;ve not arrived at the final line, go to the next line. Otherwise idle.</p>
 <p>The graphic itself is held in an asynchronous ROM. An asynchronous ROM uses logic (LUTs); it&rsquo;s a good choice for a small ROM such as this <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lib/memory/rom_async.sv">rom_async.sv</a>]</strong>:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> rom_async #(
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> rom_async #(
     <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,
     <span style="color:#66d9ef">parameter</span> DEPTH<span style="color:#f92672">=</span><span style="color:#ae81ff">256</span>,
     <span style="color:#66d9ef">parameter</span> INIT_F<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;&#34;</span>,
@@ -288,7 +288,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
 <p>Didn&rsquo;t we already sort out display timings at the <a href="/posts/fpga-graphics/#display-timings">start of the series</a>?
 Yes, we did, but there are good reasons to change how we treat screen coordinates before we start drawing sprites.</p>
 <p>Take a look at the new <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lib/display/display_timings_480p.sv">display_timings_480p.sv</a>]</strong> module, then we&rsquo;ll discuss the changes:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> display_timings_480p #(
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> display_timings_480p #(
     CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>,   <span style="color:#75715e">// signed coordinate width (bits)
 </span><span style="color:#75715e"></span>    H_RES<span style="color:#f92672">=</span><span style="color:#ae81ff">640</span>,  <span style="color:#75715e">// horizontal resolution (pixels)
 </span><span style="color:#75715e"></span>    V_RES<span style="color:#f92672">=</span><span style="color:#ae81ff">480</span>,  <span style="color:#75715e">// vertical resolution (lines)
@@ -386,7 +386,7 @@ Yes, we did, but there are good reasons to change how we treat screen coordinate
 <li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/hardware-sprites/ice40/top_sprite_v1.sv">ice40/top_sprite_v1.sv</a></strong></li>
 </ul>
 <p>iCE40 version show below:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_sprite_v1 (
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_sprite_v1 (
     <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_12m,      <span style="color:#75715e">// 12 MHz clock
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_rst,      <span style="color:#75715e">// reset button (active high)
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> dvi_clk,      <span style="color:#75715e">// DVI pixel clock
@@ -491,7 +491,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/hard
 <h2 id="scaling-up">Scaling Up</h2>
 <p>Now we can position our sprite correctly, it&rsquo;s time to make it bigger. We make larger sprites by increasing the size of the design. However, it&rsquo;s also useful to be able to scale our sprites up when drawing them. A scaled-up sprite will be blocky but will use few resources and allows a design to work at different screen resolutions.</p>
 <p>To scale our sprite, we count additional screen pixels and lines when drawing the sprite using <code>cnt_x</code> and <code>cnt_y</code> respectively. The new module is <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/hardware-sprites/sprite_v2.sv">sprite_v2sv</a>]</strong>:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> sprite_v2 #(
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> sprite_v2 #(
     <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,            <span style="color:#75715e">// graphic width in pixels
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> HEIGHT<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,           <span style="color:#75715e">// graphic height in pixels
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> SCALE_X<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>,          <span style="color:#75715e">// sprite width scale-factor
@@ -613,7 +613,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/hard
 <p>It&rsquo;s time we got our sprites moving. Now we have our basic sprite working, I&rsquo;m going to use a new design, which I&rsquo;m charitably calling a flying saucer:</p>
 <p><img src="/img/posts/hardware-sprites/saucer.png" alt="Flying Saucer" title="From Area 51"></p>
 <p>The memory initilization file is <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/hardware-sprites/res/simple/saucer.mem">saucer.mem</a>]</strong>:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">0 0 1 1 1 1 0 0
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">0 0 1 1 1 1 0 0
 0 1 1 0 0 1 1 0
 1 1 0 1 1 0 1 1
 1 0 1 1 1 1 0 1
@@ -643,7 +643,7 @@ This design was common in older computers, for example, the <a href="https://en.
 <p>If we&rsquo;re going to use larger sprites, we need to rethink our memory design. An async ROM suffices for small designs but is a resource hog and timing disaster for larger sprites. FPGAs include block ram (BRAM), which is ideal for memories of a few hundred bits to a few tens of kilobits.</p>
 <p>Our sprites designs don&rsquo;t change at runtime, so we can create a ROM using BRAM. The ROM takes a clock and address as input, and outputs the requested data the <em>following</em> clock cycle. This extra latency has implications for correct positioning of our sprite, which we&rsquo;ll discuss shortly. Check out <a href="/posts/fpga-memory-types/">FPGA Memory Types</a> to learn more about BRAM and other memory.</p>
 <p>Synchronous ROM using BRAM <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lib/memory/rom_sync.sv">rom_sync.sv</a>]</strong>:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> rom_sync #(
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> rom_sync #(
     <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,
     <span style="color:#66d9ef">parameter</span> DEPTH<span style="color:#f92672">=</span><span style="color:#ae81ff">256</span>,
     <span style="color:#66d9ef">parameter</span> INIT_F<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;&#34;</span>,
@@ -668,7 +668,7 @@ This design was common in older computers, for example, the <a href="https://en.
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
 </code></pre></div><p>Once you&rsquo;ve created the appropriate memory module, we can create our final sprite module <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/hardware-sprites/sprite.sv">sprite.sv</a>]</strong>:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> sprite #(
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> sprite #(
     <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,         <span style="color:#75715e">// graphic width in pixels
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> HEIGHT<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,        <span style="color:#75715e">// graphic height in pixels
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> SCALE_X<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>,       <span style="color:#75715e">// sprite width scale-factor
@@ -786,12 +786,12 @@ This design was common in older computers, for example, the <a href="https://en.
 <p>For better control and reuse of sprite instances, we&rsquo;ve added two new signals: <code>drawing</code> is high when the sprite is drawing pixels, and <code>done</code> indicates the sprite is complete.</p>
 <h3 id="a-refined-palette">A Refined Palette</h3>
 <p>Our boards have 12-bit colour output, supporting 4,096 colours. We can map our 11 sprite colours to any of these using a colour lookup table (CLUT). We populate the colour lookup table using a simple text file <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/hardware-sprites/res/hedgehog/hedgehog_palette.mem">hedgehog_palette.mem</a>]</strong>:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">CCC AAA 888 874 763 651 540 330 111 F0F 000
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">CCC AAA 888 874 763 651 540 330 111 F0F 000
 </code></pre></div><p><img src="/img/posts/hardware-sprites/hedgehog-palette.png" alt="Hedgehog Palette" title="The colour of the hedge"></p>
 <p>The hedgehog sprite has ten drawing colours, with an additional colour <code>F0F</code> (magenta) used for transparency. These colours are 12-bit in hex format: <code>RGB</code>; the same as a <a href="https://en.wikipedia.org/wiki/Web_colors">web colour hex triplet</a>.</p>
 <h4 id="clut--display-output">CLUT &amp; Display Output</h4>
 <p>The logic for the CLUT is straightforward: we only have 11 colours, so an async ROM suffices:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// colour lookup table (ROM) 11x12-bit entries
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// colour lookup table (ROM) 11x12-bit entries
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] clut_colr;
     rom_async #(
         .WIDTH(<span style="color:#ae81ff">12</span>),
@@ -832,7 +832,7 @@ You&rsquo;ll learn how to create your own memory files from images using <code>i
 <p>The animated sprite graphic has three images stacked vertically, so each image is contiguous in memory <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/hardware-sprites/res/hedgehog/hedgehog_walk.mem">hedgehog_walk.mem</a></strong>:</p>
 <p><img src="/img/posts/hardware-sprites/hedgehog-frames.png" alt="Hedgehog Frames" title="Walking 1,2,3"></p>
 <p>Every display frame we increment the counter <code>cnt_anim</code>. When the counter hits specific values, we update the sprite base address, <code>spr_base_addr</code>, to select a different image in the sprite graphic.</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// sprite frame selector
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// sprite frame selector
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">5</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_anim;  <span style="color:#75715e">// count from 0-63
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">if</span> (frame) <span style="color:#66d9ef">begin</span>
@@ -848,7 +848,7 @@ You&rsquo;ll learn how to create your own memory files from images using <code>i
 
             <span style="color:#75715e">// ...
 </span></code></pre></div><p>The rom address uses the sprite base address, <code>spr_base_addr</code>, to select the right image:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// sprite graphic ROM
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// sprite graphic ROM
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [COLR_BITS<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] spr_rom_data;
     <span style="color:#66d9ef">logic</span> [SPR_ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] spr_rom_addr, spr_base_addr;
     rom_sync #(
@@ -861,7 +861,7 @@ You&rsquo;ll learn how to create your own memory files from images using <code>i
         .data(spr_rom_data)
     );
 </code></pre></div><p>Next we want to make our hedgehog&rsquo;s world a little more interesting by bringing in the sky. We do this by creating horizontal bars of colour in the background:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// background colour
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// background colour
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] bg_colr;
     <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">if</span> (line) <span style="color:#66d9ef">begin</span>
@@ -876,7 +876,7 @@ You&rsquo;ll learn how to create your own memory files from images using <code>i
         <span style="color:#66d9ef">end</span>
     <span style="color:#66d9ef">end</span>
 </code></pre></div><p>We move our hedgehog down the screen to walk on the ground:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>clk_locked) <span style="color:#66d9ef">begin</span>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>clk_locked) <span style="color:#66d9ef">begin</span>
         sprx <span style="color:#f92672">&lt;=</span> H_RES;
         spry <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">240</span>;
     <span style="color:#66d9ef">end</span>
@@ -887,7 +887,7 @@ You&rsquo;ll learn how to create your own memory files from images using <code>i
 <li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/hardware-sprites/ice40/top_hedgehog.sv">ice40/top_hedgehog.sv</a></strong></li>
 </ul>
 <p>Arty version shown below:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_hedgehog (
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_hedgehog (
     <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_100m,     <span style="color:#75715e">// 100 MHz clock
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_rst,      <span style="color:#75715e">// reset button (active low)
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> vga_hsync,    <span style="color:#75715e">// horizontal sync
