@@ -121,7 +121,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
       <p>Welcome back to <em>Exploring FPGA Graphics</em>. This time we&rsquo;re going to build on our work in <a href="/posts/lines-and-triangles/">lines and triangles</a> with rectangles, circles, and filled shapes. We&rsquo;ll finish off this part by drawing a castle using our shapes.</p>
 <p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how displays work, race the beam with Pong, animate starfields and sprites, paint Michelangelo&rsquo;s David, simulate life with bitmaps, draw lines and shapes, and create smooth animation with double buffering. New to the series? Start with <a href="/posts/fpga-graphics/">FPGA Graphics</a>.</p>
 <p><strong>You can watch an <a href="https://www.youtube.com/watch?v=ezJv7pB-UmA" target="_blank">FPGA Graphics demo reel</a> with designs from across this series.</strong></p>
-<p><em>Updated 2021-08-02. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><em>Updated 2021-08-24. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <h3 id="series-outline">Series Outline</h3>
 <ul>
 <li><a href="/posts/fpga-graphics/">FPGA Graphics</a> - learn how displays work and draw your first graphics</li>
@@ -154,9 +154,9 @@ In this series, we explore graphics at the hardware level and get a feel for the
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x0, y0,  <span style="color:#75715e">// vertex 0
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x1, y1,  <span style="color:#75715e">// vertex 2
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x,  y,   <span style="color:#75715e">// drawing position
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> drawing,         <span style="color:#75715e">// rectangle is drawing
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> complete,        <span style="color:#75715e">// rectangle complete (remains high)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> done             <span style="color:#75715e">// rectangle complete (high for one tick)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> drawing,         <span style="color:#75715e">// actively drawing
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> busy,            <span style="color:#75715e">// drawing request in progress
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> done             <span style="color:#75715e">// drawing is complete (high for one tick)
 </span><span style="color:#75715e"></span>    );
 
     <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] line_id;  <span style="color:#75715e">// current line (0, 1, 2, or 3)
@@ -167,7 +167,8 @@ In this series, we explore graphics at the hardware level and get a feel for the
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lx0, ly0;  <span style="color:#75715e">// point 0 position
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lx1, ly1;  <span style="color:#75715e">// point 1 position
 </span><span style="color:#75715e"></span>
-    <span style="color:#66d9ef">enum</span> {IDLE, INIT, DRAW} state;
+    <span style="color:#75715e">// draw state machine
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">enum</span> {IDLE, INIT, DRAW} state;
     <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">case</span> (state)
             INIT: <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// register coordinates
@@ -192,7 +193,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
                 <span style="color:#66d9ef">if</span> (line_done) <span style="color:#66d9ef">begin</span>
                     <span style="color:#66d9ef">if</span> (line_id <span style="color:#f92672">==</span> <span style="color:#ae81ff">3</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// final line
 </span><span style="color:#75715e"></span>                        state <span style="color:#f92672">&lt;=</span> IDLE;
-                        complete <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                        busy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
                         done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
                     <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
                         state <span style="color:#f92672">&lt;=</span> INIT;
@@ -205,7 +206,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
                 <span style="color:#66d9ef">if</span> (start) <span style="color:#66d9ef">begin</span>
                     state <span style="color:#f92672">&lt;=</span> INIT;
                     line_id <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-                    complete <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                    busy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
                 <span style="color:#66d9ef">end</span>
             <span style="color:#66d9ef">end</span>
         <span style="color:#66d9ef">endcase</span>
@@ -214,7 +215,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
             state <span style="color:#f92672">&lt;=</span> IDLE;
             line_id <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
             line_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-            complete <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            busy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
             done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
         <span style="color:#66d9ef">end</span>
     <span style="color:#66d9ef">end</span>
@@ -231,7 +232,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
         .x,
         .y,
         .drawing,
-        .complete(),
+        .busy(),
         .done(line_done)
     );
 <span style="color:#66d9ef">endmodule</span>
@@ -396,7 +397,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
         .x(fbx),
         .y(fby),
         .drawing,
-        .complete(),
+        .busy(),
         .done(draw_done)
     );
 
@@ -432,26 +433,22 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x0,  <span style="color:#75715e">// point 0
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x1,  <span style="color:#75715e">// point 1
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x,   <span style="color:#75715e">// drawing position
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> drawing,         <span style="color:#75715e">// line is drawing
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> complete,        <span style="color:#75715e">// line complete (remains high)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> done             <span style="color:#75715e">// line done (high for one tick)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> drawing,         <span style="color:#75715e">// actively drawing
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> busy,            <span style="color:#75715e">// drawing request in progress
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> done             <span style="color:#75715e">// drawing is complete (high for one tick)
 </span><span style="color:#75715e"></span>    );
 
-    <span style="color:#66d9ef">logic</span> in_progress <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// calculation in progress (but only output if oe)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        drawing <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-        <span style="color:#66d9ef">if</span> (in_progress <span style="color:#f92672">&amp;&amp;</span> oe) drawing <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
-    <span style="color:#66d9ef">end</span>
+    <span style="color:#75715e">// draw state machine
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">enum</span> {IDLE, DRAW} state;
+    <span style="color:#66d9ef">always_comb</span> drawing <span style="color:#f92672">=</span> (state <span style="color:#f92672">==</span> DRAW <span style="color:#f92672">&amp;&amp;</span> oe);
 
-    <span style="color:#66d9ef">enum</span> {IDLE, DRAW} state;
     <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">case</span> (state)
             DRAW: <span style="color:#66d9ef">begin</span>
                 <span style="color:#66d9ef">if</span> (oe) <span style="color:#66d9ef">begin</span>
                     <span style="color:#66d9ef">if</span> (x <span style="color:#f92672">==</span> x1) <span style="color:#66d9ef">begin</span>
                         state <span style="color:#f92672">&lt;=</span> IDLE;
-                        in_progress <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-                        complete <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                        busy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
                         done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
                     <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
                         x <span style="color:#f92672">&lt;=</span> x <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
@@ -463,16 +460,14 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
                 <span style="color:#66d9ef">if</span> (start) <span style="color:#66d9ef">begin</span>
                     state <span style="color:#f92672">&lt;=</span> DRAW;
                     x <span style="color:#f92672">&lt;=</span> x0;
-                    in_progress <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-                    complete <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                    busy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
                 <span style="color:#66d9ef">end</span>
             <span style="color:#66d9ef">end</span>
         <span style="color:#66d9ef">endcase</span>
 
         <span style="color:#66d9ef">if</span> (rst) <span style="color:#66d9ef">begin</span>
             state <span style="color:#f92672">&lt;=</span> IDLE;
-            in_progress <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-            complete <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            busy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
             done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
         <span style="color:#66d9ef">end</span>
     <span style="color:#66d9ef">end</span>
@@ -487,9 +482,9 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x0, y0,  <span style="color:#75715e">// vertex 0
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x1, y1,  <span style="color:#75715e">// vertex 2
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x,  y,   <span style="color:#75715e">// drawing position
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> drawing,         <span style="color:#75715e">// rectangle is drawing
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> complete,        <span style="color:#75715e">// rectangle complete (remains high)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> done             <span style="color:#75715e">// rectangle complete (high for one tick)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> drawing,         <span style="color:#75715e">// actively drawing
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> busy,            <span style="color:#75715e">// drawing request in progress
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> done             <span style="color:#75715e">// drawing is complete (high for one tick)
 </span><span style="color:#75715e"></span>    );
 
     <span style="color:#75715e">// filled rectangle has as many lines as it is tall abs(y1-y0)
@@ -507,7 +502,8 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
     <span style="color:#75715e">// horizontal line coordinates
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lx0, lx1;
 
-    <span style="color:#66d9ef">enum</span> {IDLE, INIT, DRAW} state;
+    <span style="color:#75715e">// draw state machine
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">enum</span> {IDLE, INIT, DRAW} state;
     <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">case</span> (state)
             INIT: <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// register coordinates
@@ -523,6 +519,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
                 <span style="color:#66d9ef">if</span> (line_done) <span style="color:#66d9ef">begin</span>
                     <span style="color:#66d9ef">if</span> (y <span style="color:#f92672">==</span> y1s) <span style="color:#66d9ef">begin</span>
                         state <span style="color:#f92672">&lt;=</span> IDLE;
+                        busy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
                         done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
                     <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
                         state <span style="color:#f92672">&lt;=</span> INIT;
@@ -535,6 +532,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
                 <span style="color:#66d9ef">if</span> (start) <span style="color:#66d9ef">begin</span>
                     state <span style="color:#f92672">&lt;=</span> INIT;
                     line_id <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                    busy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
                 <span style="color:#66d9ef">end</span>
             <span style="color:#66d9ef">end</span>
         <span style="color:#66d9ef">endcase</span>
@@ -543,7 +541,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
             state <span style="color:#f92672">&lt;=</span> IDLE;
             line_id <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
             line_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-            complete <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            busy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
             done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
         <span style="color:#66d9ef">end</span>
     <span style="color:#66d9ef">end</span>
@@ -557,7 +555,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
         .x1(lx1),
         .x(x),
         .drawing,
-        .complete(),
+        .busy(),
         .done(line_done)
     );
 <span style="color:#66d9ef">endmodule</span>
@@ -566,7 +564,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
 <li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/2d-shapes/xc7/top_rectangles_fill.sv">xc7/top_rectangles_fill.sv</a></strong></li>
 <li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/2d-shapes/ice40/top_rectangles_fill.sv">ice40/top_rectangles_fill.sv</a></strong></li>
 </ul>
-<p>The drawing state machine for filled rectangles looks like this in the iCE40 version:</p>
+<p>Drawing filled rectangles looks like this in the iCE40 version (note how we have to initialize the SPRAM framebuffer before use):</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// draw filled rectangles in framebuffer
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> SHAPE_CNT<span style="color:#f92672">=</span><span style="color:#ae81ff">15</span>;  <span style="color:#75715e">// number of shapes to draw
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(SHAPE_CNT<span style="color:#f92672">+</span><span style="color:#ae81ff">1</span>)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] shape_id;  <span style="color:#75715e">// shape identifier
@@ -626,6 +624,45 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
 </span><span style="color:#75715e"></span>        <span style="color:#66d9ef">endcase</span>
         <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>clk_locked) state <span style="color:#f92672">&lt;=</span> IDLE;
     <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// control drawing speed with output enable
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> FRAME_WAIT <span style="color:#f92672">=</span> <span style="color:#ae81ff">300</span>;  <span style="color:#75715e">// wait this many frames to start drawing
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> PIX_FRAME  <span style="color:#f92672">=</span> <span style="color:#ae81ff">200</span>;  <span style="color:#75715e">// draw this many pixels per frame
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(FRAME_WAIT)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_frame_wait;
+    <span style="color:#66d9ef">logic</span> [$clog2(PIX_FRAME)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_pix_frame;
+    <span style="color:#66d9ef">logic</span> draw_req;
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        draw_req <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+        <span style="color:#66d9ef">if</span> (frame) <span style="color:#66d9ef">begin</span>
+            <span style="color:#66d9ef">if</span> (cnt_frame_wait <span style="color:#f92672">!=</span> FRAME_WAIT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) cnt_frame_wait <span style="color:#f92672">&lt;=</span> cnt_frame_wait <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+            cnt_pix_frame <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// reset pixel counter every frame
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">end</span>
+        <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>fb_busy) <span style="color:#66d9ef">begin</span>
+            <span style="color:#66d9ef">if</span> (cnt_frame_wait <span style="color:#f92672">==</span> FRAME_WAIT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span> <span style="color:#f92672">&amp;&amp;</span> cnt_pix_frame <span style="color:#f92672">!=</span> PIX_FRAME<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
+                draw_req <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                cnt_pix_frame <span style="color:#f92672">&lt;=</span> cnt_pix_frame <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+            <span style="color:#66d9ef">end</span>
+        <span style="color:#66d9ef">end</span>
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fbx_draw, fby_draw;  <span style="color:#75715e">// framebuffer drawing coordinates
+</span><span style="color:#75715e"></span>    draw_rectangle_fill #(.CORDW(CORDW)) draw_rectangle_inst (
+        .clk(clk_pix),
+        .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// must be reset for draw with Yosys
+</span><span style="color:#75715e"></span>        .start(draw_start),
+        .oe(draw_req <span style="color:#f92672">&amp;&amp;</span> <span style="color:#f92672">!</span>fb_busy),  <span style="color:#75715e">// draw if requested when framebuffer is available
+</span><span style="color:#75715e"></span>        .x0(vx0),
+        .y0(vy0),
+        .x1(vx1),
+        .y1(vy1),
+        .x(fbx_draw),
+        .y(fby_draw),
+        .drawing,
+        <span style="color:#75715e">/* verilator lint_off PINCONNECTEMPTY */</span>
+        .busy(),
+        <span style="color:#75715e">/* verilator lint_on PINCONNECTEMPTY */</span>
+        .done(draw_done)
+    );
 </code></pre></div><h2 id="filled-triangle">Filled Triangle</h2>
 <p>A filled triangle requires more thought than a rectangle. There are several quite different approaches, for example barycentric coordinates can be used to render many pixels in parallel. We&rsquo;re going to stick with Bresenham&rsquo;s algorithm, as it&rsquo;s light on FPGA resources and can still draw over a million small triangles per second (based on 100 MHz Arty drawing clock and a 36-pixel triangle taking 97 clock cycles).</p>
 <p>We use Bresenham to determine the triangle edges, then join them with a horizontal line. First we sort the vertices, so we always draw down, then we split the triangle into two flat triangles. <em>More details to follow.</em></p>
@@ -639,9 +676,9 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x1, y1,  <span style="color:#75715e">// vertex 1
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x2, y2,  <span style="color:#75715e">// vertex 2
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x,  y,   <span style="color:#75715e">// drawing position
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> drawing,         <span style="color:#75715e">// triangle is drawing
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> complete,        <span style="color:#75715e">// triangle complete (remains high)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> done             <span style="color:#75715e">// triangle complete (high for one tick)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> drawing,         <span style="color:#75715e">// actively drawing
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> busy,            <span style="color:#75715e">// drawing request in progress
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> done             <span style="color:#75715e">// drawing is complete (high for one tick)
 </span><span style="color:#75715e"></span>    );
 
     <span style="color:#75715e">// sorted input vertices
@@ -662,14 +699,15 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
     <span style="color:#75715e">// line control signals
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> oe_a, oe_b, oe_h;
     <span style="color:#66d9ef">logic</span> drawing_h;
-    <span style="color:#66d9ef">logic</span> complete_a, complete_b, complete_h;
+    <span style="color:#66d9ef">logic</span> busy_a, busy_b, busy_h;
     <span style="color:#66d9ef">logic</span> b_edge;  <span style="color:#75715e">// which B edge are we drawing?
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> right;   <span style="color:#75715e">// whether lines are drawn to the right
 </span><span style="color:#75715e"></span>
     <span style="color:#75715e">// pipeline completion signals to match coordinates
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> complete_p1, done_p1;
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> busy_p1, done_p1;
 
-    <span style="color:#66d9ef">enum</span> {IDLE, SORT_0, SORT_1, SORT_2, INIT_A, INIT_B0, INIT_B1, INIT_H,
+    <span style="color:#75715e">// draw state machine
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">enum</span> {IDLE, SORT_0, SORT_1, SORT_2, INIT_A, INIT_B0, INIT_B1, INIT_H,
             START_A, START_B, START_H, EDGE, H_LINE, DONE} state;
     <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">case</span> (state)
@@ -739,7 +777,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
             START_A: state <span style="color:#f92672">&lt;=</span> START_B;
             START_B: state <span style="color:#f92672">&lt;=</span> EDGE;
             EDGE: <span style="color:#66d9ef">begin</span>
-                <span style="color:#66d9ef">if</span> ((ya <span style="color:#f92672">!=</span> prev_y <span style="color:#f92672">||</span> complete_a) <span style="color:#f92672">&amp;&amp;</span> (yb <span style="color:#f92672">!=</span> prev_y <span style="color:#f92672">||</span> complete_b)) <span style="color:#66d9ef">begin</span>
+                <span style="color:#66d9ef">if</span> ((ya <span style="color:#f92672">!=</span> prev_y <span style="color:#f92672">||</span> <span style="color:#f92672">!</span>busy_a) <span style="color:#f92672">&amp;&amp;</span> (yb <span style="color:#f92672">!=</span> prev_y <span style="color:#f92672">||</span> <span style="color:#f92672">!</span>busy_b)) <span style="color:#66d9ef">begin</span>
                     state <span style="color:#f92672">&lt;=</span> START_H;
                     x0h <span style="color:#f92672">&lt;=</span> right <span style="color:#f92672">?</span> prev_xa <span style="color:#f92672">:</span> prev_xb;
                     x1h <span style="color:#f92672">&lt;=</span> right <span style="color:#f92672">?</span> prev_xb <span style="color:#f92672">:</span> prev_xa;
@@ -747,24 +785,24 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
             <span style="color:#66d9ef">end</span>
             START_H: state <span style="color:#f92672">&lt;=</span> H_LINE;
             H_LINE: <span style="color:#66d9ef">begin</span>
-                <span style="color:#66d9ef">if</span> (complete_h) <span style="color:#66d9ef">begin</span>
+                <span style="color:#66d9ef">if</span> (busy_h) <span style="color:#66d9ef">begin</span>
                     prev_y <span style="color:#f92672">&lt;=</span> yb;  <span style="color:#75715e">// safe to update previous values once h-line done
 </span><span style="color:#75715e"></span>                    prev_xa <span style="color:#f92672">&lt;=</span> xa;
                     prev_xb <span style="color:#f92672">&lt;=</span> xb;
-                    <span style="color:#66d9ef">if</span> (complete_b) <span style="color:#66d9ef">begin</span>
-                        state <span style="color:#f92672">&lt;=</span> (<span style="color:#f92672">!</span>complete_a <span style="color:#f92672">&amp;&amp;</span> b_edge <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) <span style="color:#f92672">?</span> INIT_B1 <span style="color:#f92672">:</span> DONE;
+                    <span style="color:#66d9ef">if</span> (busy_b) <span style="color:#66d9ef">begin</span>
+                        state <span style="color:#f92672">&lt;=</span> (busy_a <span style="color:#f92672">&amp;&amp;</span> b_edge <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) <span style="color:#f92672">?</span> INIT_B1 <span style="color:#f92672">:</span> DONE;
                     <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> state <span style="color:#f92672">&lt;=</span> EDGE;
                 <span style="color:#66d9ef">end</span>
             <span style="color:#66d9ef">end</span>
             DONE: <span style="color:#66d9ef">begin</span>
                 state <span style="color:#f92672">&lt;=</span> IDLE;
                 done_p1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-                complete_p1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                busy_p1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
             <span style="color:#66d9ef">end</span>
             <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// IDLE
 </span><span style="color:#75715e"></span>                <span style="color:#66d9ef">if</span> (start) <span style="color:#66d9ef">begin</span>
                     state <span style="color:#f92672">&lt;=</span> SORT_0;
-                    complete_p1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                    busy_p1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
                 <span style="color:#66d9ef">end</span>
                 done_p1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
             <span style="color:#66d9ef">end</span>
@@ -772,7 +810,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
 
         <span style="color:#66d9ef">if</span> (rst) <span style="color:#66d9ef">begin</span>
             state <span style="color:#f92672">&lt;=</span> IDLE;
-            complete_p1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            busy_p1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
             done_p1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
             b_edge <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
         <span style="color:#66d9ef">end</span>
@@ -789,7 +827,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
         x <span style="color:#f92672">&lt;=</span> xh;
         y <span style="color:#f92672">&lt;=</span> prev_y;
         drawing <span style="color:#f92672">&lt;=</span> drawing_h;
-        complete <span style="color:#f92672">&lt;=</span> complete_p1;
+        busy <span style="color:#f92672">&lt;=</span> busy_p1;
         done <span style="color:#f92672">&lt;=</span> done_p1;
     <span style="color:#66d9ef">end</span>
 
@@ -805,7 +843,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
         .x(xa),
         .y(ya),
         .drawing(),
-        .complete(complete_a),
+        .busy(busy_a),
         .done()
     );
 
@@ -821,7 +859,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
         .x(xb),
         .y(yb),
         .drawing(),
-        .complete(complete_b),
+        .busy(busy_b),
         .done()
     );
 
@@ -834,7 +872,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
         .x1(x1h),
         .x(xh),
         .drawing(drawing_h),
-        .complete(complete_h),
+        .busy(busy_h),
         .done()
     );
 <span style="color:#66d9ef">endmodule</span>
@@ -1146,7 +1184,7 @@ The standard approach is for top and left edges to be drawn. We won&rsquo;t be h
         .x(fbx_tri),
         .y(fby_tri),
         .drawing(drawing_tri),
-        .complete(),
+        .busy(),
         .done(draw_done_tri)
     );
 
@@ -1162,7 +1200,7 @@ The standard approach is for top and left edges to be drawn. We won&rsquo;t be h
         .x(fbx_rect),
         .y(fby_rect),
         .drawing(drawing_rect),
-        .complete(),
+        .busy(),
         .done(draw_done_rect)
     );
 
