@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"  lang="en-gb">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+<title>Animated Shapes | Project F - FPGA Development</title>
+
+<meta property='og:title' content='Animated Shapes - Project F - FPGA Development'>
+<meta property='og:description' content='Welcome back to Exploring FPGA Graphics. In the final part of our introductory graphics series, we&rsquo;re looking at animation. We&rsquo;ve already seen animation with Hardware Sprites, but double buffering gives us maximum creative freedom with fast, tear-free animation. We&rsquo;ll be making extensive use of our designs from 2D Shapes, so have a look back at that post if you need a refresher on drawing shapes.
+In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs.'>
+<meta property='og:url' content='https://projectf.io/posts/animated-shapes/'>
+<meta property='og:site_name' content='Project F - FPGA Development'>
+<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/animated-shapes/social-card.jpg'><meta property='article:published_time' content='2021-08-31T00:00:00Z'/><meta property='article:modified_time' content='2021-08-31T00:00:00Z'/><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
+
+
+<link href="https://projectf.io/index.xml" rel="alternate" type="application/rss+xml" title="Project F - FPGA Development" />
+
+<link rel="stylesheet" href="/css/style.css"/><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+<link rel="canonical" href="https://projectf.io/posts/animated-shapes/">
+<meta name="msapplication-TileColor" content="#da532c">
+<meta name="theme-color" content="#ffffff">
+<meta name="referrer" content="no-referrer, same-origin">
+</head>
+<body>
+<section class="section">
+  <div class="container">
+    <nav id="nav-main" class="nav">
+      <div id="nav-name" class="nav-left">
+        <a id="nav-anchor" class="nav-item" href="https://projectf.io">
+          <h1 id="nav-heading" class="title is-4">Project F - FPGA Development</h1>
+        </a>
+      </div>
+      <div class="nav-right">
+        <nav id="nav-items" class="nav-item level is-mobile"><a class="level-item" aria-label="github" href='https://github.com/projf'
+            target='_blank' rel='noopener'>
+            <span class="icon">
+              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
+    
+    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
+    
+  </svg></i>
+            </span>
+          </a><a class="level-item" aria-label="twitter" href='https://twitter.com/WillFlux'
+            target='_blank' rel='noopener'>
+            <span class="icon">
+              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
+    
+    <path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"/>
+    
+  </svg></i>
+            </span>
+          </a><a class="level-item" aria-label="youtube" href='https://youtube.com/channel/UCaT0lvfWo1GStbp0neg8weg'
+            target='_blank' rel='noopener'>
+            <span class="icon">
+              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
+    
+    <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/>
+    <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/>
+    
+  </svg></i>
+            </span>
+          </a><a class="level-item" aria-label="rss" href='/index.xml'
+            target='_blank' rel='noopener'>
+            <span class="icon">
+              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
+    
+    <path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle>
+    
+  </svg></i>
+            </span>
+          </a></nav>
+      </div>
+    </nav>
+
+    <nav class="nav">
+      
+      <div class="nav-left"><a class="nav-item" href="/about">
+          <h2 class="title is-5">About</h2>
+        </a><a class="nav-item" href="/sitemap">
+          <h2 class="title is-5">Sitemap</h2>
+        </a><a class="nav-item" href="/tags/cookbook">
+          <h2 class="title is-5">Cookbook</h2>
+        </a><a class="nav-item" href="/tags/explore">
+          <h2 class="title is-5">Explore</h2>
+        </a><a class="nav-item" href="/tags/tools">
+          <h2 class="title is-5">Tools</h2>
+        </a></div>
+      
+
+      
+    </nav>
+
+  </div>
+  <script src="/js/navicon-shift.js"></script>
+</section>
+<section class="section">
+  <div class="container">
+    <div class="subtitle tags is-6 is-pulled-right">
+      
+      
+<a class="subtitle is-6" href="/tags/explore/">#explore</a>
+
+
+
+  
+  | <a class="subtitle is-6" href="/tags/graphics/">#graphics</a>
+  
+
+
+      
+    </div>
+    <h2 class="subtitle is-6">31 August 2021</h2>
+    <h1 class="title">Animated Shapes</h1>
+    
+    <div class="content">
+      <p>Welcome back to <em>Exploring FPGA Graphics</em>. In the final part of our introductory graphics series, we&rsquo;re looking at animation. We&rsquo;ve already seen animation with <a href="/posts/hardware-sprites/">Hardware Sprites</a>, but double buffering gives us maximum creative freedom with fast, tear-free animation. We&rsquo;ll be making extensive use of our designs from <a href="/posts/fpga-shapes/">2D Shapes</a>, so have a look back at that post if you need a refresher on drawing shapes.</p>
+<p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how displays work, race the beam with Pong, animate starfields and sprites, paint Michelangelo&rsquo;s David, simulate life with bitmaps, draw lines and shapes, and create smooth animation with double buffering. New to the series? Start with <a href="/posts/fpga-graphics/">FPGA Graphics</a>.</p>
+<p><strong>You can watch an <a href="https://www.youtube.com/watch?v=ezJv7pB-UmA" target="_blank">FPGA Graphics demo reel</a> with designs from across this series.</strong></p>
+<p><em>DRAFT POST. Stay tuned for updates and iCE40 support during September 2021.</em></p>
+<p><em>Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<h3 id="series-outline">Series Outline</h3>
+<ul>
+<li><a href="/posts/fpga-graphics/">FPGA Graphics</a> - learn how displays work and draw your first graphics</li>
+<li><a href="/posts/fpga-pong/">Pong</a> - race the beam to create the arcade classic</li>
+<li><a href="/posts/hardware-sprites/">Hardware Sprites</a> - fast, colourful, graphics with minimal resources</li>
+<li><a href="/posts/fpga-ad-astra/">Ad Astra</a> - graphics demo with starfields and hardware sprites</li>
+<li><a href="/posts/framebuffers/">Framebuffers</a> - driving the display from a bitmap in memory</li>
+<li><a href="/posts/life-on-screen/">Life on Screen</a> - the screen comes alive with Conway&rsquo;s Game of Life</li>
+<li><a href="/posts/lines-and-triangles/">Lines and Triangles</a> - drawing lines and triangles with a framebuffer</li>
+<li><a href="/posts/fpga-shapes/">2D Shapes</a> - filling shapes and drawing pictures</li>
+<li>Animated Shapes (this post) - animating shapes and double-buffering (draft)</li>
+</ul>
+<h3 id="requirements">Requirements</h3>
+<p>For this series, you need an FPGA board with video output. We&rsquo;ll be working at 640x480, so pretty much any video output will do. It helps to be comfortable with programming your FPGA board and reasonably familiar with Verilog.</p>
+<p>We&rsquo;ll be demoing with these boards:</p>
+<ul>
+<li><strong><a href="https://docs.icebreaker-fpga.org/hardware/icebreaker/">iCEBreaker</a></strong> (Lattice iCE40) with <strong><a href="https://docs.icebreaker-fpga.org/hardware/pmod/dvi/">12-Bit DVI Pmod</a></strong></li>
+<li><strong><a href="https://reference.digilentinc.com/reference/programmable-logic/arty-a7/reference-manual">Digilent Arty A7-35T</a></strong> (Xilinx Artix-7) with <strong><a href="https://reference.digilentinc.com/reference/pmod/pmodvga/reference-manual">Pmod VGA</a></strong></li>
+</ul>
+<blockquote>
+<p><strong>iCEBreaker Support</strong><br>
+I am working on a double-buffered framebuffer using iCE40 SPRAM.
+iCEBreaker designs should be ready in September. Follow <a href="https://twitter.com/WillFlux">@WillFlux</a> for updates.</p>
+</blockquote>
+<h3 id="source">Source</h3>
+<p>The SystemVerilog designs featured in this series are available from the <a href="https://github.com/projf/projf-explore/">projf-explore</a> git repo under the open-source MIT licence: build on them to your heart&rsquo;s content. The rest of the blog content is subject to standard copyright restrictions: don&rsquo;t republish it without permission.</p>
+<h2 id="blazing-a-trail">Blazing a Trail</h2>
+<p>Back in the very first part of this series, we <a href="/posts/fpga-graphics/#bounce">animated bouncing squares</a>; now we&rsquo;re going to do it with a framebuffer. We take a filled square and bounce it around the screen, changing its colour every frame. This design uses a single framebuffer hence the &lsquo;sb&rsquo; name.</p>
+<ul>
+<li>Arty (XC7): <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/animated-shapes/xc7/top_sb_bounce.sv">top_sb_bounce.sv</a>]</strong></li>
+<li>iCEBreaker (iCE40): <em>not yet available</em></li>
+</ul>
+<blockquote>
+<p><strong>Building the Designs</strong><br>
+In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/animated-shapes">Animated Shapes</a> section of the git repo, you&rsquo;ll find the design files, a makefile for iCEBreaker, a Vivado project for Arty, and instructions for building the designs for both boards.</p>
+</blockquote>
+<p>The drawing part of the design looks like this in the Arty version:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-Verilog" data-lang="Verilog">    <span style="color:#75715e">// square coordinates
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> Q1_SIZE <span style="color:#f92672">=</span> <span style="color:#ae81ff">80</span>;
+    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] q1x, q1y;  <span style="color:#75715e">// position (top left)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> q1dx, q1dy;            <span style="color:#75715e">// direction: 0 is right/down
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] q1s <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span>;   <span style="color:#75715e">// speed in pixels/frame
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_100m) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">if</span> (frame_sys) <span style="color:#66d9ef">begin</span>
+            <span style="color:#66d9ef">if</span> (q1x <span style="color:#f92672">&gt;=</span> FB_WIDTH <span style="color:#f92672">-</span> (Q1_SIZE <span style="color:#f92672">+</span> q1s)) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// right edge
+</span><span style="color:#75715e"></span>                q1dx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                q1x <span style="color:#f92672">&lt;=</span> q1x <span style="color:#f92672">-</span> q1s;
+            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (q1x <span style="color:#f92672">&lt;</span> q1s) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// left edge
+</span><span style="color:#75715e"></span>                q1dx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                q1x <span style="color:#f92672">&lt;=</span> q1x <span style="color:#f92672">+</span> q1s;
+            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> q1x <span style="color:#f92672">&lt;=</span> (q1dx) <span style="color:#f92672">?</span> q1x <span style="color:#f92672">-</span> q1s <span style="color:#f92672">:</span> q1x <span style="color:#f92672">+</span> q1s;
+
+            <span style="color:#66d9ef">if</span> (q1y <span style="color:#f92672">&gt;=</span> FB_HEIGHT <span style="color:#f92672">-</span> (Q1_SIZE <span style="color:#f92672">+</span> q1s)) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// bottom edge
+</span><span style="color:#75715e"></span>                q1dy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                q1y <span style="color:#f92672">&lt;=</span> q1y <span style="color:#f92672">-</span> q1s;
+            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (q1y <span style="color:#f92672">&lt;</span> q1s) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// top edge
+</span><span style="color:#75715e"></span>                q1dy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                q1y <span style="color:#f92672">&lt;=</span> q1y <span style="color:#f92672">+</span> q1s;
+            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> q1y <span style="color:#f92672">&lt;=</span> (q1dy) <span style="color:#f92672">?</span> q1y <span style="color:#f92672">-</span> q1s <span style="color:#f92672">:</span> q1y <span style="color:#f92672">+</span> q1s;
+        <span style="color:#66d9ef">end</span>
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// draw square in framebuffer
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] rx0, ry0, rx1, ry1;  <span style="color:#75715e">// shape coords
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> draw_start, drawing, draw_done;  <span style="color:#75715e">// drawing signals
+</span><span style="color:#75715e"></span>
+    <span style="color:#75715e">// draw state machine
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">enum</span> {IDLE, INIT, DRAW, DONE} state;
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_100m) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">case</span> (state)
+            INIT: <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// register coordinates and colour
+</span><span style="color:#75715e"></span>                draw_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                state <span style="color:#f92672">&lt;=</span> DRAW;
+                rx0 <span style="color:#f92672">&lt;=</span> q1x;
+                ry0 <span style="color:#f92672">&lt;=</span> q1y;
+                rx1 <span style="color:#f92672">&lt;=</span> q1x <span style="color:#f92672">+</span> Q1_SIZE;
+                ry1 <span style="color:#f92672">&lt;=</span> q1y <span style="color:#f92672">+</span> Q1_SIZE;
+                fb_cidx <span style="color:#f92672">&lt;=</span> fb_cidx <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+            <span style="color:#66d9ef">end</span>
+            DRAW: <span style="color:#66d9ef">begin</span>
+                draw_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                <span style="color:#66d9ef">if</span> (draw_done) state <span style="color:#f92672">&lt;=</span> DONE;
+            <span style="color:#66d9ef">end</span>
+            DONE: state <span style="color:#f92672">&lt;=</span> IDLE;
+            <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">if</span> (frame_sys) state <span style="color:#f92672">&lt;=</span> INIT;  <span style="color:#75715e">// IDLE
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">endcase</span>
+    <span style="color:#66d9ef">end</span>
+
+    draw_rectangle_fill #(.CORDW(CORDW)) draw_rectangle_inst (
+        .clk(clk_100m),
+        .rst(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),
+        .start(draw_start),
+        .oe(<span style="color:#f92672">!</span>fb_busy),  <span style="color:#75715e">// draw when framebuffer isn&#39;t busy
+</span><span style="color:#75715e"></span>        .x0(rx0),
+        .y0(ry0),
+        .x1(rx1),
+        .y1(ry1),
+        .x(fbx),
+        .y(fby),
+        .drawing,
+        .busy(),
+        .done(draw_done)
+    );
+</code></pre></div><p><img src="/img/posts/animated-shapes/bounce-sb.png" alt="Bounce Single Buffer" title="Stripey! Captured from my FPGA board."></p>
+<p>Our framebuffer remembers all the squares we&rsquo;ve drawn, so the screen gradually fills with striped colour. While this is a fun effect, it&rsquo;s not usually what you want.</p>
+<h3 id="clean-movement">Clean Movement</h3>
+<p>There are three approaches we can take to move an object around the screen cleanly:</p>
+<ol>
+<li>Use <a href="/posts/hardware-sprites/">Hardware Sprites</a> - suitable for simple 2D graphics</li>
+<li>Use a blitter to cut out and move a framebuffer region  - effective for small 2D objects</li>
+<li>Clear the framebuffer and draw from scratch - versatile but requires plenty of bandwidth</li>
+</ol>
+<p>For this post, we&rsquo;ll go with option 3, but more than that, we&rsquo;ll also introduce double buffering.</p>
+<h2 id="double-buffering">Double Buffering</h2>
+<p>We can&rsquo;t draw in a framebuffer while the display controller reads it; otherwise, we&rsquo;ll get <a href="https://en.wikipedia.org/wiki/Screen_tearing">tearing</a>. We could limit ourselves to drawing in the vertical blanking interval, but even for 640x480 with its generous blanking, we&rsquo;d only be able to draw for less than 10% of the time. This is not enough time to do much interesting, especially as we need to clear the framebuffer of old designs every frame.</p>
+<p>To draw all the time, we can double up on framebuffers: drawing in one while the display controller reads from the other. That way, we can be drawing all the time and avoid screen tearing. The only downsides are the need for twice the memory, and an extra frame of latency before the new output is visible.</p>
+<p>Add the appropriate double buffering module for your board:</p>
+<ul>
+<li>Arty (XC7): <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lib/display/framebuffer_bram_db.sv">framebuffer_bram_db.sv</a>]</strong>:</li>
+<li>iCEBreaker (iCE40): <em>not yet available</em></li>
+</ul>
+<p>The BRAM version for the Arty is show below:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> framebuffer_bram_db #(
+    <span style="color:#66d9ef">parameter</span> CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>,      <span style="color:#75715e">// signed coordinate width (bits)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">320</span>,     <span style="color:#75715e">// width of framebuffer in pixels
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> HEIGHT<span style="color:#f92672">=</span><span style="color:#ae81ff">180</span>,    <span style="color:#75715e">// height of framebuffer in pixels
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> CIDXW<span style="color:#f92672">=</span><span style="color:#ae81ff">4</span>,       <span style="color:#75715e">// colour index data width: 4=16, 8=256 colours
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> CHANW<span style="color:#f92672">=</span><span style="color:#ae81ff">4</span>,       <span style="color:#75715e">// width of RGB colour channels (4 or 8 bit)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> SCALE<span style="color:#f92672">=</span><span style="color:#ae81ff">4</span>,       <span style="color:#75715e">// display output scaling factor (&gt;=1)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> F_IMAGE<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;&#34;</span>,    <span style="color:#75715e">// image file to load into framebuffer
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> F_PALETTE<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;&#34;</span>   <span style="color:#75715e">// palette file to load into CLUT
+</span><span style="color:#75715e"></span>    ) (
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_sys,    <span style="color:#75715e">// system clock
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_pix,    <span style="color:#75715e">// pixel clock
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst_sys,    <span style="color:#75715e">// reset (clk_sys)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst_pix,    <span style="color:#75715e">// reset (clk_pix)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> de,         <span style="color:#75715e">// data enable for display (clk_pix)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> frame,      <span style="color:#75715e">// start a new frame (clk_pix)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> line,       <span style="color:#75715e">// start a new screen line (clk_pix)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> we,         <span style="color:#75715e">// write enable
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x,  <span style="color:#75715e">// horizontal pixel coordinate
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] y,  <span style="color:#75715e">// vertical pixel coordinate
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [CIDXW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cidx,   <span style="color:#75715e">// framebuffer colour index
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [CIDXW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] bgidx,  <span style="color:#75715e">// framebuffer background colour index
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clear,              <span style="color:#75715e">// clear write buffer on frame start
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> busy,               <span style="color:#75715e">// busy with reading for display output
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> wready,             <span style="color:#75715e">// ready to accept writes (after clear)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> clip,               <span style="color:#75715e">// pixel coordinate outside buffer
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [CHANW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] red,    <span style="color:#75715e">// colour output to display (clk_pix)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [CHANW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] green,  <span style="color:#75715e">//     &#34;    &#34;    &#34;    &#34;    &#34;
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [CHANW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] blue    <span style="color:#75715e">//     &#34;    &#34;    &#34;    &#34;    &#34;
+</span><span style="color:#75715e"></span>    );
+
+    <span style="color:#66d9ef">logic</span> frame_sys;  <span style="color:#75715e">// start of new frame in system clock domain
+</span><span style="color:#75715e"></span>    xd xd_frame (.clk_i(clk_pix), .clk_o(clk_sys),
+                 .rst_i(rst_pix), .rst_o(rst_sys), .i(frame), .o(frame_sys));
+
+    <span style="color:#75715e">// buffer selection
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> front_buf;
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_sys) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">if</span> (frame_sys) front_buf <span style="color:#f92672">&lt;=</span> <span style="color:#f92672">~</span>front_buf;  <span style="color:#75715e">// swap every frame
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (rst_sys) front_buf <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// framebuffer (FB)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> FB_PIXELS   <span style="color:#f92672">=</span> WIDTH <span style="color:#f92672">*</span> HEIGHT;
+    <span style="color:#66d9ef">localparam</span> FB_BUFSIZE  <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span> <span style="color:#f92672">**</span> $clog2(FB_PIXELS<span style="color:#f92672">+</span><span style="color:#ae81ff">1</span>);  <span style="color:#75715e">// align buffers to power-of-two
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> FB_DEPTH    <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span> <span style="color:#f92672">*</span> FB_BUFSIZE;
+    <span style="color:#66d9ef">localparam</span> FB_ADDRW    <span style="color:#f92672">=</span> $clog2(FB_BUFSIZE);
+    <span style="color:#66d9ef">localparam</span> FB_DATAW    <span style="color:#f92672">=</span> CIDXW;
+    <span style="color:#66d9ef">localparam</span> FB_DUALPORT <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// separate read and write ports?
+</span><span style="color:#75715e"></span>
+    <span style="color:#66d9ef">logic</span> [FB_ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_addr_read, fb_addr_write;
+    <span style="color:#66d9ef">logic</span> [FB_DATAW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_cidx_read, fb_cidx_read_p1;
+
+    <span style="color:#75715e">// write address components
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x_add;  <span style="color:#75715e">// pixel position on line
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span>[FB_ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_addr_line;  <span style="color:#75715e">// address of line for drawing
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [FB_ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_addr_clr;  <span style="color:#75715e">// address for clearing screen
+</span><span style="color:#75715e"></span>
+    <span style="color:#75715e">// write state machine
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">enum</span> {IDLE, INIT, CLR, ACTIVE} wstate;
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_sys) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">case</span> (wstate)
+            INIT: <span style="color:#66d9ef">begin</span>
+                wstate <span style="color:#f92672">&lt;=</span> (clear) <span style="color:#f92672">?</span> CLR <span style="color:#f92672">:</span> ACTIVE;
+                fb_addr_clr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            <span style="color:#66d9ef">end</span>
+            CLR: <span style="color:#66d9ef">begin</span>
+                <span style="color:#66d9ef">if</span> (fb_addr_clr <span style="color:#f92672">==</span> FB_PIXELS<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) wstate <span style="color:#f92672">&lt;=</span> ACTIVE;
+                fb_addr_clr <span style="color:#f92672">&lt;=</span> fb_addr_clr <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+            <span style="color:#66d9ef">end</span>
+            <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">if</span> (frame_sys) wstate <span style="color:#f92672">&lt;=</span> INIT;  <span style="color:#75715e">// IDLE or ACTIVE
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">endcase</span>
+        <span style="color:#66d9ef">if</span> (rst_sys) wstate <span style="color:#f92672">&lt;=</span> IDLE;
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// ready for drawing to begin
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> wready <span style="color:#f92672">=</span> (wstate <span style="color:#f92672">==</span> ACTIVE);
+
+    <span style="color:#75715e">// calculate write address from pixel coordinates (three stages: mul, add, clear mux)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_sys) <span style="color:#66d9ef">begin</span>
+        fb_addr_line <span style="color:#f92672">&lt;=</span> WIDTH <span style="color:#f92672">*</span> y;  <span style="color:#75715e">// write address 1st stage (y could be negative)
+</span><span style="color:#75715e"></span>        x_add <span style="color:#f92672">&lt;=</span> x;  <span style="color:#75715e">// save x for write address 2nd stage
+</span><span style="color:#75715e"></span>        fb_addr_write <span style="color:#f92672">&lt;=</span> (wstate <span style="color:#f92672">==</span> CLR) <span style="color:#f92672">?</span> fb_addr_clr <span style="color:#f92672">:</span> fb_addr_line <span style="color:#f92672">+</span> x_add;
+        <span style="color:#75715e">// clipping is checked later
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// draw colour and write enable (delay to match address calculation)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> fb_we, we_in_p1;
+    <span style="color:#66d9ef">logic</span> [FB_DATAW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_cidx_write, cidx_in_p1;
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_sys) <span style="color:#66d9ef">begin</span>
+        <span style="color:#75715e">// first stage
+</span><span style="color:#75715e"></span>        we_in_p1 <span style="color:#f92672">&lt;=</span> ((we <span style="color:#f92672">&amp;&amp;</span> wready) <span style="color:#f92672">||</span> wstate <span style="color:#f92672">==</span> CLR);  <span style="color:#75715e">// draw or clear enables write
+</span><span style="color:#75715e"></span>        cidx_in_p1 <span style="color:#f92672">&lt;=</span> (wstate <span style="color:#f92672">==</span> CLR) <span style="color:#f92672">?</span> bgidx <span style="color:#f92672">:</span> cidx;   <span style="color:#75715e">// which draw colour?
+</span><span style="color:#75715e"></span>        clip <span style="color:#f92672">&lt;=</span> (y <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">||</span> y <span style="color:#f92672">&gt;=</span> HEIGHT <span style="color:#f92672">||</span> x <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">||</span> x <span style="color:#f92672">&gt;=</span> WIDTH);  <span style="color:#75715e">// clipped?
+</span><span style="color:#75715e"></span>        <span style="color:#75715e">// second stage
+</span><span style="color:#75715e"></span>        fb_we <span style="color:#f92672">&lt;=</span> (busy <span style="color:#f92672">||</span> clip) <span style="color:#f92672">?</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">:</span> we_in_p1;  <span style="color:#75715e">// write if neither busy nor clipped
+</span><span style="color:#75715e"></span>        fb_cidx_write <span style="color:#f92672">&lt;=</span> cidx_in_p1;
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// framebuffer memory (BRAM)
+</span><span style="color:#75715e"></span>    bram_sdp #(
+        .WIDTH(FB_DATAW),
+        .DEPTH(FB_DEPTH),
+        .INIT_F(F_IMAGE)
+    ) bram_inst (
+        .clk_write(clk_sys),
+        .clk_read(clk_sys),
+        .we(fb_we),
+        .addr_write({<span style="color:#f92672">~</span>front_buf,fb_addr_write}),
+        .addr_read({front_buf,fb_addr_read}),
+        .data_in(fb_cidx_write),
+        .data_out(fb_cidx_read)
+    );
+
+    <span style="color:#75715e">// linebuffer (LB)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_SCALE <span style="color:#f92672">=</span> SCALE;  <span style="color:#75715e">// scale (horizontal and vertical)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_LEN   <span style="color:#f92672">=</span> WIDTH;  <span style="color:#75715e">// line length matches framebuffer
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LB_BPC   <span style="color:#f92672">=</span> CHANW;  <span style="color:#75715e">// bits per colour channel
+</span><span style="color:#75715e"></span>
+    <span style="color:#66d9ef">logic</span> lb_data_req;  <span style="color:#75715e">// LB requesting data
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(LB_LEN<span style="color:#f92672">+</span><span style="color:#ae81ff">1</span>)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_h;  <span style="color:#75715e">// count pixels in line to read
+</span><span style="color:#75715e"></span>
+    <span style="color:#75715e">// LB enable (not corrected for latency)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> lb_en_in, lb_en_out;
+    <span style="color:#66d9ef">always_comb</span> lb_en_in  <span style="color:#f92672">=</span> cnt_h <span style="color:#f92672">&lt;</span> LB_LEN;
+    <span style="color:#66d9ef">always_comb</span> lb_en_out <span style="color:#f92672">=</span> de;
+
+    <span style="color:#75715e">// LB enable in: BRAM, address calc, and CLUT reg add three cycles of latency
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> LAT <span style="color:#f92672">=</span> <span style="color:#ae81ff">3</span>;  <span style="color:#75715e">// write latency
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [LAT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lb_en_in_sr;
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_sys) <span style="color:#66d9ef">begin</span>
+        lb_en_in_sr <span style="color:#f92672">&lt;=</span> {lb_en_in, lb_en_in_sr[LAT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">1</span>]};
+        <span style="color:#66d9ef">if</span> (rst_sys) lb_en_in_sr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// Load data from FB into LB
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_sys) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">if</span> (fb_addr_read <span style="color:#f92672">&lt;</span> FB_PIXELS<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
+            <span style="color:#66d9ef">if</span> (lb_data_req) <span style="color:#66d9ef">begin</span>
+                cnt_h <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// start new line
+</span><span style="color:#75715e"></span>                <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>FB_DUALPORT) busy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;    <span style="color:#75715e">// set busy flag if not dual port
+</span><span style="color:#75715e"></span>            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (cnt_h <span style="color:#f92672">&lt;</span> LB_LEN) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// advance to start of next line
+</span><span style="color:#75715e"></span>                cnt_h <span style="color:#f92672">&lt;=</span> cnt_h <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+                fb_addr_read <span style="color:#f92672">&lt;=</span> fb_addr_read <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+            <span style="color:#66d9ef">end</span>
+        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> cnt_h <span style="color:#f92672">&lt;=</span> LB_LEN;
+        <span style="color:#66d9ef">if</span> (frame_sys) <span style="color:#66d9ef">begin</span>
+            fb_addr_read <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// new frame
+</span><span style="color:#75715e"></span>            busy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// LB reads don&#39;t cross frame boundary
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">end</span>
+        <span style="color:#66d9ef">if</span> (rst_sys) <span style="color:#66d9ef">begin</span>
+            fb_addr_read <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            busy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            cnt_h <span style="color:#f92672">&lt;=</span> LB_LEN;  <span style="color:#75715e">// don&#39;t start reading after reset
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">end</span>
+        <span style="color:#66d9ef">if</span> (lb_en_in_sr <span style="color:#f92672">==</span> <span style="color:#ae81ff">3</span><span style="color:#ae81ff">&#39;b100</span>) busy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// LB read done: match latency `LAT`
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// LB colour channels
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [LB_BPC<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lb_in_0,  lb_in_1,  lb_in_2;
+    <span style="color:#66d9ef">logic</span> [LB_BPC<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] lb_out_0, lb_out_1, lb_out_2;
+
+    linebuffer #(
+        .WIDTH(LB_BPC),   <span style="color:#75715e">// data width of each channel
+</span><span style="color:#75715e"></span>        .LEN(LB_LEN),     <span style="color:#75715e">// length of line
+</span><span style="color:#75715e"></span>        .SCALE(LB_SCALE)  <span style="color:#75715e">// scaling factor (&gt;=1)
+</span><span style="color:#75715e"></span>        ) lb_inst (
+        .clk_in(clk_sys),        <span style="color:#75715e">// input clock
+</span><span style="color:#75715e"></span>        .clk_out(clk_pix),       <span style="color:#75715e">// output clock
+</span><span style="color:#75715e"></span>        .rst_in(rst_sys),        <span style="color:#75715e">// reset (clk_in)
+</span><span style="color:#75715e"></span>        .rst_out(rst_pix),       <span style="color:#75715e">// reset (clk_out)
+</span><span style="color:#75715e"></span>        .data_req(lb_data_req),  <span style="color:#75715e">// request input data (clk_in)
+</span><span style="color:#75715e"></span>        .en_in(lb_en_in_sr[<span style="color:#ae81ff">0</span>]),  <span style="color:#75715e">// enable input (clk_in)
+</span><span style="color:#75715e"></span>        .en_out(lb_en_out),      <span style="color:#75715e">// enable output (clk_out)
+</span><span style="color:#75715e"></span>        .frame,                  <span style="color:#75715e">// start a new frame (clk_out)
+</span><span style="color:#75715e"></span>        .line,                   <span style="color:#75715e">// start a new line (clk_out)
+</span><span style="color:#75715e"></span>        .din_0(lb_in_0),         <span style="color:#75715e">// data in (clk_in)
+</span><span style="color:#75715e"></span>        .din_1(lb_in_1),
+        .din_2(lb_in_2),
+        .dout_0(lb_out_0),       <span style="color:#75715e">// data out (clk_out)
+</span><span style="color:#75715e"></span>        .dout_1(lb_out_1),
+        .dout_2(lb_out_2)
+    );
+
+    <span style="color:#75715e">// improve timing with register between BRAM and async ROM
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_sys) fb_cidx_read_p1 <span style="color:#f92672">&lt;=</span> fb_cidx_read;
+
+    <span style="color:#75715e">// colour lookup table (ROM)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CLUTW <span style="color:#f92672">=</span> <span style="color:#ae81ff">3</span> <span style="color:#f92672">*</span> CHANW;
+    <span style="color:#66d9ef">logic</span> [CLUTW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] clut_colr;
+    rom_async #(
+        .WIDTH(CLUTW),
+        .DEPTH(<span style="color:#ae81ff">2</span><span style="color:#f92672">**</span>CIDXW),
+        .INIT_F(F_PALETTE)
+    ) clut (
+        .addr(fb_cidx_read_p1),
+        .data(clut_colr)
+    );
+
+    <span style="color:#75715e">// map colour index to palette using CLUT and read into LB
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_sys) {lb_in_2, lb_in_1, lb_in_0} <span style="color:#f92672">&lt;=</span> clut_colr;
+
+    <span style="color:#66d9ef">logic</span> lb_en_out_p1;  <span style="color:#75715e">// LB enable out: reading from LB BRAM takes one cycle
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) lb_en_out_p1 <span style="color:#f92672">&lt;=</span> lb_en_out;
+
+    <span style="color:#75715e">// colour output - combinational because top module should register
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+        red   <span style="color:#f92672">=</span> lb_en_out_p1 <span style="color:#f92672">?</span> lb_out_2 <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
+        green <span style="color:#f92672">=</span> lb_en_out_p1 <span style="color:#f92672">?</span> lb_out_1 <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
+        blue  <span style="color:#f92672">=</span> lb_en_out_p1 <span style="color:#f92672">?</span> lb_out_0 <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
+    <span style="color:#66d9ef">end</span>
+<span style="color:#66d9ef">endmodule</span>
+</code></pre></div><p>This double-buffered BRAM design is only 30 lines longer than the <a href="/posts/framebuffers/#framebuffer-module">original framebuffer module</a>.</p>
+<p>There&rsquo;s a test bench you can use to exercise the module with Vivado: <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lib/display/xc7/framebuffer_db_tb.sv">xc7/framebuffer_db_tb.sv</a>]</strong>.</p>
+<p><em>Details of how double buffering works will be added shortly.</em></p>
+<h3 id="hip-to-be-square-redux">Hip to be Square Redux</h3>
+<p>We can cleanly animate a square using our new double-buffered framebuffer:</p>
+<ul>
+<li>Arty (XC7): <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/animated-shapes/xc7/top_db_bounce.sv">top_db_bounce.sv</a>]</strong></li>
+<li>iCEBreaker (iCE40): <em>not yet available</em></li>
+</ul>
+<p>That seems like a lot of work to replicate what we did in a few lines back at the start of the series, but drawing shapes in a framebuffer is far more versatile.</p>
+<p><img src="/img/posts/animated-shapes/bounce-db.png" alt="Bounce Double Buffer" title="Minimal. Captured from my FPGA board."></p>
+<h2 id="demos">Demos</h2>
+<p>To finish, try these double-buffered demos:</p>
+<ul>
+<li><a href="#shattered-cube">Shattered Cube</a></li>
+<li><a href="#teleport">Teleport</a></li>
+<li><a href="#in-a-spin">In a Spin</a></li>
+</ul>
+<p><em>Draft post: more demo goodness to follow.</em></p>
+<h3 id="shattered-cube">Shattered Cube</h3>
+<p>Back when we learnt about <a href="/posts/fpga-shapes/#filled-triangle">filled triangles</a> we built a cube, now we can tear it apart:</p>
+<ul>
+<li>Arty (XC7): <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/animated-shapes/xc7/top_cube_pieces.sv">top_cube_pieces.sv</a>]</strong></li>
+<li>iCEBreaker (iCE40): <em>not yet available</em></li>
+</ul>
+<h3 id="teleport">Teleport</h3>
+<p><img src="/img/posts/animated-shapes/teleport.png" alt="Teleport!"></p>
+<p>Using our double-buffer and a few animated rectangles we can create a teleport effect:</p>
+<ul>
+<li>Arty (XC7): <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/animated-shapes/xc7/top_teleport.sv">top_teleport.sv</a>]</strong></li>
+<li>iCEBreaker (iCE40): <em>not yet available</em></li>
+</ul>
+<p>The Arty version of the teleport looks like this:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_teleport (
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_100m,     <span style="color:#75715e">// 100 MHz clock
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_rst,      <span style="color:#75715e">// reset button (active low)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> vga_hsync,    <span style="color:#75715e">// horizontal sync
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> vga_vsync,    <span style="color:#75715e">// vertical sync
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vga_r,  <span style="color:#75715e">// 4-bit VGA red
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vga_g,  <span style="color:#75715e">// 4-bit VGA green
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vga_b   <span style="color:#75715e">// 4-bit VGA blue
+</span><span style="color:#75715e"></span>    );
+
+    <span style="color:#75715e">// generate pixel clock
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> clk_pix;
+    <span style="color:#66d9ef">logic</span> clk_locked;
+    clock_gen_480p clock_pix_inst (
+       .clk(clk_100m),
+       .rst(<span style="color:#f92672">!</span>btn_rst),  <span style="color:#75715e">// reset button is active low
+</span><span style="color:#75715e"></span>       .clk_pix,
+       .clk_locked
+    );
+
+    <span style="color:#75715e">// display timings
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">16</span>;
+    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx, sy;
+    <span style="color:#66d9ef">logic</span> hsync, vsync;
+    <span style="color:#66d9ef">logic</span> frame, line;
+    display_timings_480p #(.CORDW(CORDW)) display_timings_inst (
+        .clk_pix,
+        .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for pixel clock lock
+</span><span style="color:#75715e"></span>        .sx,
+        .sy,
+        .hsync,
+        .vsync,
+        .de(),
+        .frame,
+        .line
+    );
+
+    <span style="color:#66d9ef">logic</span> frame_sys;  <span style="color:#75715e">// start of new frame in system clock domain
+</span><span style="color:#75715e"></span>    xd xd_frame (.clk_i(clk_pix), .clk_o(clk_100m),
+                 .rst_i(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>), .rst_o(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>), .i(frame), .o(frame_sys));
+
+    <span style="color:#75715e">// framebuffer (FB)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> FB_WIDTH   <span style="color:#f92672">=</span> <span style="color:#ae81ff">320</span>;
+    <span style="color:#66d9ef">localparam</span> FB_HEIGHT  <span style="color:#f92672">=</span> <span style="color:#ae81ff">180</span>;
+    <span style="color:#66d9ef">localparam</span> FB_CIDXW   <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;
+    <span style="color:#66d9ef">localparam</span> FB_CHANW   <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;
+    <span style="color:#66d9ef">localparam</span> FB_SCALE   <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span>;
+    <span style="color:#66d9ef">localparam</span> FB_IMAGE   <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;&#34;</span>;
+    <span style="color:#66d9ef">localparam</span> FB_PALETTE <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;teleport_16_colr_4bit_palette.mem&#34;</span>;
+
+    <span style="color:#66d9ef">logic</span> fb_we, fb_busy, fb_wready;
+    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fbx, fby;  <span style="color:#75715e">// framebuffer coordinates
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [FB_CIDXW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_cidx;
+    <span style="color:#66d9ef">logic</span> [FB_CHANW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_red, fb_green, fb_blue;  <span style="color:#75715e">// colours for display
+</span><span style="color:#75715e"></span>
+    framebuffer_bram_db #(
+        .WIDTH(FB_WIDTH),
+        .HEIGHT(FB_HEIGHT),
+        .CIDXW(FB_CIDXW),
+        .CHANW(FB_CHANW),
+        .SCALE(FB_SCALE),
+        .F_IMAGE(FB_IMAGE),
+        .F_PALETTE(FB_PALETTE)
+    ) fb_inst (
+        .clk_sys(clk_100m),
+        .clk_pix(clk_pix),
+        .rst_sys(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),
+        .rst_pix(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),
+        .de(sy <span style="color:#f92672">&gt;=</span> <span style="color:#ae81ff">60</span> <span style="color:#f92672">&amp;&amp;</span> sy <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">420</span> <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">&gt;=</span> <span style="color:#ae81ff">0</span>),  <span style="color:#75715e">// 16:9 letterbox
+</span><span style="color:#75715e"></span>        .frame,
+        .line,
+        .we(fb_we),
+        .x(fbx),
+        .y(fby),
+        .cidx(fb_cidx),
+        .bgidx(<span style="color:#ae81ff">4&#39;h0</span>),
+        .clear(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),  <span style="color:#75715e">// teleport doesn&#39;t need clearing
+</span><span style="color:#75715e"></span>        .busy(fb_busy),
+        .wready(fb_wready),
+        .clip(),
+        .red(fb_red),
+        .green(fb_green),
+        .blue(fb_blue)
+    );
+
+    <span style="color:#75715e">// animation steps
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> ANIM_CNT<span style="color:#f92672">=</span><span style="color:#ae81ff">5</span>;    <span style="color:#75715e">// five different frames in animation
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> ANIM_SPEED<span style="color:#f92672">=</span><span style="color:#ae81ff">4</span>;  <span style="color:#75715e">// display each animation step four times (15 FPS)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(ANIM_CNT)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_anim;
+    <span style="color:#66d9ef">logic</span> [$clog2(ANIM_SPEED)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_anim_speed;
+    <span style="color:#66d9ef">logic</span> [FB_CIDXW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] colr_offs;  <span style="color:#75715e">// colour offset
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_100m) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">if</span> (frame_sys) <span style="color:#66d9ef">begin</span>
+            <span style="color:#66d9ef">if</span> (cnt_anim_speed <span style="color:#f92672">==</span> ANIM_SPEED<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
+                <span style="color:#66d9ef">if</span> (cnt_anim <span style="color:#f92672">==</span> ANIM_CNT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
+                    cnt_anim <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                    colr_offs <span style="color:#f92672">&lt;=</span> colr_offs <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+                <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> cnt_anim <span style="color:#f92672">&lt;=</span> cnt_anim <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+                cnt_anim_speed <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> cnt_anim_speed <span style="color:#f92672">&lt;=</span> cnt_anim_speed <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+        <span style="color:#66d9ef">end</span>
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// draw squares in framebuffer
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> SHAPE_CNT<span style="color:#f92672">=</span><span style="color:#ae81ff">7</span>;  <span style="color:#75715e">// number of shapes to draw
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] shape_id;    <span style="color:#75715e">// shape identifier
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] dx0, dy0, dx1, dy1;  <span style="color:#75715e">// shape coords
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> draw_start, drawing, draw_done;  <span style="color:#75715e">// drawing signals
+</span><span style="color:#75715e"></span>
+    <span style="color:#75715e">// draw state machine
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">enum</span> {IDLE, INIT, CLEAR, DRAW, DONE} state;
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_100m) <span style="color:#66d9ef">begin</span>
+        <span style="color:#66d9ef">case</span> (state)
+            INIT: <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// register coordinates and colour
+</span><span style="color:#75715e"></span>                <span style="color:#66d9ef">if</span> (fb_wready) <span style="color:#66d9ef">begin</span>
+                    draw_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+                    state <span style="color:#f92672">&lt;=</span> DRAW;
+                    <span style="color:#66d9ef">case</span> (shape_id)
+                        <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d0</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// 12 pixels per anim step
+</span><span style="color:#75715e"></span>                            dx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">40</span> <span style="color:#f92672">-</span> (cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">12</span>);
+                            dy0 <span style="color:#f92672">&lt;=</span>   <span style="color:#ae81ff">0</span> <span style="color:#f92672">-</span> (cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">12</span>);
+                            dx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">279</span> <span style="color:#f92672">+</span> (cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">12</span>);
+                            dy1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">249</span> <span style="color:#f92672">+</span> (cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">12</span>);
+                            fb_cidx <span style="color:#f92672">&lt;=</span> colr_offs;
+                        <span style="color:#66d9ef">end</span>
+                        <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d1</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// 8 pixels per anim step
+</span><span style="color:#75715e"></span>                            dx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">80</span> <span style="color:#f92672">-</span> (cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">8</span>);
+                            dy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">10</span> <span style="color:#f92672">-</span> (cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">8</span>);
+                            dx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">239</span> <span style="color:#f92672">+</span> (cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">8</span>);
+                            dy1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">169</span> <span style="color:#f92672">+</span> (cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">8</span>);
+                            fb_cidx <span style="color:#f92672">&lt;=</span> colr_offs <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+                        <span style="color:#66d9ef">end</span>
+                        <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d2</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// 5 pixels per anim step
+</span><span style="color:#75715e"></span>                            dx0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">105</span> <span style="color:#f92672">-</span> (cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">5</span>);
+                            dy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">35</span> <span style="color:#f92672">-</span> (cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">5</span>);
+                            dx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">214</span> <span style="color:#f92672">+</span> (cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">5</span>);
+                            dy1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">144</span> <span style="color:#f92672">+</span> (cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">5</span>);
+                            fb_cidx <span style="color:#f92672">&lt;=</span> colr_offs <span style="color:#f92672">+</span> <span style="color:#ae81ff">2</span>;
+                        <span style="color:#66d9ef">end</span>
+                        <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d3</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// 4 pixels per anim step
+</span><span style="color:#75715e"></span>                            dx0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">125</span> <span style="color:#f92672">-</span> (cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">4</span>);
+                            dy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">55</span> <span style="color:#f92672">-</span> (cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">4</span>);
+                            dx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">194</span> <span style="color:#f92672">+</span> (cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">4</span>);
+                            dy1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">124</span> <span style="color:#f92672">+</span> (cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">4</span>);
+                            fb_cidx <span style="color:#f92672">&lt;=</span> colr_offs <span style="color:#f92672">+</span> <span style="color:#ae81ff">3</span>;
+                        <span style="color:#66d9ef">end</span>
+                        <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d4</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// 3 pixels per anim step
+</span><span style="color:#75715e"></span>                            dx0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">140</span> <span style="color:#f92672">-</span> (cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">3</span>);
+                            dy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">70</span> <span style="color:#f92672">-</span> (cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">3</span>);
+                            dx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">179</span> <span style="color:#f92672">+</span> (cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">3</span>);
+                            dy1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">109</span> <span style="color:#f92672">+</span> (cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">3</span>);
+                            fb_cidx <span style="color:#f92672">&lt;=</span> colr_offs <span style="color:#f92672">+</span> <span style="color:#ae81ff">4</span>;
+                        <span style="color:#66d9ef">end</span>
+                        <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d5</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// 2 pixels per anim step
+</span><span style="color:#75715e"></span>                            dx0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">150</span> <span style="color:#f92672">-</span> (cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">2</span>);
+                            dy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">80</span> <span style="color:#f92672">-</span> (cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">2</span>);
+                            dx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">169</span> <span style="color:#f92672">+</span> (cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">2</span>);
+                            dy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">99</span> <span style="color:#f92672">+</span> (cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">2</span>);
+                            fb_cidx <span style="color:#f92672">&lt;=</span> colr_offs <span style="color:#f92672">+</span> <span style="color:#ae81ff">5</span>;
+                        <span style="color:#66d9ef">end</span>
+                        <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d6</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// 1 pixel per anim step
+</span><span style="color:#75715e"></span>                            dx0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">155</span> <span style="color:#f92672">-</span> (cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">1</span>);
+                            dy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">85</span> <span style="color:#f92672">-</span> (cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">1</span>);
+                            dx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">164</span> <span style="color:#f92672">+</span> (cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">1</span>);
+                            dy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">94</span> <span style="color:#f92672">+</span> (cnt_anim <span style="color:#f92672">*</span> <span style="color:#ae81ff">1</span>);
+                            fb_cidx <span style="color:#f92672">&lt;=</span> colr_offs <span style="color:#f92672">+</span> <span style="color:#ae81ff">6</span>;
+                        <span style="color:#66d9ef">end</span>
+                        <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// should never occur
+</span><span style="color:#75715e"></span>                            dx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">10</span>; dy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">10</span>;
+                            dx1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">20</span>; dy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">20</span>;
+                            fb_cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">4&#39;h7</span>;  <span style="color:#75715e">// white
+</span><span style="color:#75715e"></span>                        <span style="color:#66d9ef">end</span>
+                    <span style="color:#66d9ef">endcase</span>
+                <span style="color:#66d9ef">end</span>
+            <span style="color:#66d9ef">end</span>
+            DRAW: <span style="color:#66d9ef">begin</span>
+                draw_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                <span style="color:#66d9ef">if</span> (draw_done) <span style="color:#66d9ef">begin</span>
+                    <span style="color:#66d9ef">if</span> (shape_id <span style="color:#f92672">==</span> SHAPE_CNT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
+                        state <span style="color:#f92672">&lt;=</span> DONE;
+                    <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
+                        shape_id <span style="color:#f92672">&lt;=</span> shape_id <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+                        state <span style="color:#f92672">&lt;=</span> INIT;
+                    <span style="color:#66d9ef">end</span>
+                <span style="color:#66d9ef">end</span>
+            <span style="color:#66d9ef">end</span>
+            DONE: state <span style="color:#f92672">&lt;=</span> IDLE;
+            <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">if</span> (frame_sys) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// IDLE
+</span><span style="color:#75715e"></span>                state <span style="color:#f92672">&lt;=</span> INIT;
+                shape_id <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+            <span style="color:#66d9ef">end</span>
+        <span style="color:#66d9ef">endcase</span>
+    <span style="color:#66d9ef">end</span>
+
+    draw_rectangle_fill #(.CORDW(CORDW)) draw_rectangle_inst (
+        .clk(clk_100m),
+        .rst(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),
+        .start(draw_start),
+        .oe(<span style="color:#f92672">!</span>fb_busy),  <span style="color:#75715e">// draw when framebuffer isn&#39;t busy
+</span><span style="color:#75715e"></span>        .x0(dx0),
+        .y0(dy0),
+        .x1(dx1),
+        .y1(dy1),
+        .x(fbx),
+        .y(fby),
+        .drawing,
+        .busy(),
+        .done(draw_done)
+    );
+
+    <span style="color:#75715e">// write to framebuffer when drawing
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> fb_we <span style="color:#f92672">=</span> drawing;
+
+    <span style="color:#75715e">// reading from FB takes one cycle: delay display signals to match
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> hsync_p1, vsync_p1;
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        hsync_p1 <span style="color:#f92672">&lt;=</span> hsync;
+        vsync_p1 <span style="color:#f92672">&lt;=</span> vsync;
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// VGA output
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        vga_hsync <span style="color:#f92672">&lt;=</span> hsync_p1;
+        vga_vsync <span style="color:#f92672">&lt;=</span> vsync_p1;
+        vga_r <span style="color:#f92672">&lt;=</span> fb_red;
+        vga_g <span style="color:#f92672">&lt;=</span> fb_green;
+        vga_b <span style="color:#f92672">&lt;=</span> fb_blue;
+    <span style="color:#66d9ef">end</span>
+<span style="color:#66d9ef">endmodule</span>
+</code></pre></div><h3 id="in-a-spin">In a Spin</h3>
+<p>Rotate a shape at the push of a button and a little <a href="/posts/fpga-sine-table/">sine &amp; cosine</a>.</p>
+<p><em>Design will be added shortly.</em></p>
+<h2 id="explore">Explore</h2>
+<p>I hope you enjoyed this instalment of <em>Exploring FPGA Graphics</em>, but nothing beats creating your own designs. Here are a few suggestions to get you started:</p>
+<p><em>Suggestions will be added shortly.</em></p>
+<h2 id="what-next">What Next?</h2>
+<p>This is the end of the current series of FPGA Graphics. Watch out for a future series covering more advanced graphics. Until then, why not check out <a href="/sitemap/">other posts</a> from Project F.</p>
+<p><em>Constructive feedback is always welcome. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+
+      
+      <div class="related">
+
+<h3>Similar articles:</h3>
+<ul>
+	
+	<li><a href="/posts/fpga-shapes/">2D Shapes</a></li>
+	
+	<li><a href="/posts/lines-and-triangles/">Lines and Triangles</a></li>
+	
+	<li><a href="/posts/framebuffers/">Framebuffers</a></li>
+	
+	<li><a href="/posts/hardware-sprites/">Hardware Sprites</a></li>
+	
+	<li><a href="/posts/life-on-screen/">Life on Screen</a></li>
+	
+</ul>
+</div>
+      
+    </div>
+    
+  </div>
+</section>
+
+    <script src="/js/copycode.js"></script>
+
+
+
+<section class="section">
+  <div class="container has-text-centered">
+    <p>©2021 Will Green, Project F</p>
+    
+  </div>
+</section>
+
+
+<script src="https://narwhal.projectf.io/script.js" site="EVCGKVDN" defer></script>
+</body>
+</html>
+
