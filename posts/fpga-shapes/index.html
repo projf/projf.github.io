@@ -121,7 +121,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
       <p>Welcome back to <em>Exploring FPGA Graphics</em>. Building on our designs in <a href="/posts/lines-and-triangles/">lines and triangles</a>, we&rsquo;ll draw rectangles, filled triangles and circles. We&rsquo;ll finish off this part by drawing a castle with our shapes.</p>
 <p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how displays work, race the beam with Pong, animate starfields and sprites, paint Michelangelo&rsquo;s David, simulate life with bitmaps, draw lines and shapes, and create smooth animation with double buffering. New to the series? Start with <a href="/posts/fpga-graphics/">FPGA Graphics</a>.</p>
 <p><strong>You can watch an <a href="https://www.youtube.com/watch?v=ezJv7pB-UmA" target="_blank">FPGA Graphics demo reel</a> with designs from across this series.</strong></p>
-<p><em>Updated 2021-08-31. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><em>Updated 2021-09-01. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <h3 id="series-outline">Series Outline</h3>
 <ul>
 <li><a href="/posts/fpga-graphics/">FPGA Graphics</a> - learn how displays work and draw your first graphics</li>
@@ -697,7 +697,6 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
     <span style="color:#66d9ef">logic</span> drawing_h;
     <span style="color:#66d9ef">logic</span> busy_a, busy_b, busy_h;
     <span style="color:#66d9ef">logic</span> b_edge;  <span style="color:#75715e">// which B edge are we drawing?
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> right;   <span style="color:#75715e">// whether lines are drawn to the right
 </span><span style="color:#75715e"></span>
     <span style="color:#75715e">// pipeline completion signals to match coordinates
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> busy_p1, done_p1;
@@ -750,8 +749,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
                 y1a <span style="color:#f92672">&lt;=</span> y2s;
                 prev_xa <span style="color:#f92672">&lt;=</span> x0s;
                 prev_xb <span style="color:#f92672">&lt;=</span> x0s;
-                right <span style="color:#f92672">&lt;=</span> (x1s <span style="color:#f92672">&gt;=</span> x0s);  <span style="color:#75715e">// drawing to the right
-</span><span style="color:#75715e"></span>            <span style="color:#66d9ef">end</span>
+            <span style="color:#66d9ef">end</span>
             INIT_B0: <span style="color:#66d9ef">begin</span>
                 state <span style="color:#f92672">&lt;=</span> START_A;
                 b_edge <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
@@ -775,9 +773,9 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
             EDGE: <span style="color:#66d9ef">begin</span>
                 <span style="color:#66d9ef">if</span> ((ya <span style="color:#f92672">!=</span> prev_y <span style="color:#f92672">||</span> <span style="color:#f92672">!</span>busy_a) <span style="color:#f92672">&amp;&amp;</span> (yb <span style="color:#f92672">!=</span> prev_y <span style="color:#f92672">||</span> <span style="color:#f92672">!</span>busy_b)) <span style="color:#66d9ef">begin</span>
                     state <span style="color:#f92672">&lt;=</span> START_H;
-                    x0h <span style="color:#f92672">&lt;=</span> right <span style="color:#f92672">?</span> prev_xa <span style="color:#f92672">:</span> prev_xb;
-                    x1h <span style="color:#f92672">&lt;=</span> right <span style="color:#f92672">?</span> prev_xb <span style="color:#f92672">:</span> prev_xa;
-                <span style="color:#66d9ef">end</span>
+                    x0h <span style="color:#f92672">&lt;=</span> (prev_xa <span style="color:#f92672">&gt;</span> prev_xb) <span style="color:#f92672">?</span> prev_xb <span style="color:#f92672">:</span> prev_xa;  <span style="color:#75715e">// always draw...
+</span><span style="color:#75715e"></span>                    x1h <span style="color:#f92672">&lt;=</span> (prev_xa <span style="color:#f92672">&gt;</span> prev_xb) <span style="color:#f92672">?</span> prev_xa <span style="color:#f92672">:</span> prev_xb;  <span style="color:#75715e">// left to right
+</span><span style="color:#75715e"></span>                <span style="color:#66d9ef">end</span>
             <span style="color:#66d9ef">end</span>
             START_H: state <span style="color:#f92672">&lt;=</span> H_LINE;
             H_LINE: <span style="color:#66d9ef">begin</span>
