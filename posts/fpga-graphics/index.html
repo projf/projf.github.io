@@ -4,13 +4,13 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 
-<title>FPGA Graphics | Project F - FPGA Development</title>
+<title>Intro to FPGA Graphics | Project F - FPGA Development</title>
 
-<meta property='og:title' content='FPGA Graphics - Project F - FPGA Development'>
+<meta property='og:title' content='Intro to FPGA Graphics - Project F - FPGA Development'>
 <meta property='og:description' content='Welcome to Exploring FPGA Graphics. In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how displays work, race the beam with Pong, animate starfields and sprites, paint Michelangelo&rsquo;s David, simulate life with bitmaps, draw lines and shapes, and create smooth animation with double buffering. Along the way, you&rsquo;ll experience a Smörgåsbord of designs and techniques, from BRAM and finite state machines to crossing clock domains and translating C algorithms into Verilog.'>
 <meta property='og:url' content='https://projectf.io/posts/fpga-graphics/'>
 <meta property='og:site_name' content='Project F - FPGA Development'>
-<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/fpga-graphics/social-card.png'><meta property='article:published_time' content='2020-05-20T00:00:00Z'/><meta property='article:modified_time' content='2020-05-20T00:00:00Z'/><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
+<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/fpga-graphics/social-card.png'><meta property='article:published_time' content='2020-05-20T00:00:00Z'/><meta property='article:modified_time' content='2021-10-19T00:00:00Z'/><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
 
 
 <link href="https://projectf.io/index.xml" rel="alternate" type="application/rss+xml" title="Project F - FPGA Development" />
@@ -116,20 +116,20 @@
       
     </div>
     <h2 class="subtitle is-6">20 May 2020</h2>
-    <h1 class="title">FPGA Graphics</h1>
+    <h1 class="title">Intro to FPGA Graphics</h1>
     
     <div class="content">
       <p>Welcome to <em>Exploring FPGA Graphics</em>. In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how displays work, race the beam with Pong, animate starfields and sprites, paint Michelangelo&rsquo;s David, simulate life with bitmaps, draw lines and shapes, and create smooth animation with double buffering. Along the way, you&rsquo;ll experience a Smörgåsbord of designs and techniques, from BRAM and finite state machines to crossing clock domains and translating C algorithms into Verilog.</p>
 <p>We begin by learning the basics of computer displays and drawing simple graphics.</p>
 <p><strong>You can watch an <a href="https://www.youtube.com/watch?v=ezJv7pB-UmA" target="_blank">FPGA Graphics demo reel</a> with designs from across this series.</strong></p>
-<p><em>Updated 2021-09-17. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><em>Updated 2021-10-19. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <blockquote>
 <p>In all beginnings dwells a magic force<br>
 <em>Herman Hesse, Stages from <a href="https://en.wikipedia.org/wiki/The_Glass_Bead_Game">The Glass Bead Game</a></em></p>
 </blockquote>
 <h3 id="series-outline">Series Outline</h3>
 <ul>
-<li>FPGA Graphics (this post) - learn how displays work and draw your first graphics</li>
+<li>Intro to FPGA Graphics (this post) - draw your first FPGA graphics</li>
 <li><a href="/posts/fpga-pong/">Pong</a> - race the beam to create the arcade classic</li>
 <li><a href="/posts/hardware-sprites/">Hardware Sprites</a> - fast, colourful, graphics with minimal logic</li>
 <li><a href="/posts/fpga-ad-astra/">Ad Astra</a> - graphics demo with starfields and hardware sprites</li>
@@ -191,10 +191,10 @@ Modern displays, including <a href="https://en.wikipedia.org/wiki/Multisync_moni
 <li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/lib/clock/ice40/clock_gen_480p.sv">ice40/clock_gen_480p.sv</a></strong></li>
 </ul>
 <p>These modules are part of the <a href="https://github.com/projf/projf-explore/tree/master/lib">Project F Library</a> of useful Verilog designs.</p>
-<h2 id="simple-display-timings">Simple Display Timings</h2>
-<p>Using our ~25 MHz pixel clock, we can generate timings for our 640x480 display. Creating display timings is straightforward: there&rsquo;s one counter for horizontal position and one for vertical. We use these counters to decide on the correct time for sync signals.</p>
-<p>Create a module for 640x480 60Hz display timings <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/fpga-graphics/simple_display_timings_480p.sv">simple_display_timings_480p.sv</a>]</strong>:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> simple_display_timings_480p (
+<h2 id="simple-display-signals">Simple Display Signals</h2>
+<p>Using our ~25 MHz pixel clock, we can generate sync signals and coordinates for our 640x480 display. Creating display signals is straightforward: there&rsquo;s one counter for horizontal position and one for vertical. We use these counters to decide on the correct time for sync signals.</p>
+<p>Create a module for a 640x480 60Hz display <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/fpga-graphics/simple_80p.sv">simple_480p.sv</a>]</strong>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> simple_480p (
     <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_pix,   <span style="color:#75715e">// pixel clock
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst,       <span style="color:#75715e">// reset
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">9</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx,  <span style="color:#75715e">// horizontal screen position
@@ -240,13 +240,13 @@ Modern displays, including <a href="https://en.wikipedia.org/wiki/Multisync_moni
 <p><strong>sx</strong> and <strong>sy</strong> store the horizontal and vertical position; their maximum values are 800 and 525, respectively, so we need 10 bits to hold them (2<sup>10</sup> = 1024).</p>
 <p><strong>de</strong> is <em>data enable</em>, which is low during the blanking interval: we use it to decide when to draw pixels.</p>
 <p>Display modes vary in their sync polarity; for traditional 640x480, the polarity is negative for both <strong>hsync</strong> and <strong>vsync</strong>. Negative polarity means the voltage is normally high, with low voltage indicating a sync.</p>
-<p>The following simulation shows the vertical sync starting at line 489; it&rsquo;s low for two lines as expected from our display timings. Note the horizontal sync at the end of every line.</p>
+<p>The following simulation shows the vertical sync starting at line 489; it&rsquo;s low for two lines as expected from the display timings. Note the horizontal sync at the end of every line.</p>
 <p><img src="/img/posts/fpga-graphics/hsync-vsync-vga.png" alt="Sync Signal Simulation" title="Simulating VGA horizontal &amp; vertical sync signals"></p>
 <h2 id="test-benches">Test Benches</h2>
 <p>You can exercise the designs with the included test benches (Xilinx only):</p>
 <ul>
 <li><strong><a href="https://github.com/projf/projf-explore/tree/master/lib/clock/xc7/clock_gen_480p_tb.sv">Clock Gen Test Bench</a></strong></li>
-<li><strong><a href="https://github.com/projf/projf-explore/tree/master/graphics/fpga-graphics/xc7/simple_display_timings_480p_tb.sv">Display Timings Test Bench</a></strong></li>
+<li><strong><a href="https://github.com/projf/projf-explore/tree/master/graphics/fpga-graphics/xc7/simple_480p_tb.sv">Simple Display Test Bench</a></strong></li>
 </ul>
 <p>Some things to check:</p>
 <ul>
@@ -261,7 +261,7 @@ Modern displays, including <a href="https://en.wikipedia.org/wiki/Multisync_moni
 <p>Now we have our pixel clock and display signals, we&rsquo;re ready to drive a display. The following diagram shows the basic architecture, with the three Verilog modules and their key signals:</p>
 <p><img src="/img/posts/fpga-graphics/driving-a-display.png" alt="Driving a Display" title="Board oscillator in... video out"></p>
 <h3 id="square-one">Square One</h3>
-<p>We&rsquo;ll keep things simple for the first outing of our display logic: let’s draw a square.
+<p>We&rsquo;ll keep things simple for the first outing of our display logic: let&rsquo;s draw a square.
 When the screen coordinates, <code>sx</code> and <code>sy</code>, are both less than 32, we draw orange; otherwise, we draw blue.</p>
 <p>There are two versions of the square top module, one for each demo board:</p>
 <ul>
@@ -291,11 +291,11 @@ When the screen coordinates, <code>sx</code> and <code>sy</code>, are both less 
        .clk_locked
     );
 
-    <span style="color:#75715e">// display timings
+    <span style="color:#75715e">// display sync signals and coordinates
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>;  <span style="color:#75715e">// screen coordinate width in bits
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx, sy;
     <span style="color:#66d9ef">logic</span> hsync, vsync, de;
-    simple_display_timings_480p display_timings_inst (
+    simple_480p display_inst (
         .clk_pix,
         .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for clock lock
 </span><span style="color:#75715e"></span>        .sx,
@@ -347,11 +347,11 @@ We use a single hex digit from <code>0-F</code> to represent the intensity of re
        .clk_locked
     );
 
-    <span style="color:#75715e">// display timings
+    <span style="color:#75715e">// display sync signals and coordinates
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>;  <span style="color:#75715e">// screen coordinate width in bits
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx, sy;
     <span style="color:#66d9ef">logic</span> hsync, vsync, de;
-    simple_display_timings_480p display_timings_inst (
+    simple_480p display_inst (
         .clk_pix,
         .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for clock lock
 </span><span style="color:#75715e"></span>        .sx,
@@ -422,7 +422,7 @@ iceprog top_square.bin
 <p><img src="/img/posts/fpga-graphics/vga-square.png" alt="A Square" title="Orange and blue; what a lovely combination!"></p>
 <p>Try experimenting with your own square size, position, and colours.</p>
 <h2 id="animation">Animation</h2>
-<p>To create a simple animation, we can update the position of the square every frame. If we move the square during active drawing, we risk <strong><a href="https://en.wikipedia.org/wiki/Screen_tearing">screen tearing</a></strong>, so we create an <code>animate</code> signal at the start of the vertical blanking period.</p>
+<p>To create a simple animation, we can update the position of the square every frame. If we move the square during active drawing, we risk <strong><a href="https://en.wikipedia.org/wiki/Screen_tearing">screen tearing</a></strong>, so we create an <code>animate</code> signal at the start of the vertical blanking period. Screen drawing doesn&rsquo;t occurs during blanking and the vertical blanking period lasts over a millisecond, so it&rsquo;s ideal time to update graphics positions.</p>
 <p>We&rsquo;re going to replicate the behaviour of the video display itself, scanning across then down the screen. The square &ldquo;beam&rdquo; disappears off the edge of the screen, like the signal in the blanking interval. Try rebuilding the design with <code>top_beam</code>:</p>
 <ul>
 <li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/fpga-graphics/xc7/top_beam.sv">xc7/top_beam.sv</a></strong></li>
@@ -432,8 +432,8 @@ iceprog top_square.bin
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// size of screen with and without blanking
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> H_RES_FULL <span style="color:#f92672">=</span> <span style="color:#ae81ff">800</span>;
     <span style="color:#66d9ef">localparam</span> V_RES_FULL <span style="color:#f92672">=</span> <span style="color:#ae81ff">525</span>;
-    <span style="color:#66d9ef">localparam</span> H_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">640</span>;
-    <span style="color:#66d9ef">localparam</span> V_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">480</span>;
+    <span style="color:#66d9ef">localparam</span> H_RES      <span style="color:#f92672">=</span> <span style="color:#ae81ff">640</span>;
+    <span style="color:#66d9ef">localparam</span> V_RES      <span style="color:#f92672">=</span> <span style="color:#ae81ff">480</span>;
 
     <span style="color:#66d9ef">logic</span> animate;  <span style="color:#75715e">// high for one clock tick at start of vertical blanking
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> animate <span style="color:#f92672">=</span> (sy <span style="color:#f92672">==</span> V_RES <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>);
