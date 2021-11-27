@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"  lang="en-gb">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+<title>Multiplication with FPGA DSPs | Project F - FPGA Development</title>
+
+<meta property='og:title' content='Multiplication with FPGA DSPs - Project F - FPGA Development'>
+<meta property='og:description' content='Welcome back to my series covering mathematics and algorithms with FPGAs.
+I was initially going to look at real numbers in this part, but Project F is known for its practical, hands-on tutorials. So, I decided to dedicate a post to a topic usually ignored by introductory guides: multiplication with DSPs. We&rsquo;ll cover real numbers in the next post.
+New to the series? Start with Numbers in Verilog.
+This post is a draft: improvements and additional content to come.'>
+<meta property='og:url' content='https://projectf.io/posts/multiplication-fpga-dsps/'>
+<meta property='og:site_name' content='Project F - FPGA Development'>
+<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/multiplication-fpga-dsps/social-card.png'><meta property='article:published_time' content='2021-11-27T00:00:00Z'/><meta property='article:modified_time' content='2021-11-27T00:00:00Z'/><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
+
+
+<link href="https://projectf.io/index.xml" rel="alternate" type="application/rss+xml" title="Project F - FPGA Development" />
+
+<link rel="stylesheet" href="/css/style.css"/><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+<link rel="canonical" href="https://projectf.io/posts/multiplication-fpga-dsps/">
+<meta name="msapplication-TileColor" content="#da532c">
+<meta name="theme-color" content="#ffffff">
+<meta name="referrer" content="no-referrer, same-origin">
+</head>
+<body>
+<section class="section">
+  <div class="container">
+    <nav id="nav-main" class="nav">
+      <div id="nav-name" class="nav-left">
+        <a id="nav-anchor" class="nav-item" href="https://projectf.io">
+          <h1 id="nav-heading" class="title is-4">Project F - FPGA Development</h1>
+        </a>
+      </div>
+      <div class="nav-right">
+        <nav id="nav-items" class="nav-item level is-mobile"><a class="level-item" aria-label="github" href='https://github.com/projf/projf-explore'
+            target='_blank' rel='noopener'>
+            <span class="icon">
+              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
+    
+    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
+    
+  </svg></i>
+            </span>
+          </a><a class="level-item" aria-label="twitter" href='https://twitter.com/WillFlux'
+            target='_blank' rel='noopener'>
+            <span class="icon">
+              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
+    
+    <path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"/>
+    
+  </svg></i>
+            </span>
+          </a><a class="level-item" aria-label="youtube" href='https://youtube.com/channel/UCaT0lvfWo1GStbp0neg8weg'
+            target='_blank' rel='noopener'>
+            <span class="icon">
+              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
+    
+    <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/>
+    <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/>
+    
+  </svg></i>
+            </span>
+          </a><a class="level-item" aria-label="rss" href='/index.xml'
+            target='_blank' rel='noopener'>
+            <span class="icon">
+              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
+    
+    <path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle>
+    
+  </svg></i>
+            </span>
+          </a></nav>
+      </div>
+    </nav>
+
+    <nav class="nav">
+      
+      <div class="nav-left"><a class="nav-item" href="/about">
+          <h2 class="title is-5">About</h2>
+        </a><a class="nav-item" href="/sitemap">
+          <h2 class="title is-5">Site Map</h2>
+        </a><a class="nav-item" href="/tags/cookbook">
+          <h2 class="title is-5">Cookbook</h2>
+        </a><a class="nav-item" href="/tags/graphics">
+          <h2 class="title is-5">Graphics</h2>
+        </a><a class="nav-item" href="/tags/maths">
+          <h2 class="title is-5">Maths</h2>
+        </a><a class="nav-item" href="/tags/tools">
+          <h2 class="title is-5">Tools</h2>
+        </a></div>
+      
+
+      
+    </nav>
+
+  </div>
+  <script src="/js/navicon-shift.js"></script>
+</section>
+<section class="section">
+  <div class="container">
+    <div class="subtitle tags is-6 is-pulled-right">
+      
+      
+<a class="subtitle is-6" href="/tags/dsp/">#dsp</a>
+
+
+
+  
+  | <a class="subtitle is-6" href="/tags/explore/">#explore</a>
+  
+  | <a class="subtitle is-6" href="/tags/maths/">#maths</a>
+  
+
+
+      
+    </div>
+    <h2 class="subtitle is-6">27 November 2021</h2>
+    <h1 class="title">Multiplication with FPGA DSPs</h1>
+    
+    <div class="content">
+      <p>Welcome back to my series covering mathematics and algorithms with FPGAs.</p>
+<p>I was initially going to look at real numbers in this part, but Project F is known for its practical, hands-on tutorials. So, I decided to dedicate a post to a topic usually ignored by introductory guides: multiplication with DSPs. We&rsquo;ll cover real numbers in the next post.</p>
+<p>New to the series? Start with <a href="/posts/numbers-in-verilog/">Numbers in Verilog</a>.</p>
+<p><strong>This post is a draft: improvements and additional content to come.</strong></p>
+<p><em>Share your thoughts with <a href="https://twitter.com/WillFlux">@WillFlux</a> or find me on <a href="https://1bitsquared.com/pages/chat">1BitSquared Discord</a>.</em></p>
+<h2 id="dsp-blocks">DSP Blocks</h2>
+<p>FPGAs incorporate dedicated digital signal processing (DSP) blocks. As their name suggests, DSPs accelerate typical signal processing tasks, such as <a href="https://en.wikipedia.org/wiki/Fast_Fourier_transform">fast Fourier transforms</a> (FFTs) and <a href="https://en.wikipedia.org/wiki/Finite_impulse_response">finite impulse response filtering</a> (FIR). Each DSP block includes a multiplier, which is the topic of this post. Just bear in mind that DSP blocks are used for many things beyond multiplication.</p>
+<p>You can implement multiplication directly in logic (LUTs and flip-flops), but it takes significant resources. Using dedicated DSP blocks for multiplication makes sense from a performance and logic-use perspective.</p>
+<h2 id="multiplication-capabilities">Multiplication Capabilities</h2>
+<p>Let&rsquo;s take a quick look at the multiplication capabilities of a few FPGAs.</p>
+<p>The width of a DSP multiplier depends on the FPGA architecture:</p>
+<ul>
+<li>Lattice iCE40UP (SB_MAC16): <code>16 x 16 bit</code></li>
+<li>Lattice ECP5 (sysDSP): <code>18 x 18 bit</code></li>
+<li>Xilinx 7 Series (DSP48E1): <code>25 × 18 bit</code></li>
+<li>Xilinx Ultrascale+ (DSP48E2): <code>27 x 18 bit</code></li>
+</ul>
+<p>For example, an ECP5 multiplier takes two 18-bit inputs and generates a 36-bit product output.</p>
+<p>While the number of multipliers depends on the specific FPGA part:</p>
+<ul>
+<li>Lattice iCE40UP
+<ul>
+<li>iCE40UP5K: <code>8 multipliers</code></li>
+</ul>
+</li>
+<li>Lattice ECP5
+<ul>
+<li>LFE5U-85: <code>156 multipliers</code></li>
+<li>LFE5U-25: <code>56 multipliers</code></li>
+</ul>
+</li>
+<li>Xilinx 7 Series
+<ul>
+<li>Artix-7 A200T: <code>740 multipliers</code></li>
+<li>Spartan-7 S25: <code>80 multipliers</code></li>
+</ul>
+</li>
+<li>Xilinx Ultrascale+
+<ul>
+<li>Artix AU10P: <code>400 multipliers</code></li>
+</ul>
+</li>
+</ul>
+<p>Larger FPGAs include many thousands of multipliers, but we&rsquo;ve confined ourselves to parts you might find on a hobbyist-friendly board (I live in hope of an affordable Ultrascale+ board in 2022).</p>
+<h3 id="dsp-block-references">DSP Block References</h3>
+<ul>
+<li><a href="https://www.latticesemi.com/view_document?document_id=50669">Lattice DSP Function Usage Guide for iCE40 Devices</a></li>
+<li><a href="https://www.latticesemi.com/view_document?document_id=50469">Lattice ECP5 and ECP5-5G sysDSP Usage Guide</a></li>
+<li><a href="https://www.xilinx.com/support/documentation/user_guides/ug479_7Series_DSP48E1.pdf">Xilinx 7 Series DSP48E1 Slice</a></li>
+<li><a href="https://www.xilinx.com/support/documentation/user_guides/ug579-ultrascale-dsp.pdf">Xilinx Ultrascale+ DSP48E2 Slice</a></li>
+</ul>
+<p>Note: each ECP5 DSP block incorporates two multipliers.</p>
+<h2 id="using-dsps">Using DSPs</h2>
+<p>There are two ways to incorporate DSPs into your FPGA designs:</p>
+<ul>
+<li>Explicitly instantiate the DSP primitive (SB_MAC16, DSP48E1 etc.)</li>
+<li>Infer the DSP using regular multiplication in Verilog or VHDL</li>
+</ul>
+<p>Vendor primitives allow you to fine-tune your implementation but are more complex and limit your design to a single FPGA architecture. I&rsquo;d recommend starting with inference and only reaching for vendor primitives if you need to do something clever or ring the last nanosecond out of your design.</p>
+<h3 id="yosys-dsp-inference">Yosys DSP Inference</h3>
+<p>If you&rsquo;re using Yosys with an iCE40UP FPGA, you need to explicitly enable DSP inference using the <code>-dsp</code> option.</p>
+<p>For example, to synthesize a module called <code>top_pong.v</code>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell">yosys -p <span style="color:#e6db74">&#34;synth_ice40 -dsp -json top_pong.json&#34;</span> top_pong.v
+</code></pre></div><p>On ECP5, Yosys infers DSPs by default; you can disable them with <code>-nodsp</code>.</p>
+<p>NB. My current (November 2021) understanding is that you shouldn&rsquo;t use <code>-dsp</code> with <code>synth_ice40</code> if you&rsquo;re also instantiating SB_MAC16 primitives directly.</p>
+<h2 id="multiplication-examples">Multiplication Examples</h2>
+<p>To create simple, practical examples, I&rsquo;ve combined simple maths functions with graphics output. If you have an FPGA board with video output, you can view the results on screen, but even if you don&rsquo;t, you can still look at the designs and timings with your FPGA development tools. I also provide Verilator simulations of the designs.</p>
+<p>Our examples run mathematical functions for each pixel on the screen, generating a 0 or 1 as output. The function needs to keep pace with the display signal: calculating 25 million values per second for 640x480 or 74 million for 1280x720.</p>
+<h3 id="source">Source</h3>
+<p>The SystemVerilog designs featured in this post are available from the <a href="https://github.com/projf/projf-explore/">projf-explore</a> git repo under the open-source MIT licence: build on them to your heart&rsquo;s content. The rest of the blog content is subject to standard copyright restrictions: don&rsquo;t republish it without permission.</p>
+<h3 id="squared">Squared</h3>
+<p>Let&rsquo;s start with a module that includes just one multiplication.</p>
+<p>This module takes the X and Y coordinates of a pixel and returns <code>1</code> if X squared is larger than the scaled Y value (explained below).</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> func_squared #(
+    CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,     <span style="color:#75715e">// signed coordinate width (bits)
+</span><span style="color:#75715e"></span>    Y_SCALE<span style="color:#f92672">=</span><span style="color:#ae81ff">256</span>  <span style="color:#75715e">// increase y-scale so we can see more on-screen
+</span><span style="color:#75715e"></span>    ) (
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> clk,
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x,
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] y,
+    <span style="color:#66d9ef">output</span> <span style="color:#66d9ef">logic</span> r
+    );
+
+    <span style="color:#75715e">// v1: simple version (latency: 2 cycles)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [<span style="color:#ae81ff">2</span><span style="color:#f92672">*</span>CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x_squared;
+    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [<span style="color:#ae81ff">2</span><span style="color:#f92672">*</span>CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] y_scaled;
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
+        y_scaled <span style="color:#f92672">&lt;=</span> Y_SCALE <span style="color:#f92672">*</span> y;
+        x_squared <span style="color:#f92672">&lt;=</span> x<span style="color:#f92672">*</span>x;
+        r <span style="color:#f92672">&lt;=</span> (x_squared <span style="color:#f92672">&lt;</span> y_scaled) <span style="color:#f92672">?</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
+    <span style="color:#66d9ef">end</span>
+<span style="color:#66d9ef">endmodule</span>
+</code></pre></div><p>Because we&rsquo;re using integers, each pixel represents one whole number. When we square X, the value quickly becomes too large to fit on screen if we assume each vertical pixel represents <code>1</code>. To make more of the function visible, we scale the Y-axis with a parameter. In this case, we&rsquo;ve scaled the Y-axis so each pixel represents 256.</p>
+<p>Here&rsquo;s a sample top module to drive it; this version is for the Arty (Xilinx 7 Series). <code>(0,0)</code> is in the centre of the screen. We&rsquo;re using 12-bit signed signals, so they comfortably fit into any DSP.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_graphing (
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_100m,     <span style="color:#75715e">// 100 MHz clock
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_rst,      <span style="color:#75715e">// reset button (active low)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> vga_hsync,    <span style="color:#75715e">// horizontal sync
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> vga_vsync,    <span style="color:#75715e">// vertical sync
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vga_r,  <span style="color:#75715e">// 4-bit VGA red
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vga_g,  <span style="color:#75715e">// 4-bit VGA green
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vga_b   <span style="color:#75715e">// 4-bit VGA blue
+</span><span style="color:#75715e"></span>    );
+
+    <span style="color:#75715e">// generate pixel clock
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> clk_pix;
+    <span style="color:#66d9ef">logic</span> clk_locked;
+    clock_gen_480p clock_pix_inst (
+       .clk(clk_100m),
+       .rst(<span style="color:#f92672">!</span>btn_rst),  <span style="color:#75715e">// reset button is active low
+</span><span style="color:#75715e"></span>       .clk_pix,
+       .clk_locked
+    );
+
+    <span style="color:#75715e">// display sync signals and coordinates
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">12</span>;
+    <span style="color:#66d9ef">logic</span> hsync, vsync;
+    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx, sy;
+    <span style="color:#66d9ef">logic</span> de;
+    display_480p #(.CORDW(CORDW)) display_inst (
+        .clk_pix,
+        .rst(<span style="color:#f92672">!</span>clk_locked),
+        .sx,
+        .sy,
+        .hsync,
+        .vsync,
+        .de,
+        .frame(),
+        .line()
+    );
+
+    <span style="color:#75715e">// signal when to draw mathematical function and axis
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> draw, axes;
+
+    <span style="color:#75715e">// VGA output
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        vga_hsync <span style="color:#f92672">&lt;=</span> hsync;
+        vga_vsync <span style="color:#f92672">&lt;=</span> vsync;
+        vga_r <span style="color:#f92672">&lt;=</span> <span style="color:#f92672">!</span>de <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h0</span> <span style="color:#f92672">:</span> (axes <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hC</span> <span style="color:#f92672">:</span> (draw <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h3</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h2</span>));
+        vga_g <span style="color:#f92672">&lt;=</span> <span style="color:#f92672">!</span>de <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h0</span> <span style="color:#f92672">:</span> (axes <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hC</span> <span style="color:#f92672">:</span> (draw <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hB</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h2</span>));
+        vga_b <span style="color:#f92672">&lt;=</span> <span style="color:#f92672">!</span>de <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h0</span> <span style="color:#f92672">:</span> (axes <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hC</span> <span style="color:#f92672">:</span> (draw <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hC</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h2</span>));
+    <span style="color:#66d9ef">end</span>
+
+
+    <span style="color:#75715e">//
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">// Graphing Logic
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">//
+</span><span style="color:#75715e"></span>
+    <span style="color:#75715e">// function coordinates
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x, y;
+
+    <span style="color:#75715e">// adjust screen coordinates so (0,0) is at centre of screen
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> X_OFFS <span style="color:#f92672">=</span> <span style="color:#ae81ff">320</span>;
+    <span style="color:#66d9ef">localparam</span> Y_OFFS <span style="color:#f92672">=</span> <span style="color:#ae81ff">239</span>;
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+        x <span style="color:#f92672">&lt;=</span> sx <span style="color:#f92672">-</span> X_OFFS <span style="color:#f92672">+</span> <span style="color:#ae81ff">3</span>;  <span style="color:#75715e">// latency for function (+n) and offset calculation (+1)
+</span><span style="color:#75715e"></span>        y <span style="color:#f92672">&lt;=</span> Y_OFFS <span style="color:#f92672">-</span> sy;
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// draw X and Y axes
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> x_axis, y_axis;
+    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+        x_axis <span style="color:#f92672">=</span> (sy <span style="color:#f92672">==</span> Y_OFFS);
+        y_axis <span style="color:#f92672">=</span> (sx <span style="color:#f92672">==</span> X_OFFS);
+        axes <span style="color:#f92672">=</span> x_axis <span style="color:#f92672">||</span> y_axis;
+    <span style="color:#66d9ef">end</span>
+
+    <span style="color:#75715e">// function to graph
+</span><span style="color:#75715e"></span>    func_squared #(.CORDW(CORDW)) func_inst (
+        .clk(clk_pix),
+        .x,
+        .y,
+        .r(draw)
+    );
+<span style="color:#66d9ef">endmodule</span>
+</code></pre></div><blockquote>
+<p><strong>Building the Demos</strong><br>
+In the <a href="/projf/projf-explore/tree/master/maths/demo">Maths Demo</a> section of the git repo, you&rsquo;ll find the design files, a makefile for iCEBreaker (coming soon), a Vivado project for Arty and Nexys Video, and instructions for building the designs for dev boards and with Verilator.</p>
+</blockquote>
+<p>And here&rsquo;s what the Verilator simulation looks like:</p>
+<p><img src="/img/posts/multiplication-fpga-dsps/verilator-squared.png" alt="X Squared" title="Verilator simulation running on macOS."></p>
+<p>Vivado automatically infers DSPs for the multiplication, but it gives a warning of the form:</p>
+<blockquote>
+<p><strong>[DRC DPOP-2] MREG Output pipelining&hellip;</strong><br>
+Pipelining the multiplier function will improve performance and will save significant power so it is suggested whenever possible to fully pipeline this function.  If this multiplier was inferred, it is suggested to describe an additional register stage after this function.</p>
+</blockquote>
+<p>Let&rsquo;s take Vivado&rsquo;s advice and register the result of the multiplication before comparing it with the Y-value. This adds an additional cycle of latency, so we need to delay the Y value:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// v2: extra pipeline stages (latency: 3 cycles)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [<span style="color:#ae81ff">2</span><span style="color:#f92672">*</span>CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x_squared, x_squared_p1;
+    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [<span style="color:#ae81ff">2</span><span style="color:#f92672">*</span>CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] y_scaled, y_scaled_p1;
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
+        y_scaled_p1 <span style="color:#f92672">&lt;=</span> Y_SCALE <span style="color:#f92672">*</span> y;
+        y_scaled    <span style="color:#f92672">&lt;=</span> y_scaled_p1;
+
+        x_squared_p1 <span style="color:#f92672">&lt;=</span> x<span style="color:#f92672">*</span>x;
+        x_squared <span style="color:#f92672">&lt;=</span> x_squared_p1;
+
+        r <span style="color:#f92672">&lt;=</span> (x_squared <span style="color:#f92672">&lt;</span> y_scaled) <span style="color:#f92672">?</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
+    <span style="color:#66d9ef">end</span>
+</code></pre></div><p>We also update the latency correction in <strong>top_graphing</strong>; otherwise our results don&rsquo;t match our inputs and our graphic would be shifted to the right:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">        x <span style="color:#f92672">&lt;=</span> sx <span style="color:#f92672">-</span> X_OFFS <span style="color:#f92672">+</span> <span style="color:#ae81ff">4</span>;  <span style="color:#75715e">// latency for function (+n) and offset calculation (+1)
+</span></code></pre></div><p>Let&rsquo;s compare the timings and logic used for the two versions of the design:</p>
+<table>
+<thead>
+<tr>
+<th>Design</th>
+<th>Target (MHz)</th>
+<th>Cycles</th>
+<th>LUT</th>
+<th>FF</th>
+<th>DSP</th>
+<th>WNS (ns)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Squared v1</td>
+<td>25</td>
+<td>2</td>
+<td>81</td>
+<td>90</td>
+<td>1</td>
+<td>33.6</td>
+</tr>
+<tr>
+<td>Squared v2</td>
+<td>25</td>
+<td>3</td>
+<td>84</td>
+<td>96</td>
+<td>1</td>
+<td>34.1</td>
+</tr>
+</tbody>
+</table>
+<p><em>Build with Vivado 2021.2 using default settings for synthesis and implementation.</em></p>
+<p>Timing (represented by WNS) wasn&rsquo;t an issue for 25 MHz operation, even with the first version of our design. The extra pipeline stage uses a little more logic and adds an additional cycle of latency.</p>
+<p><em>Results for iCEBreaker and Nexys Video at 74.25 MHz will be added soon.</em></p>
+<h3 id="circle">Circle</h3>
+<p>A more complex function is the circle equation, which requires squaring both X and Y.</p>
+<p>Again, we create two versions and compare them. I&rsquo;m including both versions in one module but commenting one out.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> func_circle #(
+    CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,    <span style="color:#75715e">// signed coordinate width (bits)
+</span><span style="color:#75715e"></span>    RADIUS<span style="color:#f92672">=</span><span style="color:#ae81ff">128</span>  <span style="color:#75715e">// circle radius
+</span><span style="color:#75715e"></span>    ) (
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> clk,
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x,
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] y,
+    <span style="color:#66d9ef">output</span> <span style="color:#66d9ef">logic</span> r
+    );
+
+    <span style="color:#75715e">// // v1: simple version (latency: 2 cycles)
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">// logic signed [2*CORDW:0] circle;  // addition of two squares, so twice as wide
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">// always_ff @(posedge clk) begin
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">//     circle &lt;= x*x + y*y;
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">//     r &lt;= (circle &lt; RADIUS * RADIUS) ? 1 : 0;
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">// end
+</span><span style="color:#75715e"></span>
+    <span style="color:#75715e">// v2: extra pipeline stages (latency: 4 cycles)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">2</span><span style="color:#f92672">*</span>CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x_squared, x_squared_p1;
+    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">2</span><span style="color:#f92672">*</span>CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] y_squared, y_squared_p1;
+    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [<span style="color:#ae81ff">2</span><span style="color:#f92672">*</span>CORDW:<span style="color:#ae81ff">0</span>] circle;  <span style="color:#75715e">// addition of two squares, so twice as wide
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
+        x_squared_p1 <span style="color:#f92672">&lt;=</span> x<span style="color:#f92672">*</span>x;
+        x_squared <span style="color:#f92672">&lt;=</span> x_squared_p1;
+
+        y_squared_p1 <span style="color:#f92672">&lt;=</span> y<span style="color:#f92672">*</span>y;
+        y_squared <span style="color:#f92672">&lt;=</span> y_squared_p1;
+
+        circle <span style="color:#f92672">&lt;=</span> x_squared <span style="color:#f92672">+</span> y_squared;
+        r <span style="color:#f92672">&lt;=</span> (circle <span style="color:#f92672">&lt;</span> RADIUS <span style="color:#f92672">*</span> RADIUS) <span style="color:#f92672">?</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
+    <span style="color:#66d9ef">end</span>
+<span style="color:#66d9ef">endmodule</span>
+
+</code></pre></div><table>
+<thead>
+<tr>
+<th>Design</th>
+<th>Target (MHz)</th>
+<th>Cycles</th>
+<th>LUT</th>
+<th>FF</th>
+<th>DSP</th>
+<th>WNS (ns)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Circle v1</td>
+<td>25</td>
+<td>2</td>
+<td>78</td>
+<td>66</td>
+<td>2</td>
+<td>33.6</td>
+</tr>
+<tr>
+<td>Circle v2</td>
+<td>25</td>
+<td>4</td>
+<td>102</td>
+<td>77</td>
+<td>2</td>
+<td>33.9</td>
+</tr>
+</tbody>
+</table>
+<p>As with our squared module, we&rsquo;ve so much timing slack at 25 MHz that the extra registers don&rsquo;t make any significant difference. In addition, when timing is easily met, Vivado doesn&rsquo;t heavily optimise the design.</p>
+<p><em>Results for iCEBreaker and Nexys Video at 74.25 MHz will be added soon.</em></p>
+<p>NB. This is not an efficient way to draw a circle for graphics applications; use a specialist circle drawing algorithm that doesn&rsquo;t require DSPs; see <a href="/posts/fpga-shapes/#circles">FPGA Shapes</a>.</p>
+<h3 id="cubed">Cubed</h3>
+<p>The next example increases the complexity a little more, calculating X cubed:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> func_cubed #(
+    CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,       <span style="color:#75715e">// signed coordinate width (bits)
+</span><span style="color:#75715e"></span>    Y_SCALE<span style="color:#f92672">=</span><span style="color:#ae81ff">16384</span>  <span style="color:#75715e">// increase y-scale so we can see more on-screen
+</span><span style="color:#75715e"></span>    ) (
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> clk,
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x,
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] y,
+    <span style="color:#66d9ef">output</span> <span style="color:#66d9ef">logic</span> r
+    );
+
+    <span style="color:#75715e">// // v1: simple version (latency: 2 cycles)
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">// logic signed [3*CORDW-1:0] x_cubed, y_scaled;
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">// always_ff @(posedge clk) begin
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">//     y_scaled &lt;= Y_SCALE * y;
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">//     x_cubed &lt;= x*x*x;
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">//     r &lt;= (x_cubed &lt; y_scaled) ? 1 : 0;
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">// end
+</span><span style="color:#75715e"></span>
+    <span style="color:#75715e">// v2: extra pipeline stages (latency: 5 cycles)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [<span style="color:#ae81ff">2</span><span style="color:#f92672">*</span>CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x_squared, x_squared_p1;
+    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">*</span>CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x_cubed_p1, x_cubed;
+    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">*</span>CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] y_scaled, y_scaled_p1, y_scaled_p2, y_scaled_p3;
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
+        y_scaled_p3 <span style="color:#f92672">&lt;=</span> Y_SCALE <span style="color:#f92672">*</span> y;
+        y_scaled_p2 <span style="color:#f92672">&lt;=</span> y_scaled_p3;
+        y_scaled_p1 <span style="color:#f92672">&lt;=</span> y_scaled_p2;
+        y_scaled    <span style="color:#f92672">&lt;=</span> y_scaled_p1;
+
+        x_squared_p1 <span style="color:#f92672">&lt;=</span> x<span style="color:#f92672">*</span>x;
+        x_squared    <span style="color:#f92672">&lt;=</span> x_squared_p1;
+        x_cubed_p1   <span style="color:#f92672">&lt;=</span> x<span style="color:#f92672">*</span>x_squared;
+        x_cubed      <span style="color:#f92672">&lt;=</span> x_cubed_p1;
+
+        r <span style="color:#f92672">&lt;=</span> (x_cubed <span style="color:#f92672">&lt;</span> y_scaled) <span style="color:#f92672">?</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
+    <span style="color:#66d9ef">end</span>
+<span style="color:#66d9ef">endmodule</span>
+</code></pre></div><p>In cubed v1, we now have two multiplications in one expression. Interestingly, if the signal width is 16, it requires three DSPs on Xilinx 7 Series, while 12-bit signals require only two DSPs.</p>
+<table>
+<thead>
+<tr>
+<th>Design</th>
+<th>Target (MHz)</th>
+<th>Cycles</th>
+<th>LUT</th>
+<th>FF</th>
+<th>DSP</th>
+<th>WNS (ns)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cubed v1</td>
+<td>25</td>
+<td>2</td>
+<td>83</td>
+<td>90</td>
+<td>2</td>
+<td>30.7</td>
+</tr>
+<tr>
+<td>Cubed v2</td>
+<td>25</td>
+<td>5</td>
+<td>91</td>
+<td>79</td>
+<td>3</td>
+<td>33.9</td>
+</tr>
+</tbody>
+</table>
+<p>For our 25 MHz design, we&rsquo;ve still got plenty of slack, but the additional pipeline stages improve performance at the cost of an extra DSP.</p>
+<h3 id="quartic-polynomial">Quartic Polynomial</h3>
+<p>Let&rsquo;s up the ante and graph a quartic polynomial: <code>x⁴−x²</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> func_polynomial #(
+    CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,       <span style="color:#75715e">// signed coordinate width (bits)
+</span><span style="color:#75715e"></span>    Y_SCALE<span style="color:#f92672">=</span><span style="color:#ae81ff">2</span><span style="color:#f92672">**</span><span style="color:#ae81ff">24</span>  <span style="color:#75715e">// increase y-scale so we can see more on-screen
+</span><span style="color:#75715e"></span>    ) (
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> clk,
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x,
+    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] y,
+    <span style="color:#66d9ef">output</span> <span style="color:#66d9ef">logic</span> r
+    );
+
+    <span style="color:#75715e">// // v1: simple version (latency: 2 cycles)
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">// logic signed [4*CORDW-1:0] x_poly, y_scaled;
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">// always_ff @(posedge clk) begin
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">//     y_scaled &lt;= Y_SCALE * y;
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">//     x_poly &lt;= x*x*x*x - 2**16 * x*x;
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">//     r &lt;= (x_poly &lt; y_scaled) ? 1 : 0;
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">// end
+</span><span style="color:#75715e"></span>
+    <span style="color:#75715e">// v2: extra pipeline stages (latency: 6 cycles)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [<span style="color:#ae81ff">2</span><span style="color:#f92672">*</span>CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x_squared, x_squared_p1, x_squared_p2, x_squared_p3;
+    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [<span style="color:#ae81ff">4</span><span style="color:#f92672">*</span>CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x_fourth, x_fourth_p1, x_poly;
+    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [<span style="color:#ae81ff">4</span><span style="color:#f92672">*</span>CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] y_scaled, y_scaled_p1, y_scaled_p2, y_scaled_p3, y_scaled_p4;
+    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
+        y_scaled_p4 <span style="color:#f92672">&lt;=</span> Y_SCALE <span style="color:#f92672">*</span> y;
+        y_scaled_p3 <span style="color:#f92672">&lt;=</span> y_scaled_p4;
+        y_scaled_p2 <span style="color:#f92672">&lt;=</span> y_scaled_p3;
+        y_scaled_p1 <span style="color:#f92672">&lt;=</span> y_scaled_p2;
+        y_scaled    <span style="color:#f92672">&lt;=</span> y_scaled_p1;
+
+        x_squared_p3 <span style="color:#f92672">&lt;=</span> x<span style="color:#f92672">*</span>x;
+        x_squared_p2 <span style="color:#f92672">&lt;=</span> x_squared_p3;
+        x_squared_p1 <span style="color:#f92672">&lt;=</span> x_squared_p2;
+        x_squared    <span style="color:#f92672">&lt;=</span> x_squared_p1;
+
+        x_fourth_p1 <span style="color:#f92672">&lt;=</span> x_squared_p2 <span style="color:#f92672">*</span> x_squared_p2;
+        x_fourth    <span style="color:#f92672">&lt;=</span> x_fourth_p1;
+
+        x_poly <span style="color:#f92672">&lt;=</span> x_fourth <span style="color:#f92672">-</span> <span style="color:#ae81ff">2</span><span style="color:#f92672">**</span><span style="color:#ae81ff">16</span> <span style="color:#f92672">*</span> x_squared;
+        r <span style="color:#f92672">&lt;=</span> (x_poly <span style="color:#f92672">&lt;</span> y_scaled) <span style="color:#f92672">?</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
+    <span style="color:#66d9ef">end</span>
+<span style="color:#66d9ef">endmodule</span>
+</code></pre></div><table>
+<thead>
+<tr>
+<th>Design</th>
+<th>Target (MHz)</th>
+<th>Cycles</th>
+<th>LUT</th>
+<th>FF</th>
+<th>DSP</th>
+<th>WNS (ns)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Polynomial v1</td>
+<td>25</td>
+<td>2</td>
+<td>130</td>
+<td>112</td>
+<td>6</td>
+<td>20.9</td>
+</tr>
+<tr>
+<td>Polynomial v2</td>
+<td>25</td>
+<td>6</td>
+<td>150</td>
+<td>160</td>
+<td>3</td>
+<td>33.1</td>
+</tr>
+</tbody>
+</table>
+<p>This time, there&rsquo;s a significant timing difference, even at 25 MHz. Notably, the extra pipeline stages also halve the number of DSPs required from 6 to 3. So, it&rsquo;s not always the case that extra pipeline stages increase the DSPs needed.</p>
+<p><img src="/img/posts/multiplication-fpga-dsps/verilator-polynomial.png" alt="x⁴−x²" title="Verilator simulation running on macOS."></p>
+<h2 id="a-balancing-act">A Balancing Act</h2>
+<p>Implementing an algorithm in hardware is always a balancing act, never more so than when using DSPs. Adding pipeline stages and registering outputs is almost always worthwhile, but it does increase latency, which is problematic for some applications. Using narrower signals saves logic but reduces accuracy or range.</p>
+<p>I&rsquo;ll finish by giving you a few tips to take away:</p>
+<ul>
+<li>Improve timing by including at least one register between each calculation step</li>
+<li>Narrower signals can save significant DSPs and logic</li>
+<li>Use <a href="/posts/numbers-in-verilog/#signed-numbers">signed</a> values with Xilinx DSPs</li>
+<li>Use an FSM to divide a complex algorithm into multiple steps
+<ul>
+<li>We&rsquo;ll see examples of using FSM with algorithms in later posts</li>
+</ul>
+</li>
+</ul>
+<h2 id="next-time">Next Time</h2>
+<p>Stay tuned for the next part of <em>Maths and Algorithms with FPGAs</em>, where we&rsquo;ll look at real numbers including fixed point. Until then, why not check out our existing maths posts: <a href="/posts/division-in-verilog/">division</a>, <a href="/posts/square-root-in-verilog/">square root</a>, and <a href="/posts/fpga-sine-table/">sine &amp; cosine</a>.</p>
+<p><em>Constructive feedback is always welcome. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<blockquote>
+<p><strong>Sponsor Project F</strong><br>
+If you like what I do, consider <a href="https://github.com/sponsors/WillGreen">sponsoring me</a> on GitHub.
+I use contributions to spend more time creating open-source FPGA designs and tutorials.</p>
+</blockquote>
+
+      
+      <div class="related">
+
+<h3>Similar articles:</h3>
+<ul>
+	
+	<li><a href="/posts/numbers-in-verilog/">Numbers in Verilog</a></li>
+	
+	<li><a href="/posts/animated-shapes/">Animated Shapes</a></li>
+	
+	<li><a href="/posts/fpga-sine-table/">FPGA Sine Lookup Table</a></li>
+	
+	<li><a href="/posts/hello-arty-3/">Hello Arty - Part 3</a></li>
+	
+	<li><a href="/posts/fpga-shapes/">2D Shapes</a></li>
+	
+</ul>
+</div>
+      
+    </div>
+    
+  </div>
+</section>
+
+    <script src="/js/copycode.js"></script>
+
+
+
+<section class="section">
+  <div class="container has-text-centered">
+    <p>©2021 Will Green, Project F</p>
+    
+  </div>
+</section>
+
+
+<script src="https://badgers.projectf.io/script.js" data-site="EVCGKVDN" defer></script>
+</body>
+</html>
+
