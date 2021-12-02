@@ -10,10 +10,10 @@
 <meta property='og:description' content='Welcome back to my series covering mathematics and algorithms with FPGAs.
 I was initially going to look at real numbers in this part, but Project F is known for its practical, hands-on tutorials. So, I decided to dedicate a post to a topic usually ignored by introductory guides: multiplication with DSPs. We&rsquo;ll cover real numbers in the next post.
 New to the series? Start with Numbers in Verilog.
-This post is a draft: improvements and additional content to come.'>
+Updated 2021-12-02. Share your thoughts with @WillFlux or find me on 1BitSquared Discord.'>
 <meta property='og:url' content='https://projectf.io/posts/multiplication-fpga-dsps/'>
 <meta property='og:site_name' content='Project F - FPGA Development'>
-<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/multiplication-fpga-dsps/social-card.png'><meta property='article:published_time' content='2021-11-27T00:00:00Z'/><meta property='article:modified_time' content='2021-11-27T00:00:00Z'/><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
+<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/multiplication-fpga-dsps/social-card.png'><meta property='article:published_time' content='2021-11-27T00:00:00Z'/><meta property='article:modified_time' content='2021-12-02T00:00:00Z'/><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
 
 
 <link href="https://projectf.io/index.xml" rel="alternate" type="application/rss+xml" title="Project F - FPGA Development" />
@@ -127,11 +127,10 @@ This post is a draft: improvements and additional content to come.'>
       <p>Welcome back to my series covering mathematics and algorithms with FPGAs.</p>
 <p>I was initially going to look at real numbers in this part, but Project F is known for its practical, hands-on tutorials. So, I decided to dedicate a post to a topic usually ignored by introductory guides: multiplication with DSPs. We&rsquo;ll cover real numbers in the next post.</p>
 <p>New to the series? Start with <a href="/posts/numbers-in-verilog/">Numbers in Verilog</a>.</p>
-<p><strong>This post is a draft: improvements and additional content to come.</strong></p>
-<p><em>Share your thoughts with <a href="https://twitter.com/WillFlux">@WillFlux</a> or find me on <a href="https://1bitsquared.com/pages/chat">1BitSquared Discord</a>.</em></p>
+<p><em>Updated 2021-12-02. Share your thoughts with <a href="https://twitter.com/WillFlux">@WillFlux</a> or find me on <a href="https://1bitsquared.com/pages/chat">1BitSquared Discord</a>.</em></p>
 <h2 id="dsp-blocks">DSP Blocks</h2>
 <p>FPGAs incorporate dedicated digital signal processing (DSP) blocks. As their name suggests, DSPs accelerate typical signal processing tasks, such as <a href="https://en.wikipedia.org/wiki/Fast_Fourier_transform">fast Fourier transforms</a> (FFTs) and <a href="https://en.wikipedia.org/wiki/Finite_impulse_response">finite impulse response filtering</a> (FIR). DSP blocks include multipliers, which we&rsquo;ll cover in this post. Just bear in mind that DSP blocks are useful for many things beyond straight multiplication.</p>
-<p>You can also implement multiplication directly in logic (LUTs and flip-flops), but it takes significant resources. Using dedicated DSP blocks for multiplication makes sense from a performance and logic-use perspective. Hence, why even small FPGAs dedicate space to DSP blocks.</p>
+<p>You can also implement multiplication directly in logic (LUTs and flip-flops), but it takes significant resources. Using dedicated DSP blocks for multiplication makes sense from a performance and logic-use perspective. Hence, even small FPGAs dedicate space to DSP blocks.</p>
 <h2 id="multiplication-capabilities">Multiplication Capabilities</h2>
 <p>Let&rsquo;s take a quick look at the multiplication capabilities of a few FPGAs.</p>
 <p>The width of a DSP multiplier depends on the FPGA architecture:</p>
@@ -188,7 +187,7 @@ This post is a draft: improvements and additional content to come.'>
 <p>For example, to synthesize a module called <code>top_pong.v</code>:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell">yosys -p <span style="color:#e6db74">&#34;synth_ice40 -dsp -json top_pong.json&#34;</span> top_pong.v
 </code></pre></div><p>On ECP5, Yosys infers DSPs by default; you can disable them with <code>-nodsp</code>.</p>
-<p>NB. My current (November 2021) understanding is that you shouldn&rsquo;t use <code>-dsp</code> with <code>synth_ice40</code> if you&rsquo;re also instantiating SB_MAC16 primitives directly.</p>
+<p><em>Once I better understand Yosys iCE40UP DSP inference, I’ll add timing results for iCE40UP5K.</em></p>
 <h2 id="multiplication-examples">Multiplication Examples</h2>
 <p>To create simple, practical examples, I&rsquo;ve combined simple maths functions with graphics output. If you have an FPGA board with video output, you can view the results on screen, but even if you don&rsquo;t, you can still look at the designs and timings with your FPGA development tools. I also provide Verilator simulations of the designs.</p>
 <p>Our examples run mathematical functions for each pixel on the screen, generating a 0 or 1 as output. The function needs to keep pace with the display signal: calculating 25 million values per second for 640x480 or 74 million for 1280x720.</p>
@@ -307,7 +306,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/maths/demo">M
 <p><img src="/img/posts/multiplication-fpga-dsps/verilator-squared.png" alt="X Squared" title="Verilator simulation running on macOS."></p>
 <p>Vivado automatically infers DSPs for the multiplication, but it gives a warning of the form:</p>
 <blockquote>
-<p><strong>[DRC DPOP-2] MREG Output pipelining&hellip;</strong><br>
+<p><strong>[DRC DPOP-2] MREG Output pipelining</strong><br>
 Pipelining the multiplier function will improve performance and will save significant power so it is suggested whenever possible to fully pipeline this function.  If this multiplier was inferred, it is suggested to describe an additional register stage after this function.</p>
 </blockquote>
 <p>Let&rsquo;s take Vivado&rsquo;s advice and register the result of the multiplication before comparing it with the Y-value. This adds an additional cycle of latency, so we need to delay the Y value:</p>
@@ -325,12 +324,13 @@ Pipelining the multiplier function will improve performance and will save signif
     <span style="color:#66d9ef">end</span>
 </code></pre></div><p>We also update the latency correction in <strong>top_graphing</strong>; otherwise our results don&rsquo;t match our inputs and our graphic would be shifted to the right:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">        x <span style="color:#f92672">&lt;=</span> sx <span style="color:#f92672">-</span> X_OFFS <span style="color:#f92672">+</span> <span style="color:#ae81ff">4</span>;  <span style="color:#75715e">// latency for function (+n) and offset calculation (+1)
-</span></code></pre></div><p>Let&rsquo;s compare the timings and logic used for the two versions of the design:</p>
+</span></code></pre></div><p>Let&rsquo;s compare the timings and logic used for the two versions of the design on different FPGAs:</p>
 <table>
 <thead>
 <tr>
+<th>FPGA</th>
 <th>Design</th>
-<th>Target (MHz)</th>
+<th>Target</th>
 <th>Cycles</th>
 <th>LUT</th>
 <th>FF</th>
@@ -340,8 +340,9 @@ Pipelining the multiplier function will improve performance and will save signif
 </thead>
 <tbody>
 <tr>
+<td>XC7A35T</td>
 <td>Squared v1</td>
-<td>25</td>
+<td>25.2  MHz</td>
 <td>2</td>
 <td>81</td>
 <td>90</td>
@@ -349,19 +350,44 @@ Pipelining the multiplier function will improve performance and will save signif
 <td>33.6</td>
 </tr>
 <tr>
+<td>XC7A35T</td>
 <td>Squared v2</td>
-<td>25</td>
+<td>25.2  MHz</td>
 <td>3</td>
 <td>84</td>
 <td>96</td>
 <td>1</td>
 <td>34.1</td>
 </tr>
+<tr>
+<td>XC7A200T</td>
+<td>Squared v1</td>
+<td>74.25 MHz</td>
+<td>2</td>
+<td>137</td>
+<td>127</td>
+<td>1</td>
+<td>9.2</td>
+</tr>
+<tr>
+<td>XC7A200T</td>
+<td>Squared v2</td>
+<td>74.25 MHz</td>
+<td>3</td>
+<td>139</td>
+<td>135</td>
+<td>1</td>
+<td>8.2</td>
+</tr>
 </tbody>
 </table>
-<p><em>Build with Vivado 2021.2 using default settings for synthesis and implementation.</em></p>
-<p>Timing (represented by WNS) wasn&rsquo;t an issue for 25 MHz operation, even with the first version of our design. The extra pipeline stage uses a little more logic and adds an additional cycle of latency.</p>
-<p><em>Results for iCEBreaker and Nexys Video at 74.25 MHz will be added soon.</em></p>
+<p><em>Build with Vivado 2021.2 using default settings for synthesis and implementation. All Xilinx FPGAs are speed grade -1 (slowest grade).</em></p>
+<p>The results for XC7A35T include 640x480 VGA output, while those for XC7A200T include 1280x720p60 DVI output. Timing (represented by WNS) wasn&rsquo;t an issue for 25 or 74 MHz operation, even with the first version of our design. The extra pipeline stage uses a little more logic and adds an additional cycle of latency.</p>
+<p>Timing on the XC7A200T is actually worse for our pipelined design, but still comfortable. Vivado doesn&rsquo;t optimise a design when timing is comfortable, so we shouldn&rsquo;t read too much into this.</p>
+<blockquote>
+<p><strong>Worst Negative Slack</strong><br>
+The unhelpfully named <em>worst negative slack</em> (WNS) is how Vivado reports timing. The larger this number, the better, but you need to account for the target clock speed. For example, at 100 MHz the maximum WNS is 10 ns because that&rsquo;s how long a clock cycle lasts at 100 MHz. If WNS is negative, your design doesn&rsquo;t meet timing and might not work.</p>
+</blockquote>
 <h3 id="circle">Circle</h3>
 <p>A more complex function is the circle equation, which requires squaring both X and Y.</p>
 <p>Again, we create two versions and compare them. I&rsquo;m including both versions in one module but commented one out.</p>
@@ -397,12 +423,12 @@ Pipelining the multiplier function will improve performance and will save signif
         r <span style="color:#f92672">&lt;=</span> (circle <span style="color:#f92672">&lt;</span> RADIUS <span style="color:#f92672">*</span> RADIUS) <span style="color:#f92672">?</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
-
 </code></pre></div><table>
 <thead>
 <tr>
+<th>FPGA</th>
 <th>Design</th>
-<th>Target (MHz)</th>
+<th>Target</th>
 <th>Cycles</th>
 <th>LUT</th>
 <th>FF</th>
@@ -412,8 +438,9 @@ Pipelining the multiplier function will improve performance and will save signif
 </thead>
 <tbody>
 <tr>
+<td>XC7A35T</td>
 <td>Circle v1</td>
-<td>25</td>
+<td>25.2  MHz</td>
 <td>2</td>
 <td>78</td>
 <td>66</td>
@@ -421,18 +448,38 @@ Pipelining the multiplier function will improve performance and will save signif
 <td>33.6</td>
 </tr>
 <tr>
+<td>XC7A35T</td>
 <td>Circle v2</td>
-<td>25</td>
+<td>25.2  MHz</td>
 <td>4</td>
 <td>102</td>
 <td>77</td>
 <td>2</td>
 <td>33.9</td>
 </tr>
+<tr>
+<td>XC7A200T</td>
+<td>Circle v1</td>
+<td>74.25 MHz</td>
+<td>2</td>
+<td>135</td>
+<td>103</td>
+<td>2</td>
+<td>7.7</td>
+</tr>
+<tr>
+<td>XC7A200T</td>
+<td>Circle v2</td>
+<td>74.25 MHz</td>
+<td>4</td>
+<td>159</td>
+<td>114</td>
+<td>2</td>
+<td>9.2</td>
+</tr>
 </tbody>
 </table>
-<p>As with our squared module, we&rsquo;ve so much timing slack at 25 MHz that the extra registers don&rsquo;t make any significant difference. In addition, when timing is easily met, Vivado doesn&rsquo;t heavily optimise the design.</p>
-<p><em>Results for iCEBreaker and Nexys Video at 74.25 MHz will be added soon.</em></p>
+<p>As with our squared module, we&rsquo;ve so much timing slack at 25 MHz that the extra registers don&rsquo;t make any significant difference. At 74 MHz there is some improvement, but both versions have generous slack considering the target frequency.</p>
 <p>NB. This is not an efficient way to draw a circle for graphics applications; use a specialist circle drawing algorithm that doesn&rsquo;t require DSPs, such as the one in <a href="/posts/fpga-shapes/#circles">FPGA Shapes</a>.</p>
 <h3 id="cubed">Cubed</h3>
 <p>The next example increases the complexity a little more, calculating X cubed:</p>
@@ -477,8 +524,9 @@ Pipelining the multiplier function will improve performance and will save signif
 <table>
 <thead>
 <tr>
+<th>FPGA</th>
 <th>Design</th>
-<th>Target (MHz)</th>
+<th>Target</th>
 <th>Cycles</th>
 <th>LUT</th>
 <th>FF</th>
@@ -488,8 +536,9 @@ Pipelining the multiplier function will improve performance and will save signif
 </thead>
 <tbody>
 <tr>
+<td>XC7A35T</td>
 <td>Cubed v1</td>
-<td>25</td>
+<td>25.2  MHz</td>
 <td>2</td>
 <td>83</td>
 <td>90</td>
@@ -497,17 +546,38 @@ Pipelining the multiplier function will improve performance and will save signif
 <td>30.7</td>
 </tr>
 <tr>
+<td>XC7A35T</td>
 <td>Cubed v2</td>
-<td>25</td>
+<td>25.2  MHz</td>
 <td>5</td>
 <td>91</td>
 <td>79</td>
 <td>3</td>
 <td>33.9</td>
 </tr>
+<tr>
+<td>XC7A200T</td>
+<td>Cubed v1</td>
+<td>74.25 MHz</td>
+<td>2</td>
+<td>140</td>
+<td>127</td>
+<td>2</td>
+<td>4.6</td>
+</tr>
+<tr>
+<td>XC7A200T</td>
+<td>Cubed v2</td>
+<td>74.25 MHz</td>
+<td>5</td>
+<td>148</td>
+<td>115</td>
+<td>3</td>
+<td>9.1</td>
+</tr>
 </tbody>
 </table>
-<p>For our 25 MHz design, we&rsquo;ve still got plenty of slack, but the additional pipeline stages improve performance at the cost of an extra DSP. However, the number of flip flops goes down in the pipelined version.</p>
+<p>For our 25 MHz design, we&rsquo;ve still got plenty of slack, but the additional pipeline stages improve performance at the cost of an extra DSP. However, the number of flip flops goes down in the pipelined version. The 74 MHz results mirror 25 MHz, though timing is starting to get tight for the non-pipelined design.</p>
 <h3 id="quartic-polynomial">Quartic Polynomial</h3>
 <p>Let&rsquo;s up the ante and graph a quartic polynomial: <code>x⁴−x²</code>.</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> func_polynomial #(
@@ -554,8 +624,9 @@ Pipelining the multiplier function will improve performance and will save signif
 </code></pre></div><table>
 <thead>
 <tr>
+<th>FPGA</th>
 <th>Design</th>
-<th>Target (MHz)</th>
+<th>Target</th>
 <th>Cycles</th>
 <th>LUT</th>
 <th>FF</th>
@@ -565,8 +636,9 @@ Pipelining the multiplier function will improve performance and will save signif
 </thead>
 <tbody>
 <tr>
+<td>XC7A35T</td>
 <td>Polynomial v1</td>
-<td>25</td>
+<td>25.2  MHz</td>
 <td>2</td>
 <td>130</td>
 <td>112</td>
@@ -574,17 +646,39 @@ Pipelining the multiplier function will improve performance and will save signif
 <td>20.9</td>
 </tr>
 <tr>
+<td>XC7A35T</td>
 <td>Polynomial v2</td>
-<td>25</td>
+<td>25.2  MHz</td>
 <td>6</td>
 <td>150</td>
 <td>160</td>
 <td>3</td>
 <td>33.1</td>
 </tr>
+<tr>
+<td>XC7A200T</td>
+<td>Polynomial v1</td>
+<td>74.25 MHz</td>
+<td>2</td>
+<td>186</td>
+<td>149</td>
+<td>6</td>
+<td>-  2.7</td>
+</tr>
+<tr>
+<td>XC7A200T</td>
+<td>Polynomial v2</td>
+<td>74.25 MHz</td>
+<td>6</td>
+<td>206</td>
+<td>198</td>
+<td>3</td>
+<td>7.6</td>
+</tr>
 </tbody>
 </table>
-<p>This time, there&rsquo;s a significant timing difference, even at 25 MHz. Notably, the extra pipeline stages also halve the number of DSPs required from 6 to 3. So, it&rsquo;s not always the case that extra pipeline stages increase the DSPs needed.</p>
+<p>This time there&rsquo;s a significant difference in timing, even at 25 MHz. For 74 MHz, the complexity has caught up with us, and v1 misses timing by quite a margin. However, the pipelined version is still comfortable.</p>
+<p>Notably, the extra pipeline stages also halve the number of DSPs required from 6 to 3. Don&rsquo;t assume that adding pipeline stages results in higher DSP usage: handling too much complex logic in one cycle can be inefficient in logic as well as time.</p>
 <p><img src="/img/posts/multiplication-fpga-dsps/verilator-polynomial.png" alt="x⁴−x²" title="Verilator simulation running on macOS."></p>
 <h2 id="a-balancing-act">A Balancing Act</h2>
 <p>Implementing an algorithm in hardware is always a balancing act, never more so than when using DSPs. Adding pipeline stages and registering outputs is almost always worthwhile, but it does increase latency, which is problematic for some applications. Using narrower signals saves logic but reduces accuracy or range.</p>
