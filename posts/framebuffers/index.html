@@ -10,7 +10,7 @@
 <meta property='og:description' content='Welcome back to Exploring FPGA Graphics. In the previous two parts, we worked with sprites, but another approach is needed as graphics become more complex. Instead of drawing directly to the screen, we draw to a framebuffer, which is read out to the screen. This post provides an introduction to framebuffers and how to scale them up. We&rsquo;ll also learn how to fizzlefade graphics Wolfenstein 3D style. In the next part, we&rsquo;ll use a framebuffer to visualize a simulation of life.'>
 <meta property='og:url' content='https://projectf.io/posts/framebuffers/'>
 <meta property='og:site_name' content='Project F - FPGA Development'>
-<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/framebuffers/social-card.png'><meta property='article:published_time' content='2020-10-30T00:00:00Z'/><meta property='article:modified_time' content='2021-10-19T00:00:00Z'/><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
+<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/framebuffers/social-card.png'><meta property='article:published_time' content='2020-10-30T00:00:00Z'/><meta property='article:modified_time' content='2021-12-09T00:00:00Z'/><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
 
 
 <link href="https://projectf.io/index.xml" rel="alternate" type="application/rss+xml" title="Project F - FPGA Development" />
@@ -122,7 +122,7 @@
       <p>Welcome back to <em>Exploring FPGA Graphics</em>. In the previous two parts, we worked with sprites, but another approach is needed as graphics become more complex. Instead of drawing directly to the screen, we draw to a framebuffer, which is read out to the screen. This post provides an introduction to framebuffers and how to scale them up. We&rsquo;ll also learn how to fizzlefade graphics Wolfenstein 3D style. In the <a href="/posts/life-on-screen/">next part</a>, we&rsquo;ll use a framebuffer to visualize a simulation of life.</p>
 <p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how displays work, race the beam with Pong, animate starfields and sprites, paint Michelangelo&rsquo;s David, simulate life with bitmaps, draw lines and shapes, and create smooth animation with double buffering. New to the series? Start with <a href="/posts/fpga-graphics/">Intro to FPGA Graphics</a>.</p>
 <p><strong>You can watch an <a href="https://www.youtube.com/watch?v=ezJv7pB-UmA" target="_blank">FPGA Graphics demo reel</a> with designs from across this series.</strong></p>
-<p><em>Updated 2021-10-19. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><em>Updated 2021-12-06. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <h3 id="series-outline">Series Outline</h3>
 <ul>
 <li><a href="/posts/fpga-graphics/">Intro to FPGA Graphics</a> - draw your first FPGA graphics</li>
@@ -149,7 +149,7 @@
 <h2 id="a-small-buffer">A Small Buffer</h2>
 <p>A framebuffer requires enough memory to hold the complete frame. To keep things simple, we&rsquo;ll store our framebuffer in internal FPGA block memory (BRAM). The iCEBreaker&rsquo;s iCE40 FPGA has thirty 4kb BRAMs, for 120 kb in total, so that&rsquo;s what we&rsquo;ll target. You can learn more about block ram in <a href="/posts/fpga-memory-types/">FPGA Memory Types</a>.</p>
 <p>If we divide our 640x480 screen by four in both dimensions, we get 160x120. 160x120 is 19,200 pixels, so a monochrome framebuffer requires 18.75 kilobits of memory (19,200 = 18.75 * 1024).</p>
-<p>We&rsquo;ll start by wiring up our usual display timings with a framebuffer based on BRAM, then draw a simple horizontal line in it to confirm everything is working.</p>
+<p>We&rsquo;ll start by wiring up our usual display module with a framebuffer based on BRAM, then draw a simple horizontal line in it to confirm everything is working.</p>
 <ul>
 <li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/framebuffers/xc7/top_line.sv">xc7/top_line.sv</a></strong></li>
 <li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/framebuffers/ice40/top_line.sv">ice40/top_line.sv</a></strong></li>
@@ -175,15 +175,15 @@
        .clk_locked
     );
 
-    <span style="color:#75715e">// display timings
+    <span style="color:#75715e">// display sync signals and coordinates
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">16</span>;
+    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx, sy;
     <span style="color:#66d9ef">logic</span> hsync, vsync;
     <span style="color:#66d9ef">logic</span> frame;
-    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx, sy;
-    display_timings_480p #(.CORDW(CORDW)) display_timings_inst (
+    display_480p #(.CORDW(CORDW)) display_inst (
         .clk_pix,
-        .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for pixel clock lock
-</span><span style="color:#75715e"></span>        .sx,
+        .rst(<span style="color:#f92672">!</span>clk_locked),
+        .sx,
         .sy,
         .hsync,
         .vsync,
@@ -309,15 +309,15 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/fram
        .clk_locked
     );
 
-    <span style="color:#75715e">// display timings
+    <span style="color:#75715e">// display sync signals and coordinates
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">16</span>;
+    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx, sy;
     <span style="color:#66d9ef">logic</span> hsync, vsync;
     <span style="color:#66d9ef">logic</span> de, frame;
-    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx, sy;
-    display_timings_480p #(.CORDW(CORDW)) display_timings_inst (
+    display_480p #(.CORDW(CORDW)) display_inst (
         .clk_pix,
-        .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for pixel clock lock
-</span><span style="color:#75715e"></span>        .sx,
+        .rst(<span style="color:#f92672">!</span>clk_locked),
+        .sx,
         .sy,
         .hsync,
         .vsync,
@@ -520,7 +520,7 @@ Wikipedia has a lovely <em><a href="https://en.wikipedia.org/wiki/List_of_color_
 </blockquote>
 <h2 id="crude-scaling">Crude Scaling</h2>
 <p>Our framebuffer is too small to fill a 640x480 screen, and modern monitors don&rsquo;t support lower resolutions. To make our framebuffer fill the screen, we need to scale it up.</p>
-<p>We&rsquo;ve made our framebuffer an integer fraction of our display resolution, so scaling ought to be simple: just divide the coordinates by four!</p>
+<p>We&rsquo;ve made our framebuffer an integer fraction of our display resolution, so scaling ought to be simple: just divide the screen coordinates by four!</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    fb_addr_read <span style="color:#f92672">&lt;=</span> FB_WIDTH <span style="color:#f92672">*</span> (sy<span style="color:#f92672">/</span><span style="color:#ae81ff">4</span>) <span style="color:#f92672">+</span> (sx<span style="color:#f92672">/</span><span style="color:#ae81ff">4</span>);
 </code></pre></div><p>This does work, as the third version of David demonstrates:</p>
 <ul>
@@ -536,12 +536,11 @@ Wikipedia has a lovely <em><a href="https://en.wikipedia.org/wiki/List_of_color_
 <li>Memory access is driven by the pixel clock</li>
 </ul>
 <p><strong>The fundamental problem is that our framebuffer is tied to the display logic.</strong></p>
-<p>Even without scaling, we soon run into severe limitations:</p>
+<p>Even without scaling, we soon run into severe limitations because the whole design is bound to the pixel clock <code>clk_pix</code>:</p>
 <ul>
-<li>The whole design is bound to the pixel clock</li>
-<li>External memory, such as DRAM, has its own access and latency patterns</li>
-<li>Sharing memory between the framebuffer and a CPU or other logic</li>
-<li>Supporting screen resolutions with different pixel clocks</li>
+<li>Sharing memory between the framebuffer other logic forces it to run at <code>clk_pix</code></li>
+<li>External memory, such as DRAM, has its own timings that don&rsquo;t match <code>clk_pix</code></li>
+<li>Different screen resolutions require different <code>clk_pix</code>, which changes the whole design</li>
 </ul>
 <p>FPGAs are adroit at handling such situations: let&rsquo;s build a better framebuffer.</p>
 <h2 id="a-better-buffer">A Better Buffer</h2>
@@ -549,7 +548,7 @@ Wikipedia has a lovely <em><a href="https://en.wikipedia.org/wiki/List_of_color_
 <p>We need <strong>two clock domains!</strong> Has the fear taken you yet?</p>
 <p>Never fear, dual-port BRAM comes to the rescue. Rather than directly reading the framebuffer for display, we can use a linebuffer. The linebuffer has three BRAMs, one for each colour channel: red, green, blue.</p>
 <p><em>diagram to follow</em></p>
-<p>For our 160x120 framebuffer, we copy a single 160-pixel line into the linebuffer; then we read this out for four display lines before going back to the framebuffer for the following line of data. We write data into the linebuffer using our chosen design clock and read it out in the pixel clock domain.</p>
+<p>For our 160x120 framebuffer, we copy a single 160-pixel line into the linebuffer; then we read this out for four display lines before going back to the framebuffer for the following line of data. We write data into the linebuffer using our chosen design clock frequency and read it out in the pixel clock domain.</p>
 <p>We&rsquo;ve freed out design from the tyranny of the pixel clock.</p>
 <blockquote>
 <p><strong>iCEBreaker BRAM &amp; PLL</strong><br>
@@ -900,14 +899,14 @@ However, iCE40UP5K has only one PLL, so you can only generate one clock.</p>
        .clk_locked
     );
 
-    <span style="color:#75715e">// display timings
+    <span style="color:#75715e">// display sync signals and coordinates
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">16</span>;
     <span style="color:#66d9ef">logic</span> hsync, vsync;
-    <span style="color:#66d9ef">logic</span> de, frame, line;
-    display_timings_480p #(.CORDW(CORDW)) display_timings_inst (
+    <span style="color:#66d9ef">logic</span> de, line, frame;
+    display_480p #(.CORDW(CORDW)) display_inst (
         .clk_pix,
-        .rst(<span style="color:#f92672">!</span>clk_locked),  <span style="color:#75715e">// wait for pixel clock lock
-</span><span style="color:#75715e"></span>        .sx(),
+        .rst(<span style="color:#f92672">!</span>clk_locked),
+        .sx(),
         .sy(),
         .hsync,
         .vsync,
