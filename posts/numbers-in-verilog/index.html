@@ -11,7 +11,7 @@
 In this first post, we examine how integers (whole numbers) are represented and dig into the challenges of signed numbers in Verilog.'>
 <meta property='og:url' content='https://projectf.io/posts/numbers-in-verilog/'>
 <meta property='og:site_name' content='Project F - FPGA Development'>
-<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/numbers-in-verilog/social-card.png'><meta property='article:published_time' content='2021-09-30T00:00:00Z'/><meta property='article:modified_time' content='2021-11-27T00:00:00Z'/><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
+<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/numbers-in-verilog/social-card.png'><meta property='article:published_time' content='2021-09-30T00:00:00Z'/><meta property='article:modified_time' content='2022-01-21T00:00:00Z'/><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
 
 
 <link href="https://projectf.io/index.xml" rel="alternate" type="application/rss+xml" title="Project F - FPGA Development" />
@@ -206,7 +206,7 @@ The logic, reg, and wire data types can take one of four values: <code>0, 1, X, 
 </span></code></pre></div><p><code>$clog2</code> is handy, but you need to be careful.</p>
 <p>If you&rsquo;re specifying a maximum value (rather than a count), it doesn&rsquo;t do what you want:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">parameter</span> MAX_VOLTAGE<span style="color:#f92672">=</span><span style="color:#ae81ff">256</span>;  <span style="color:#75715e">// maximum voltage
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">parameter</span> VOLTW<span style="color:#f92672">=</span>$clog2(MAX_VOLTAGE);  <span style="color:#75715e">// voltage bit width (NOT RIGHT)
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">parameter</span> VOLTW<span style="color:#f92672">=</span>$clog2(MAX_VOLTAGE);  <span style="color:#75715e">// voltage bit width (INCORRECT!)
 </span><span style="color:#75715e"></span>
 <span style="color:#66d9ef">logic</span> [VOLTW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] volatage;  <span style="color:#75715e">// we can&#39;t handle 256!
 </span></code></pre></div><p><code>$clog2</code> returns &lsquo;8&rsquo;, giving a voltage range of 0-255 inclusive. 256 is out of range.</p>
@@ -367,11 +367,11 @@ y1: 00000011     3
     le_byte[<span style="color:#ae81ff">6</span>] <span style="color:#f92672">&lt;=</span> i2c_byte[<span style="color:#ae81ff">1</span>];
     le_byte[<span style="color:#ae81ff">7</span>] <span style="color:#f92672">&lt;=</span> i2c_byte[<span style="color:#ae81ff">0</span>];
 <span style="color:#66d9ef">end</span>
-</code></pre></div><p>Handling the individual bits is tedious, but a <code>for</code> loop can handle it:</p>
+</code></pre></div><p>Updating each individual bit is tedious, but a <code>for</code> loop can handle this for us:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
     <span style="color:#66d9ef">for</span> (i<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>; i<span style="color:#f92672">&lt;</span><span style="color:#ae81ff">8</span>; i<span style="color:#f92672">=</span>i<span style="color:#f92672">+</span><span style="color:#ae81ff">1</span>) le_byte[i] <span style="color:#f92672">&lt;=</span> i2c_byte[<span style="color:#ae81ff">7</span><span style="color:#f92672">-</span>i];
 <span style="color:#66d9ef">end</span>
-</code></pre></div><p>Verilog <code>for</code> is NOT like a software loop: the <code>for</code> loop is unrolled into parallel bit swaps.</p>
+</code></pre></div><p>Verilog <code>for</code> is NOT like a software loop: this <code>for</code> loop is unrolled into parallel bit swaps.</p>
 <h3 id="byte-endian">Byte Endian</h3>
 <p>So far, we&rsquo;ve been talking about endianness at the bit level, but it also occurs with bytes. If you have a 32-bit word, do you store the least significant byte at the lowest address (little-endian), or the most significant byte at the lowest address (big-endian)?</p>
 <p>RISC-V, x86, and ARM are little-endian, while Internet protocols (TCP/IP) and Motorola 68K are big-endian. To learn more, hop over to Wikipedia&rsquo;s entry on <a href="https://en.wikipedia.org/wiki/Endianness">Endianness</a>.</p>
