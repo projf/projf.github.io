@@ -11,7 +11,7 @@
 This guide is designed for Ubuntu or Pop!_OS 20.04, but should be straightforward to adjust to your own distro. These instructions will work on Windows Subsystem for Linux (WSL), but there&rsquo;s no USB support in WSL, so you can&rsquo;t program boards under WSL.'>
 <meta property='og:url' content='https://projectf.io/posts/building-ice40-fpga-toolchain/'>
 <meta property='og:site_name' content='Project F - FPGA Development'>
-<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/building-ice40-tools-fpga-toolchain/social-card.jpg'><meta property='article:published_time' content='2020-11-11T00:00:00Z'/><meta property='article:modified_time' content='2021-11-28T00:00:00Z'/><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
+<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/building-ice40-tools-fpga-toolchain/social-card.jpg'><meta property='article:published_time' content='2020-11-11T00:00:00Z'/><meta property='article:modified_time' content='2022-02-01T00:00:00Z'/><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
 
 
 <link href="https://projectf.io/index.xml" rel="alternate" type="application/rss+xml" title="Project F - FPGA Development" />
@@ -123,7 +123,7 @@ This guide is designed for Ubuntu or Pop!_OS 20.04, but should be straightforwar
       <p>Since I <a href="/posts/fpga-dev-ubuntu-20.04/">tested FPGA development tools on Ubuntu 20.04</a>, there have been requests for more posts on FPGA tooling. In this post, I provide a quick guide to building an open-source FPGA toolchain for iCE40 boards, such as <a href="https://docs.icebreaker-fpga.org/hardware/icebreaker/">iCEBreaker</a>. I plan to cover ECP5 FPGAs in a future version.</p>
 <p>This guide is designed for <a href="https://ubuntu.com/desktop">Ubuntu</a> or <a href="https://pop.system76.com/">Pop!_OS 20.04</a>, but should be straightforward to adjust to your own distro. These instructions will work on Windows Subsystem for Linux (WSL), but there&rsquo;s no USB support in WSL, so you can&rsquo;t program boards under WSL.</p>
 <p>If you prefer pre-built tools, then <a href="https://github.com/open-tool-forge/fpga-toolchain">Open Tool Forge</a> has binaries for Linux, Mac, and Windows.</p>
-<p><em>Updated 2021-11-28. Feedback to <a href="https://twitter.com/WillFlux">@WillFlux</a> is most welcome.</em></p>
+<p><em>Updated 2022-02-01. Feedback to <a href="https://twitter.com/WillFlux">@WillFlux</a> is most welcome.</em></p>
 <h2 id="checklist">Checklist</h2>
 <p>We&rsquo;ll be installing:</p>
 <ol>
@@ -239,27 +239,30 @@ The following sample makefile should get you off to a good start.</p>
 FPGA_PKG <span style="color:#f92672">=</span> sg48
 FPGA_TYPE <span style="color:#f92672">=</span> up5k
 PCF <span style="color:#f92672">=</span> icebreaker.pcf
-ADD_SRC <span style="color:#f92672">=</span> module_1.v module_2.v
+
+<span style="color:#75715e"># included modules
+</span><span style="color:#75715e"></span>ADD_SRC <span style="color:#f92672">=</span> module_1.v module_2.v
 
 <span style="color:#a6e22e">top_foo</span><span style="color:#f92672">:</span> top_foo.rpt top_foo.bin
 <span style="color:#a6e22e">top_bar</span><span style="color:#f92672">:</span> top_bar.rpt top_bar.bin
 
-<span style="color:#a6e22e">%.json</span><span style="color:#f92672">:</span> %.v <span style="color:#66d9ef">$(</span>ADD_SRC<span style="color:#66d9ef">)</span>
-    yosys -ql <span style="color:#66d9ef">$(</span>subst .json,,$@<span style="color:#66d9ef">)</span>-yosys.log -p <span style="color:#e6db74">&#39;synth_ice40 -top $(subst .json,,$@) -json $@&#39;</span> $&lt; <span style="color:#66d9ef">$(</span>ADD_SRC<span style="color:#66d9ef">)</span>
+<span style="color:#a6e22e">%.json</span><span style="color:#f92672">:</span> %.sv <span style="color:#66d9ef">$(</span>ADD_SRC<span style="color:#66d9ef">)</span>
+	yosys -ql <span style="color:#66d9ef">$(</span>basename $@<span style="color:#66d9ef">)</span>-yosys.log -p <span style="color:#e6db74">&#39;synth_ice40 \
+</span><span style="color:#e6db74">		-top $(basename $@) -json $@&#39;</span> $&lt; <span style="color:#66d9ef">$(</span>ADD_SRC<span style="color:#66d9ef">)</span>
 
 <span style="color:#a6e22e">%.asc</span><span style="color:#f92672">:</span> %.json
-    nextpnr-ice40 --<span style="color:#e6db74">${</span>FPGA_TYPE<span style="color:#e6db74">}</span> --package <span style="color:#e6db74">${</span>FPGA_PKG<span style="color:#e6db74">}</span> --json $&lt; --pcf <span style="color:#e6db74">${</span>PCF<span style="color:#e6db74">}</span> --asc $@
+	nextpnr-ice40 --<span style="color:#e6db74">${</span>FPGA_TYPE<span style="color:#e6db74">}</span> --package <span style="color:#e6db74">${</span>FPGA_PKG<span style="color:#e6db74">}</span> --json $&lt; --pcf <span style="color:#e6db74">${</span>PCF<span style="color:#e6db74">}</span> --asc $@
 
 <span style="color:#a6e22e">%.rpt</span><span style="color:#f92672">:</span> %.asc
-    icetime -d <span style="color:#e6db74">${</span>FPGA_TYPE<span style="color:#e6db74">}</span> -mtr $@ $&lt;
+	icetime -d <span style="color:#e6db74">${</span>FPGA_TYPE<span style="color:#e6db74">}</span> -mtr $@ $&lt;
 
 <span style="color:#a6e22e">%.bin</span><span style="color:#f92672">:</span> %.asc
-    icepack $&lt; $@
-
-<span style="color:#a6e22e">clean</span><span style="color:#f92672">:</span>
-    rm -f top*.json top*.asc top*.rpt top*.bin top*yosys.log
+	icepack $&lt; <span style="color:#66d9ef">$(</span>subst top_,,$@<span style="color:#66d9ef">)</span>
 
 <span style="color:#a6e22e">all</span><span style="color:#f92672">:</span> top_foo top_bar
+
+<span style="color:#a6e22e">clean</span><span style="color:#f92672">:</span>
+	rm -f top*.json top*.asc top*.rpt *.bin top*yosys.log
 
 <span style="color:#a6e22e">.PHONY</span><span style="color:#f92672">:</span> all clean
 </code></pre></div><p>You can find also find iCEBreaker makefiles in the Project F <a href="https://github.com/projf/projf-explore">Exploring FPGAs repo</a>.</p>
