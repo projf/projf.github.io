@@ -11,7 +11,7 @@
 In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs.'>
 <meta property='og:url' content='https://projectf.io/posts/animated-shapes/'>
 <meta property='og:site_name' content='Project F - FPGA Development'>
-<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/animated-shapes/social-card.png'><meta property='article:published_time' content='2021-08-31T00:00:00Z'/><meta property='article:modified_time' content='2022-01-10T00:00:00Z'/><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
+<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/animated-shapes/social-card.png'><meta property='article:published_time' content='2021-08-31T00:00:00Z'/><meta property='article:modified_time' content='2022-02-26T00:00:00Z'/><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
 
 
 <link href="https://projectf.io/index.xml" rel="alternate" type="application/rss+xml" title="Project F - FPGA Development" />
@@ -123,8 +123,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
       <p>Welcome back to <em>Exploring FPGA Graphics</em>. In the final part of our introductory graphics series, we&rsquo;re looking at animation. We&rsquo;ve already seen animation with <a href="/posts/hardware-sprites/">hardware sprites</a>, but double buffering gives us maximum creative freedom with fast, tear-free motion. We&rsquo;ll be making extensive use of our designs from <a href="/posts/fpga-shapes/">2D Shapes</a>, so have a look back at that post if you need a refresher on drawing shapes.</p>
 <p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how displays work, race the beam with Pong, animate starfields and sprites, paint Michelangelo&rsquo;s David, simulate life with bitmaps, draw lines and shapes, and create smooth animation with double buffering. New to the series? Start with <a href="/posts/fpga-graphics/">Intro to FPGA Graphics</a>.</p>
 <p><strong>You can watch an <a href="https://www.youtube.com/watch?v=ezJv7pB-UmA" target="_blank">FPGA Graphics demo reel</a> with designs from across this series.</strong></p>
-<p><em>Updated 2022-01-10. Stay tuned for additional content and iCE40 support during autumn 2021.</em></p>
-<p><em>Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><em>Updated 2022-02-26. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 <h3 id="series-outline">Series Outline</h3>
 <ul>
 <li><a href="/posts/fpga-graphics/">Intro to FPGA Graphics</a> - draw your first FPGA graphics</li>
@@ -147,7 +146,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
 <blockquote>
 <p><strong>iCEBreaker Support</strong><br>
 I am working on a double-buffered framebuffer using iCE40 SPRAM.
-iCEBreaker designs will be ready later in 2022. Follow <a href="https://twitter.com/WillFlux">@WillFlux</a> for updates.</p>
+iCEBreaker designs will be available later in 2022. Follow <a href="https://twitter.com/WillFlux">@WillFlux</a> for updates.</p>
 </blockquote>
 <h3 id="source">Source</h3>
 <p>The SystemVerilog designs featured in this series are available from the <a href="https://github.com/projf/projf-explore/">projf-explore</a> git repo under the open-source MIT licence: build on them to your heart&rsquo;s content. The rest of the blog content is subject to standard copyright restrictions: don&rsquo;t republish it without permission.</p>
@@ -303,21 +302,22 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/anim
     <span style="color:#75715e">// write address components
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x_add;  <span style="color:#75715e">// pixel position on line
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span>[FB_ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_addr_line;  <span style="color:#75715e">// address of line for drawing
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [FB_ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_addr_clr;  <span style="color:#75715e">// address for clearing screen
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [FB_ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_addr_clr, fb_addr_clr_p1;  <span style="color:#75715e">// address for clearing screen
 </span><span style="color:#75715e"></span>
     <span style="color:#75715e">// write state machine
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">enum</span> {IDLE, INIT, CLR, ACTIVE} wstate;
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">enum</span> {IDLE, INIT, CLR, WAIT, ACTIVE} wstate;
     <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_sys) <span style="color:#66d9ef">begin</span>
         <span style="color:#66d9ef">case</span> (wstate)
             INIT: <span style="color:#66d9ef">begin</span>
                 wstate <span style="color:#f92672">&lt;=</span> (clear) <span style="color:#f92672">?</span> CLR <span style="color:#f92672">:</span> ACTIVE;
-                fb_addr_clr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+                fb_addr_clr_p1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
             <span style="color:#66d9ef">end</span>
-            CLR: <span style="color:#66d9ef">begin</span>
-                <span style="color:#66d9ef">if</span> (fb_addr_clr <span style="color:#f92672">==</span> FB_PIXELS<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) wstate <span style="color:#f92672">&lt;=</span> ACTIVE;
-                fb_addr_clr <span style="color:#f92672">&lt;=</span> fb_addr_clr <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+            CLR: <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// clear whole buffer
+</span><span style="color:#75715e"></span>                <span style="color:#66d9ef">if</span> (fb_addr_clr_p1 <span style="color:#f92672">==</span> FB_BUFSIZE<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) wstate <span style="color:#f92672">&lt;=</span> WAIT;
+                fb_addr_clr_p1 <span style="color:#f92672">&lt;=</span> fb_addr_clr_p1 <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
             <span style="color:#66d9ef">end</span>
-            <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">if</span> (frame_sys) wstate <span style="color:#f92672">&lt;=</span> INIT;  <span style="color:#75715e">// IDLE or ACTIVE
+            WAIT: wstate <span style="color:#f92672">&lt;=</span> ACTIVE;  <span style="color:#75715e">// one cycle of latency before becoming active
+</span><span style="color:#75715e"></span>            <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">if</span> (frame_sys) wstate <span style="color:#f92672">&lt;=</span> INIT;  <span style="color:#75715e">// IDLE or ACTIVE
 </span><span style="color:#75715e"></span>        <span style="color:#66d9ef">endcase</span>
         <span style="color:#66d9ef">if</span> (rst_sys) wstate <span style="color:#f92672">&lt;=</span> IDLE;
     <span style="color:#66d9ef">end</span>
@@ -327,11 +327,13 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/anim
 
     <span style="color:#75715e">// calculate write address from pixel coordinates (three stages: mul, add, clear mux)
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_sys) <span style="color:#66d9ef">begin</span>
+        <span style="color:#75715e">// first stage
+</span><span style="color:#75715e"></span>        fb_addr_clr <span style="color:#f92672">&lt;=</span> fb_addr_clr_p1;
         fb_addr_line <span style="color:#f92672">&lt;=</span> WIDTH <span style="color:#f92672">*</span> y;  <span style="color:#75715e">// write address 1st stage (y could be negative)
 </span><span style="color:#75715e"></span>        x_add <span style="color:#f92672">&lt;=</span> x;  <span style="color:#75715e">// save x for write address 2nd stage
-</span><span style="color:#75715e"></span>        fb_addr_write <span style="color:#f92672">&lt;=</span> (wstate <span style="color:#f92672">==</span> CLR) <span style="color:#f92672">?</span> fb_addr_clr <span style="color:#f92672">:</span> fb_addr_line <span style="color:#f92672">+</span> x_add;
-        <span style="color:#75715e">// clipping is checked later
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">end</span>
+</span><span style="color:#75715e"></span>        <span style="color:#75715e">// second stage
+</span><span style="color:#75715e"></span>        fb_addr_write <span style="color:#f92672">&lt;=</span> (wready) <span style="color:#f92672">?</span> fb_addr_line <span style="color:#f92672">+</span> x_add <span style="color:#f92672">:</span> fb_addr_clr;
+    <span style="color:#66d9ef">end</span>
 
     <span style="color:#75715e">// draw colour and write enable (delay to match address calculation)
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> fb_we, we_in_p1;
@@ -339,8 +341,8 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/anim
     <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_sys) <span style="color:#66d9ef">begin</span>
         <span style="color:#75715e">// first stage
 </span><span style="color:#75715e"></span>        we_in_p1 <span style="color:#f92672">&lt;=</span> ((we <span style="color:#f92672">&amp;&amp;</span> wready) <span style="color:#f92672">||</span> wstate <span style="color:#f92672">==</span> CLR);  <span style="color:#75715e">// draw or clear enables write
-</span><span style="color:#75715e"></span>        cidx_in_p1 <span style="color:#f92672">&lt;=</span> (wstate <span style="color:#f92672">==</span> CLR) <span style="color:#f92672">?</span> bgidx <span style="color:#f92672">:</span> cidx;   <span style="color:#75715e">// which draw colour?
-</span><span style="color:#75715e"></span>        clip <span style="color:#f92672">&lt;=</span> (y <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">||</span> y <span style="color:#f92672">&gt;=</span> HEIGHT <span style="color:#f92672">||</span> x <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">||</span> x <span style="color:#f92672">&gt;=</span> WIDTH);  <span style="color:#75715e">// clipped?
+</span><span style="color:#75715e"></span>        cidx_in_p1 <span style="color:#f92672">&lt;=</span> (wstate <span style="color:#f92672">==</span> CLR) <span style="color:#f92672">?</span> bgidx <span style="color:#f92672">:</span> cidx;    <span style="color:#75715e">// which draw colour?
+</span><span style="color:#75715e"></span>        clip <span style="color:#f92672">&lt;=</span> (wstate <span style="color:#f92672">==</span> ACTIVE) <span style="color:#f92672">&amp;&amp;</span> (y <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">||</span> y <span style="color:#f92672">&gt;=</span> HEIGHT <span style="color:#f92672">||</span> x <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">||</span> x <span style="color:#f92672">&gt;=</span> WIDTH);  <span style="color:#75715e">// clipped?
 </span><span style="color:#75715e"></span>        <span style="color:#75715e">// second stage
 </span><span style="color:#75715e"></span>        fb_we <span style="color:#f92672">&lt;=</span> (busy <span style="color:#f92672">||</span> clip) <span style="color:#f92672">?</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">:</span> we_in_p1;  <span style="color:#75715e">// write if neither busy nor clipped
 </span><span style="color:#75715e"></span>        fb_cidx_write <span style="color:#f92672">&lt;=</span> cidx_in_p1;
@@ -459,9 +461,9 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/anim
         blue  <span style="color:#f92672">=</span> lb_en_out_p1 <span style="color:#f92672">?</span> lb_out_0 <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;
     <span style="color:#66d9ef">end</span>
 <span style="color:#66d9ef">endmodule</span>
-</code></pre></div><p>This double-buffered BRAM design is only 30 lines longer than the <a href="/posts/framebuffers/#framebuffer-module">original framebuffer module</a>.</p>
+</code></pre></div><p>This double-buffered BRAM design is around 30 lines longer than the <a href="/posts/framebuffers/#framebuffer-module">original framebuffer module</a>.</p>
 <p>There&rsquo;s a test bench you can use to exercise the module with Vivado: <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lib/display/xc7/framebuffer_db_tb.sv">xc7/framebuffer_db_tb.sv</a>]</strong>.</p>
-<p><em>Details of how double buffering works will be added shortly.</em></p>
+<p><em>Details of how double buffering works will be added soon.</em></p>
 <h3 id="hip-to-be-square-redux">Hip to be Square Redux</h3>
 <p>We can cleanly animate a square using our new double-buffered framebuffer:</p>
 <ul>
@@ -729,7 +731,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/anim
 <p><img src="/img/posts/animated-shapes/rotate-filled-triangle.jpg" alt="Rotate the Triangle"></p>
 <h2 id="explore">Explore</h2>
 <p>I hope you enjoyed this instalment of <em>Exploring FPGA Graphics</em>, but nothing beats creating your own designs. Here are a few suggestions to get you started:</p>
-<p><em>Suggestions will be added shortly.</em></p>
+<p><em>Suggestions will be added soon.</em></p>
 <blockquote>
 <p><strong>Sponsor Project F</strong><br>
 If you like what I do, consider <a href="https://github.com/sponsors/WillGreen">sponsoring me</a> on GitHub.<br>
