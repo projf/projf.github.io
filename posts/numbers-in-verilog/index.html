@@ -11,7 +11,7 @@
 In this first post, we examine how integers (whole numbers) are represented and dig into the challenges of signed numbers in Verilog.'>
 <meta property='og:url' content='https://projectf.io/posts/numbers-in-verilog/'>
 <meta property='og:site_name' content='Project F - FPGA Development'>
-<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/numbers-in-verilog/social-card.png'><meta property='article:published_time' content='2021-09-30T00:00:00Z'/><meta property='article:modified_time' content='2022-01-21T00:00:00Z'/><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
+<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/numbers-in-verilog/social-card.png'><meta property='article:published_time' content='2021-09-30T00:00:00Z'/><meta property='article:modified_time' content='2022-02-27T00:00:00Z'/><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
 
 
 <link href="https://projectf.io/index.xml" rel="alternate" type="application/rss+xml" title="Project F - FPGA Development" />
@@ -122,7 +122,7 @@ In this first post, we examine how integers (whole numbers) are represented and 
     <div class="content">
       <p>Welcome to my new series covering mathematics and algorithms with FPGAs. Whatever hardware you&rsquo;re designing, you&rsquo;re likely to be working with numbers. This series begins with the basics of Verilog numbers, covers simple mathematics, including division and CORDIC, before looking at more complex algorithms, such as data compression.</p>
 <p>In this first post, we examine how integers (whole numbers) are represented and dig into the challenges of signed numbers in Verilog.</p>
-<p><em>Updated 2021-11-27. Share your thoughts with <a href="https://twitter.com/WillFlux">@WillFlux</a> or find me on <a href="https://1bitsquared.com/pages/chat">1BitSquared Discord</a>.</em></p>
+<p><em>Updated 2022-02-27. Share your thoughts with <a href="https://twitter.com/WillFlux">@WillFlux</a> or find me on <a href="https://1bitsquared.com/pages/chat">1BitSquared Discord</a>.</em></p>
 <h2 id="representing-numbers">Representing Numbers</h2>
 <p>We&rsquo;re so familair with different representations of numbers we hardly give them a second thought. For example, the following are all forty-two: XLII, 101010<sub>2</sub>, 42, 0x2A, 52<sub>8</sub>, 4.2x10<sup>1</sup>, zweiundvierzig.</p>
 <p>Different representations express (almost) the same thing but work better (or worse) in different circumstances: hexadecimal is suitable for a memory address, while scientific notation compactly expresses vast and tiny numbers alike.</p>
@@ -155,26 +155,29 @@ BCD      1001 1000 0111
 </code></pre></div><p>The BCD representation requires eight bits to represent 42, two more than the plain old binary version. However, there are advantages, including the ease of display (each nibble is one character) and the ability to accurately represent decimal numbers (such as 10.1).</p>
 <p>On typical binary computers, BCD adds overhead for arithmetic operations. However, when designing your own hardware, you can support BCD directly in logic, making it an attractive option for straightforward numerical designs.</p>
 <p>Wikipedia&rsquo;s <a href="https://en.wikipedia.org/wiki/Binary-coded_decimal">binary-coded decimal</a> article covers different BCD variants and sign encoding.</p>
+<p>Interesting as BCD is, we&rsquo;ll be sticking with plain old binary for the rest of this document. Many of the concepts we&rsquo;ll cover also apply to BCD.</p>
 <h2 id="binary-in-verilog">Binary in Verilog</h2>
 <p>By default, a Verilog register or wire is 1 bit wide. This is a <strong>scalar</strong>:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">wire</span>  x;  <span style="color:#75715e">// 1 bit wire
 </span><span style="color:#75715e"></span><span style="color:#66d9ef">reg</span>   y;  <span style="color:#75715e">// also 1 bit
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> z;  <span style="color:#75715e">// me too! 
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> z;  <span style="color:#75715e">// me too!
 </span></code></pre></div><p>A scalar can only hold 0 or 1 (but see <em>Four State Data Types</em>, below).</p>
 <p>We need a <strong>vector</strong> to hold values other than 0 and 1.</p>
 <p>A vector is declared like this: <code>type [upper:lower] name;</code></p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">wire</span>   [<span style="color:#ae81ff">5</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] a;  <span style="color:#75715e">// 6-bit wire
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] b;  <span style="color:#75715e">// 12-bit logic
-</span></code></pre></div><p>Both <code>a</code> and <code>b</code> are vectors:</p>
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">reg</span>    [<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] b;  <span style="color:#75715e">// 8-bit reg
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] c;  <span style="color:#75715e">// 12-bit logic
+</span></code></pre></div><p><code>a</code>, <code>b</code>, and <code>c</code> are vectors:</p>
 <ul>
 <li>Wire <strong>a</strong> handles 0-63 inclusive (2<sup>6</sup> is 64).</li>
-<li>Logic <strong>b</strong> handles 0-4095 inclusive (2<sup>12</sup> is 4096).</li>
+<li>Register <strong>b</strong> handles 0-255 inclusive (2<sup>8</sup> is 256).</li>
+<li>Logic <strong>c</strong> handles 0-4095 inclusive (2<sup>12</sup> is 4096).</li>
 </ul>
 <p>You need to ensure your vector is large enough to handle the full range of values your design requires. Synthesis tools are good at discarding unused bits, so it&rsquo;s better to err on the side of too large rather than too small.</p>
 <p>Deciding on the appropriate vector width for an algorithm requires an understanding of that algorithm. For example, I&rsquo;ve worked with an ellipse drawing algorithm that required 48-bit internal vectors when using 16-bits coordinates.</p>
 <p>It&rsquo;s easy to miss the width off a signal and create a scalar by mistake:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">reg</span> [<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x;  <span style="color:#75715e">// 12 bit (vector)
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">reg</span> x1;        <span style="color:#75715e">// 1 bit (scalar)
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">wire</span> [<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x;  <span style="color:#75715e">// 12 bit (vector)
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">wire</span> x1;        <span style="color:#75715e">// 1 bit (scalar)
 </span><span style="color:#75715e"></span>
 <span style="color:#66d9ef">always_comb</span> x1 <span style="color:#f92672">=</span> x;  <span style="color:#75715e">// discards 11 bits!
 </span></code></pre></div><p>Alas, many tools provide no warning on width mismatches. To catch issues with bit widths, I strongly recommend you <a href="/posts/verilog-lint-with-verilator/">lint your designs with Verilator</a>.</p>
@@ -193,7 +196,7 @@ The logic, reg, and wire data types can take one of four values: <code>0, 1, X, 
 <p>Imagine you&rsquo;re creating a game engine where the number of sprites is configurable:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">parameter</span> SPR_CNT<span style="color:#f92672">=</span><span style="color:#ae81ff">10</span>;   <span style="color:#75715e">// maximum number of sprites on screen
 </span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sprite_id;  <span style="color:#75715e">// 4 bits is correct for a count of 10, but if SPR_CNT changes?
-</span></code></pre></div><p>If we hardcode the width, then changing the sprite count will break the design.</p>
+</span></code></pre></div><p>If we hardcode the width, changing the sprite count will break the design.</p>
 <p>Verilog 2005 introduced <code>$clog2</code> to handle this.</p>
 <h3 id="calculating-widths">Calculating Widths</h3>
 <p>The <code>$clog2</code> function returns the ceiling of the logarithm to base 2.</p>
@@ -230,7 +233,7 @@ The logic, reg, and wire data types can take one of four values: <code>0, 1, X, 
 </span><span style="color:#75715e"></span><span style="color:#ae81ff">12</span><span style="color:#ae81ff">&#39;d1024</span>            <span style="color:#75715e">// decimal literal
 </span><span style="color:#75715e"></span><span style="color:#ae81ff">12&#39;h400</span>             <span style="color:#75715e">// hex literal
 </span><span style="color:#75715e"></span><span style="color:#ae81ff">12</span><span style="color:#ae81ff">&#39;o2000</span>            <span style="color:#75715e">// octal literal
-</span></code></pre></div><p>It&rsquo;s good practice to include the width and base for any literals, but they are optional.</p>
+</span></code></pre></div><p>It&rsquo;s good practice to include the width and base for any literal, but they are optional.</p>
 <ul>
 <li>If the width is omitted, it defaults to 32-bits</li>
 <li>If the base is omitted, it defaults to decimal (base 10)</li>
@@ -241,7 +244,7 @@ The logic, reg, and wire data types can take one of four values: <code>0, 1, X, 
 </span><span style="color:#75715e"></span><span style="color:#ae81ff">&#39;d9</span>     <span style="color:#75715e">// unsigned decimal literal
 </span><span style="color:#75715e"></span><span style="color:#ae81ff">9</span>       <span style="color:#75715e">// signed decimal literal
 </span><span style="color:#75715e"></span><span style="color:#ae81ff">1024</span>    <span style="color:#75715e">// signed decimal literal
-</span></code></pre></div><p>NB. If you omit the base, the literal is signed! Most of the time, this isn&rsquo;t a problem, but it can lead to subtle bugs. We&rsquo;ll cover signed numbers in the next section.</p>
+</span></code></pre></div><p>NB. If you omit the base, the literal is signed! This isn&rsquo;t a problem most of the time, but it can lead to subtle bugs. We&rsquo;ll cover signed numbers in the next section.</p>
 <h3 id="literal-tricks">Literal Tricks</h3>
 <p>In SystemVerilog, you can set all the bits of a vector to &lsquo;1&rsquo;:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#75715e">// x and y have the same value:
@@ -255,7 +258,7 @@ The logic, reg, and wire data types can take one of four values: <code>0, 1, X, 
 <span style="color:#66d9ef">reg</span> [COORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] y <span style="color:#f92672">=</span> { {<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b1</span>}, {COORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>{<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>}} };  <span style="color:#75715e">// y = 1000_0000_0000
 </span></code></pre></div><p>Concat allows us to set an appropriate value, however wide the vectors are.</p>
 <h2 id="signed-numbers">Signed Numbers</h2>
-<p>If your application requires negative values, you need to handle signed numbers. If you&rsquo;re coming at this fresh, your first instinct might be to use a sign bit. A sign bit can work but requires custom logic for arithmetic operations and leads to the thorny issue of negative zero. For regular binary numbers, the standard approach is <strong>two&rsquo;s complement</strong>.</p>
+<p>If your application requires negative values, you need to handle signed numbers. The standard approach is <strong>two&rsquo;s complement</strong>, as with most software development.</p>
 <h3 id="the-twos-complement">The Two&rsquo;s Complement</h3>
 <p>With two&rsquo;s complement, addition, subtraction, and multiplication all work as they do with positive binary numbers. But what is the two&rsquo;s complement? The positive and negative two&rsquo;s complement representations of an N-bit number add up to 2<sup>N</sup>.</p>
 <p>For example, with four-bit values: 7 is <code>0111</code> and -7 is <code>1001</code>, because <code>0111 + 1001 = 10000</code> (2<sup>4</sup>).</p>
@@ -341,14 +344,16 @@ With offset -4:
 x1: 00010011    19  *SURPRISE*
 y1: 00000011     3
 </code></pre></div><h2 id="big-endian-little-endian">Big-Endian, Little-Endian</h2>
-<p>Earlier, we said a vector was declared like this: <code>type [upper:lower] name;</code>.</p>
+<p>Earlier, we said a vector was declared like this: <code>type [upper:lower] name;</code></p>
+<p>A more general definition is: <code>type [MSB:LSB] name;</code><br>
+<code>MSB</code> is the most significant bit and <code>LSB</code> is the least.</p>
+<p>We can see that the usual way of defining vectors has the least significant bit at the lowest index. These are <strong>little-endian</strong> (LE) vectors:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">wire</span>   [<span style="color:#ae81ff">5</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] a;  <span style="color:#75715e">// 6-bit wire (little-endian)
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] b;  <span style="color:#75715e">// 12-bit logic (little-endian)
-</span></code></pre></div><p>These vectors are <strong>little-endian</strong> because the <code>lower</code> bit is the smallest.</p>
-<p>Alternatively, we could have declared the vectors like this:</p>
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">reg</span>   [<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] b;  <span style="color:#75715e">// 12-bit logic (little-endian)
+</span></code></pre></div><p>Alternatively, we can declare vectors like this:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">wire</span>   [<span style="color:#ae81ff">0</span><span style="color:#f92672">:</span><span style="color:#ae81ff">5</span>] a;  <span style="color:#75715e">// 6-bit wire (big-endian)
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">0</span><span style="color:#f92672">:</span><span style="color:#ae81ff">11</span>] b;  <span style="color:#75715e">// 12-bit logic (big-endian)
-</span></code></pre></div><p>These vectors are <strong>big-endian</strong> because the <code>lower</code> bit is the largest.</p>
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">reg</span>   [<span style="color:#ae81ff">0</span><span style="color:#f92672">:</span><span style="color:#ae81ff">11</span>] b;  <span style="color:#75715e">// 12-bit logic (big-endian)
+</span></code></pre></div><p>These vectors have the most significant bit at the lowest index; they&rsquo;re <strong>big-endian</strong> (BE) vectors.</p>
 <p>Either will work, but the convention is to use little-endian unless you need to interface with big-endian hardware. For example, I<sup>2</sup>C uses big-endian bit order.</p>
 <h3 id="switching-ends">Switching Ends</h3>
 <p>Say you&rsquo;ve got a bit-endian byte from I<sup>2</sup>C and want to convert it to little-endian. Alas, you can&rsquo;t mix big and little-endian vectors, so the following won&rsquo;t work:</p>
@@ -373,11 +378,12 @@ y1: 00000011     3
 <span style="color:#66d9ef">end</span>
 </code></pre></div><p>Verilog <code>for</code> is NOT like a software loop: this <code>for</code> loop is unrolled into parallel bit swaps.</p>
 <h3 id="byte-endian">Byte Endian</h3>
-<p>So far, we&rsquo;ve been talking about endianness at the bit level, but it also occurs with bytes. If you have a 32-bit word, do you store the least significant byte at the lowest address (little-endian), or the most significant byte at the lowest address (big-endian)?</p>
-<p>RISC-V, x86, and ARM are little-endian, while Internet protocols (TCP/IP) and Motorola 68K are big-endian. To learn more, hop over to Wikipedia&rsquo;s entry on <a href="https://en.wikipedia.org/wiki/Endianness">Endianness</a>.</p>
+<p>So far, we&rsquo;ve been talking about endianness at the bit level, but it most commonly occurs in the context of bytes. If you have a 32-bit word, do you store the least significant byte at the lowest address (little-endian) or the most significant byte at the lowest address (big-endian)?</p>
+<p>RISC-V, x86, and ARM are little-endian, while Internet protocols (TCP/IP) and Motorola 68K are big-endian.</p>
+<p>This isn&rsquo;t particularly relevant to what we&rsquo;re looking at, so I won&rsquo;t go into this further. If you&rsquo;re interested in learning more, check out <a href="https://en.wikipedia.org/wiki/Endianness">Endianness</a> on Wikipedia.</p>
 <h2 id="reckoning-with-arithmetic">Reckoning with Arithmetic</h2>
 <p>We&rsquo;ve talked a lot about the representation of numbers, but we&rsquo;ve not done any maths.</p>
-<p>Modern FPGAs include logic to handle addition and subtraction: there&rsquo;s no need to roll your own. If you want to create an adder from scratch, there are plenty of university slide decks online. Unless you&rsquo;re working with massive vectors, you&rsquo;re unlikely to encounter problems with addition or subtraction. The usual advice to register your values between calculation steps applies, especially when using subtraction on simpler FPGAs.</p>
+<p>Modern FPGAs include logic to handle addition and subtraction: there&rsquo;s no need to roll your own. If you want to create an adder from scratch, there are plenty of university slide decks online. Unless you&rsquo;re working with massive vectors, you&rsquo;re unlikely to encounter problems with addition or subtraction. The usual advice to register your values between calculation steps applies, especially to subtraction on simpler FPGAs.</p>
 <p>Multiplication is more complex, but FPGAs can handle it with dedicated DSP blocks. We&rsquo;ll be covering multiplication in the next part of this series: <a href="/posts/multiplication-fpga-dsps">Multiplication with FPGA DSPs</a>.</p>
 <p>What about division? I&rsquo;ve got some bad news for you: Verilog won&rsquo;t do this for you. We&rsquo;ll look into division in detail in a later post, but for now, you can use the <a href="/posts/division-in-verilog/">division</a> design from the Project F cookbook.</p>
 <h2 id="next-time">Next Time</h2>
