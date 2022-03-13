@@ -154,23 +154,23 @@ We&rsquo;ll use a few choice features from SystemVerilog to make Verilog a littl
 <li>Verilator</li>
 <li>SDL</li>
 </ol>
-<p>The simulations should work on any modern platform, but I&rsquo;ve confined my instructions to Linux and macOS. Windows installation depends on your choice of compiler, but the sims should work fine there too. For advice on SDL development on Windows, see <a href="https://lazyfoo.net/tutorials/SDL/01_hello_SDL/windows/index.php">Lazy Foo' - Setting up SDL on Windows</a>.</p>
+<p>The simulations should work on any modern platform, but I&rsquo;ve confined my instructions to Linux and macOS. Windows installation depends on your choice of compiler, but the sims should work fine there too. For advice on SDL development on Windows, see <a href="https://lazyfoo.net/tutorials/SDL/01_hello_SDL/windows/index.php">Lazy Foo&rsquo; - Setting up SDL on Windows</a>.</p>
 <h3 id="linux">Linux</h3>
 <p>For Debian and Ubuntu-based distros, you can use the following. Other distros will be similar.</p>
 <p>Install a C++ toolchain via &lsquo;build-essential&rsquo;:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell">apt update
-apt install build-essential
-</code></pre></div><p>Install packages for Verilator and the dev version of SDL:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell">apt update
-apt install verilator libsdl2-dev
-</code></pre></div><p>That&rsquo;s it!</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>apt update
+</span></span><span style="display:flex;"><span>apt install build-essential
+</span></span></code></pre></div><p>Install packages for Verilator and the dev version of SDL:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>apt update
+</span></span><span style="display:flex;"><span>apt install verilator libsdl2-dev
+</span></span></code></pre></div><p>That&rsquo;s it!</p>
 <p><em>If you want to build the latest version of Verilator yourself, see <a href="/posts/building-ice40-fpga-toolchain/#verilator">Building Verilator for Linux</a>.</em></p>
 <h3 id="macos">macOS</h3>
 <p>Install <a href="https://developer.apple.com/xcode/">Xcode</a> to get a C++ toolchain.</p>
 <p>Install the <a href="https://brew.sh/">Homebrew</a> package manager.</p>
 <p>With Homebrew installed, you can run:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell">brew install verilator sdl2
-</code></pre></div><p>And you&rsquo;re ready to go.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>brew install verilator sdl2
+</span></span></code></pre></div><p>And you&rsquo;re ready to go.</p>
 <h2 id="working-with-verilator">Working with Verilator</h2>
 <p>Verilator compiles your Verilog into a C++ model you can control using a simple interface. We&rsquo;ll use the first design from <a href="/posts/fpga-graphics/">Beginning FPGA Graphics</a> as a demo.</p>
 <p>To create your simulation, you need two things:</p>
@@ -181,221 +181,221 @@ apt install verilator libsdl2-dev
 <h3 id="verilator-top">Verilator Top</h3>
 <p>Our Verilog top module is similar to that for FPGA dev boards. For simulation, we skip PLL clock generation and output the screen position and data enable as well as the pixel colour.</p>
 <p>Our Verilator <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/fpga-graphics/sim/top_square.sv">top_square.sv</a>]</strong> looks like this:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_square #(<span style="color:#66d9ef">parameter</span> CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">10</span>) (  <span style="color:#75715e">// coordinate width
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_pix,             <span style="color:#75715e">// pixel clock
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> sim_rst,             <span style="color:#75715e">// sim reset
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sdl_sx,  <span style="color:#75715e">// horizontal SDL position
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sdl_sy,  <span style="color:#75715e">// vertical SDL position
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> sdl_de,              <span style="color:#75715e">// data enable (low in blanking interval)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sdl_r,         <span style="color:#75715e">// 8-bit red
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sdl_g,         <span style="color:#75715e">// 8-bit green
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sdl_b          <span style="color:#75715e">// 8-bit blue
-</span><span style="color:#75715e"></span>    );
-
-    <span style="color:#75715e">// display sync signals and coordinates
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx, sy;
-    <span style="color:#66d9ef">logic</span> de;
-    simple_480p display_inst (
-        .clk_pix,
-        .rst_pix(sim_rst),
-        .sx,
-        .sy,
-        .hsync(),
-        .vsync(),
-        .de
-    );
-
-    <span style="color:#75715e">// define a square with screen coordinates
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> square;
-    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        square <span style="color:#f92672">=</span> (sx <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">220</span> <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">420</span>) <span style="color:#f92672">&amp;&amp;</span> (sy <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">140</span> <span style="color:#f92672">&amp;&amp;</span> sy <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">340</span>);
-    <span style="color:#66d9ef">end</span>
-
-    <span style="color:#75715e">// paint colours: white inside square, blue outside
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] paint_r, paint_g, paint_b;
-    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        paint_r <span style="color:#f92672">=</span> (square) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h1</span>;
-        paint_g <span style="color:#f92672">=</span> (square) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h3</span>;
-        paint_b <span style="color:#f92672">=</span> (square) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h7</span>;
-    <span style="color:#66d9ef">end</span>
-
-    <span style="color:#75715e">// SDL output (8 bits per colour channel)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
-        sdl_sx <span style="color:#f92672">&lt;=</span> sx;
-        sdl_sy <span style="color:#f92672">&lt;=</span> sy;
-        sdl_de <span style="color:#f92672">&lt;=</span> de;
-        sdl_r <span style="color:#f92672">&lt;=</span> {<span style="color:#ae81ff">2</span>{paint_r}};  <span style="color:#75715e">// double signal width from 4 to 8 bits
-</span><span style="color:#75715e"></span>        sdl_g <span style="color:#f92672">&lt;=</span> {<span style="color:#ae81ff">2</span>{paint_g}};
-        sdl_b <span style="color:#f92672">&lt;=</span> {<span style="color:#ae81ff">2</span>{paint_b}};
-    <span style="color:#66d9ef">end</span>
-<span style="color:#66d9ef">endmodule</span>
-</code></pre></div><p>NB. SDL colour output is delayed one cycle in &ldquo;SDL output&rdquo;, so we need to delay <code>sx</code>, <code>sy</code>, and <code>de</code> to match. If we don&rsquo;t do this, everything will be shifted left one pixel.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> top_square #(<span style="color:#66d9ef">parameter</span> CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">10</span>) (  <span style="color:#75715e">// coordinate width
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_pix,             <span style="color:#75715e">// pixel clock
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> sim_rst,             <span style="color:#75715e">// sim reset
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sdl_sx,  <span style="color:#75715e">// horizontal SDL position
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sdl_sy,  <span style="color:#75715e">// vertical SDL position
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> sdl_de,              <span style="color:#75715e">// data enable (low in blanking interval)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sdl_r,         <span style="color:#75715e">// 8-bit red
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sdl_g,         <span style="color:#75715e">// 8-bit green
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sdl_b          <span style="color:#75715e">// 8-bit blue
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    );
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// display sync signals and coordinates
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx, sy;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> de;
+</span></span><span style="display:flex;"><span>    simple_480p display_inst (
+</span></span><span style="display:flex;"><span>        .clk_pix,
+</span></span><span style="display:flex;"><span>        .rst_pix(sim_rst),
+</span></span><span style="display:flex;"><span>        .sx,
+</span></span><span style="display:flex;"><span>        .sy,
+</span></span><span style="display:flex;"><span>        .hsync(),
+</span></span><span style="display:flex;"><span>        .vsync(),
+</span></span><span style="display:flex;"><span>        .de
+</span></span><span style="display:flex;"><span>    );
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// define a square with screen coordinates
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> square;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>        square <span style="color:#f92672">=</span> (sx <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">220</span> <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">420</span>) <span style="color:#f92672">&amp;&amp;</span> (sy <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">140</span> <span style="color:#f92672">&amp;&amp;</span> sy <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">340</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// paint colours: white inside square, blue outside
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] paint_r, paint_g, paint_b;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>        paint_r <span style="color:#f92672">=</span> (square) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h1</span>;
+</span></span><span style="display:flex;"><span>        paint_g <span style="color:#f92672">=</span> (square) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h3</span>;
+</span></span><span style="display:flex;"><span>        paint_b <span style="color:#f92672">=</span> (square) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h7</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// SDL output (8 bits per colour channel)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>        sdl_sx <span style="color:#f92672">&lt;=</span> sx;
+</span></span><span style="display:flex;"><span>        sdl_sy <span style="color:#f92672">&lt;=</span> sy;
+</span></span><span style="display:flex;"><span>        sdl_de <span style="color:#f92672">&lt;=</span> de;
+</span></span><span style="display:flex;"><span>        sdl_r <span style="color:#f92672">&lt;=</span> {<span style="color:#ae81ff">2</span>{paint_r}};  <span style="color:#75715e">// double signal width from 4 to 8 bits
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        sdl_g <span style="color:#f92672">&lt;=</span> {<span style="color:#ae81ff">2</span>{paint_g}};
+</span></span><span style="display:flex;"><span>        sdl_b <span style="color:#f92672">&lt;=</span> {<span style="color:#ae81ff">2</span>{paint_b}};
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
+</span></span></code></pre></div><p>NB. SDL colour output is delayed one cycle in &ldquo;SDL output&rdquo;, so we need to delay <code>sx</code>, <code>sy</code>, and <code>de</code> to match. If we don&rsquo;t do this, everything will be shifted left one pixel.</p>
 <h4 id="display-module">Display Module</h4>
 <p>Our top module depends on one other module: <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/fpga-graphics/simple_480p.sv">simple_480p.sv</a>]</strong>; it&rsquo;s identical to that used with FPGAs. On real hardware, this module produces 640x480 output with a 60 Hz refresh rate. To understand how and why this works, read <a href="/posts/fpga-graphics/">Beginning FPGA Graphics</a>.</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> simple_480p (
-    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_pix,   <span style="color:#75715e">// pixel clock
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst_pix,   <span style="color:#75715e">// reset in pixel clock domain
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">9</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx,  <span style="color:#75715e">// horizontal screen position
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">9</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sy,  <span style="color:#75715e">// vertical screen position
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> hsync,     <span style="color:#75715e">// horizontal sync
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> vsync,     <span style="color:#75715e">// vertical sync
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> de         <span style="color:#75715e">// data enable (low in blanking interval)
-</span><span style="color:#75715e"></span>    );
-
-    <span style="color:#75715e">// horizontal timings
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> HA_END <span style="color:#f92672">=</span> <span style="color:#ae81ff">639</span>;           <span style="color:#75715e">// end of active pixels
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> HS_STA <span style="color:#f92672">=</span> HA_END <span style="color:#f92672">+</span> <span style="color:#ae81ff">16</span>;   <span style="color:#75715e">// sync starts after front porch
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> HS_END <span style="color:#f92672">=</span> HS_STA <span style="color:#f92672">+</span> <span style="color:#ae81ff">96</span>;   <span style="color:#75715e">// sync ends
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> LINE   <span style="color:#f92672">=</span> <span style="color:#ae81ff">799</span>;           <span style="color:#75715e">// last pixel on line (after back porch)
-</span><span style="color:#75715e"></span>
-    <span style="color:#75715e">// vertical timings
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> VA_END <span style="color:#f92672">=</span> <span style="color:#ae81ff">479</span>;           <span style="color:#75715e">// end of active pixels
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> VS_STA <span style="color:#f92672">=</span> VA_END <span style="color:#f92672">+</span> <span style="color:#ae81ff">10</span>;   <span style="color:#75715e">// sync starts after front porch
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> VS_END <span style="color:#f92672">=</span> VS_STA <span style="color:#f92672">+</span> <span style="color:#ae81ff">2</span>;    <span style="color:#75715e">// sync ends
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> SCREEN <span style="color:#f92672">=</span> <span style="color:#ae81ff">524</span>;           <span style="color:#75715e">// last line on screen (after back porch)
-</span><span style="color:#75715e"></span>
-    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        hsync <span style="color:#f92672">=</span> <span style="color:#f92672">~</span>(sx <span style="color:#f92672">&gt;=</span> HS_STA <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">&lt;</span> HS_END);  <span style="color:#75715e">// invert: negative polarity
-</span><span style="color:#75715e"></span>        vsync <span style="color:#f92672">=</span> <span style="color:#f92672">~</span>(sy <span style="color:#f92672">&gt;=</span> VS_STA <span style="color:#f92672">&amp;&amp;</span> sy <span style="color:#f92672">&lt;</span> VS_END);  <span style="color:#75715e">// invert: negative polarity
-</span><span style="color:#75715e"></span>        de <span style="color:#f92672">=</span> (sx <span style="color:#f92672">&lt;=</span> HA_END <span style="color:#f92672">&amp;&amp;</span> sy <span style="color:#f92672">&lt;=</span> VA_END);
-    <span style="color:#66d9ef">end</span>
-
-    <span style="color:#75715e">// calculate horizontal and vertical screen position
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
-        <span style="color:#66d9ef">if</span> (sx <span style="color:#f92672">==</span> LINE) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// last pixel on line?
-</span><span style="color:#75715e"></span>            sx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-            sy <span style="color:#f92672">&lt;=</span> (sy <span style="color:#f92672">==</span> SCREEN) <span style="color:#f92672">?</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">:</span> sy <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// last line on screen?
-</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
-            sx <span style="color:#f92672">&lt;=</span> sx <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-        <span style="color:#66d9ef">end</span>
-        <span style="color:#66d9ef">if</span> (rst_pix) <span style="color:#66d9ef">begin</span>
-            sx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-            sy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-        <span style="color:#66d9ef">end</span>
-    <span style="color:#66d9ef">end</span>
-<span style="color:#66d9ef">endmodule</span>
-</code></pre></div><h3 id="c-interface--sdl">C++ Interface &amp; SDL</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> simple_480p (
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_pix,   <span style="color:#75715e">// pixel clock
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst_pix,   <span style="color:#75715e">// reset in pixel clock domain
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">9</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx,  <span style="color:#75715e">// horizontal screen position
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">9</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sy,  <span style="color:#75715e">// vertical screen position
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> hsync,     <span style="color:#75715e">// horizontal sync
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> vsync,     <span style="color:#75715e">// vertical sync
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> de         <span style="color:#75715e">// data enable (low in blanking interval)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    );
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// horizontal timings
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> HA_END <span style="color:#f92672">=</span> <span style="color:#ae81ff">639</span>;           <span style="color:#75715e">// end of active pixels
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> HS_STA <span style="color:#f92672">=</span> HA_END <span style="color:#f92672">+</span> <span style="color:#ae81ff">16</span>;   <span style="color:#75715e">// sync starts after front porch
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> HS_END <span style="color:#f92672">=</span> HS_STA <span style="color:#f92672">+</span> <span style="color:#ae81ff">96</span>;   <span style="color:#75715e">// sync ends
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> LINE   <span style="color:#f92672">=</span> <span style="color:#ae81ff">799</span>;           <span style="color:#75715e">// last pixel on line (after back porch)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// vertical timings
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> VA_END <span style="color:#f92672">=</span> <span style="color:#ae81ff">479</span>;           <span style="color:#75715e">// end of active pixels
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> VS_STA <span style="color:#f92672">=</span> VA_END <span style="color:#f92672">+</span> <span style="color:#ae81ff">10</span>;   <span style="color:#75715e">// sync starts after front porch
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> VS_END <span style="color:#f92672">=</span> VS_STA <span style="color:#f92672">+</span> <span style="color:#ae81ff">2</span>;    <span style="color:#75715e">// sync ends
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> SCREEN <span style="color:#f92672">=</span> <span style="color:#ae81ff">524</span>;           <span style="color:#75715e">// last line on screen (after back porch)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>        hsync <span style="color:#f92672">=</span> <span style="color:#f92672">~</span>(sx <span style="color:#f92672">&gt;=</span> HS_STA <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">&lt;</span> HS_END);  <span style="color:#75715e">// invert: negative polarity
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        vsync <span style="color:#f92672">=</span> <span style="color:#f92672">~</span>(sy <span style="color:#f92672">&gt;=</span> VS_STA <span style="color:#f92672">&amp;&amp;</span> sy <span style="color:#f92672">&lt;</span> VS_END);  <span style="color:#75715e">// invert: negative polarity
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        de <span style="color:#f92672">=</span> (sx <span style="color:#f92672">&lt;=</span> HA_END <span style="color:#f92672">&amp;&amp;</span> sy <span style="color:#f92672">&lt;=</span> VA_END);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// calculate horizontal and vertical screen position
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (sx <span style="color:#f92672">==</span> LINE) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// last pixel on line?
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            sx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>            sy <span style="color:#f92672">&lt;=</span> (sy <span style="color:#f92672">==</span> SCREEN) <span style="color:#f92672">?</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">:</span> sy <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// last line on screen?
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>            sx <span style="color:#f92672">&lt;=</span> sx <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (rst_pix) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>            sx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>            sy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
+</span></span></code></pre></div><h3 id="c-interface--sdl">C++ Interface &amp; SDL</h3>
 <p>To drive our simulation, we need a C++ main function. SDL has many ways to draw on the screen. I&rsquo;ve chosen a straightforward approach that should work for any graphics design. We write the Verilog video &ldquo;beam&rdquo; to an array of pixels. Once per frame, we convert the pixel array to an SDL texture and update our application window.</p>
 <p>I&rsquo;ll show the source file below, then discuss how it works. I&rsquo;m not a professional C++ developer, so don&rsquo;t be too horrified by my code. :)</p>
 <p>Verilator C++ <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/fpga-graphics/sim/main_square.cpp">main_square.cpp</a>]</strong>:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++"><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;stdio.h&gt;</span><span style="color:#75715e">
-</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;SDL.h&gt;</span><span style="color:#75715e">
-</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;verilated.h&gt;</span><span style="color:#75715e">
-</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&#34;Vtop_square.h&#34;</span><span style="color:#75715e">
-</span><span style="color:#75715e"></span>
-<span style="color:#75715e">// screen dimensions
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">const</span> <span style="color:#66d9ef">int</span> H_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">640</span>;
-<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">int</span> V_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">480</span>;
-
-<span style="color:#66d9ef">typedef</span> <span style="color:#66d9ef">struct</span> <span style="color:#a6e22e">Pixel</span> {  <span style="color:#75715e">// for SDL texture
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">uint8_t</span> a;  <span style="color:#75715e">// transparency
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">uint8_t</span> b;  <span style="color:#75715e">// blue
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">uint8_t</span> g;  <span style="color:#75715e">// green
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">uint8_t</span> r;  <span style="color:#75715e">// red
-</span><span style="color:#75715e"></span>} Pixel;
-
-<span style="color:#66d9ef">int</span> <span style="color:#a6e22e">main</span>(<span style="color:#66d9ef">int</span> argc, <span style="color:#66d9ef">char</span><span style="color:#f92672">*</span> argv[]) {
-    Verilated<span style="color:#f92672">::</span>commandArgs(argc, argv);
-
-    <span style="color:#66d9ef">if</span> (SDL_Init(SDL_INIT_VIDEO) <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0</span>) {
-        printf(<span style="color:#e6db74">&#34;SDL init failed.</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
-        <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">1</span>;
-    }
-
-    Pixel screenbuffer[H_RES<span style="color:#f92672">*</span>V_RES];
-
-    SDL_Window<span style="color:#f92672">*</span>   sdl_window   <span style="color:#f92672">=</span> NULL;
-    SDL_Renderer<span style="color:#f92672">*</span> sdl_renderer <span style="color:#f92672">=</span> NULL;
-    SDL_Texture<span style="color:#f92672">*</span>  sdl_texture  <span style="color:#f92672">=</span> NULL;
-
-    sdl_window <span style="color:#f92672">=</span> SDL_CreateWindow(<span style="color:#e6db74">&#34;Square&#34;</span>, SDL_WINDOWPOS_CENTERED,
-        SDL_WINDOWPOS_CENTERED, H_RES, V_RES, SDL_WINDOW_SHOWN);
-    <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>sdl_window) {
-        printf(<span style="color:#e6db74">&#34;Window creation failed: %s</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, SDL_GetError());
-        <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">1</span>;
-    }
-
-    sdl_renderer <span style="color:#f92672">=</span> SDL_CreateRenderer(sdl_window, <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>,
-        SDL_RENDERER_ACCELERATED <span style="color:#f92672">|</span> SDL_RENDERER_PRESENTVSYNC);
-    <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>sdl_renderer) {
-        printf(<span style="color:#e6db74">&#34;Renderer creation failed: %s</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, SDL_GetError());
-        <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">1</span>;
-    }
-
-    sdl_texture <span style="color:#f92672">=</span> SDL_CreateTexture(sdl_renderer, SDL_PIXELFORMAT_RGBA8888,
-        SDL_TEXTUREACCESS_TARGET, H_RES, V_RES);
-    <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>sdl_texture) {
-        printf(<span style="color:#e6db74">&#34;Texture creation failed: %s</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, SDL_GetError());
-        <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">1</span>;
-    }
-
-    <span style="color:#75715e">// initialize Verilog module
-</span><span style="color:#75715e"></span>    Vtop_square<span style="color:#f92672">*</span> top <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> Vtop_square;
-
-    <span style="color:#75715e">// reset
-</span><span style="color:#75715e"></span>    top<span style="color:#f92672">-&gt;</span>sim_rst <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
-    top<span style="color:#f92672">-&gt;</span>clk_pix <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-    top<span style="color:#f92672">-&gt;</span>eval();
-    top<span style="color:#f92672">-&gt;</span>clk_pix <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
-    top<span style="color:#f92672">-&gt;</span>eval();
-    top<span style="color:#f92672">-&gt;</span>sim_rst <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-    top<span style="color:#f92672">-&gt;</span>clk_pix <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-    top<span style="color:#f92672">-&gt;</span>eval();
-
-    <span style="color:#75715e">// initialize frame rate
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">uint64_t</span> start_ticks <span style="color:#f92672">=</span> SDL_GetPerformanceCounter();
-    <span style="color:#66d9ef">uint64_t</span> frame_count <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-
-    <span style="color:#75715e">// main loop
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">while</span> (<span style="color:#ae81ff">1</span>) {
-        <span style="color:#75715e">// cycle the clock
-</span><span style="color:#75715e"></span>        top<span style="color:#f92672">-&gt;</span>clk_pix <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
-        top<span style="color:#f92672">-&gt;</span>eval();
-        top<span style="color:#f92672">-&gt;</span>clk_pix <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-        top<span style="color:#f92672">-&gt;</span>eval();
-
-        <span style="color:#75715e">// update pixel if not in blanking interval
-</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (top<span style="color:#f92672">-&gt;</span>sdl_de) {
-            Pixel<span style="color:#f92672">*</span> p <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;</span>screenbuffer[top<span style="color:#f92672">-&gt;</span>sdl_sy<span style="color:#f92672">*</span>H_RES <span style="color:#f92672">+</span> top<span style="color:#f92672">-&gt;</span>sdl_sx];
-            p<span style="color:#f92672">-&gt;</span>a <span style="color:#f92672">=</span> <span style="color:#ae81ff">0xFF</span>;  <span style="color:#75715e">// transparency
-</span><span style="color:#75715e"></span>            p<span style="color:#f92672">-&gt;</span>b <span style="color:#f92672">=</span> top<span style="color:#f92672">-&gt;</span>sdl_b;
-            p<span style="color:#f92672">-&gt;</span>g <span style="color:#f92672">=</span> top<span style="color:#f92672">-&gt;</span>sdl_g;
-            p<span style="color:#f92672">-&gt;</span>r <span style="color:#f92672">=</span> top<span style="color:#f92672">-&gt;</span>sdl_r;
-        }
-
-        <span style="color:#75715e">// update texture once per frame (in blanking)
-</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (top<span style="color:#f92672">-&gt;</span>sdl_sy <span style="color:#f92672">==</span> V_RES <span style="color:#f92672">&amp;&amp;</span> top<span style="color:#f92672">-&gt;</span>sdl_sx <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) {
-            <span style="color:#75715e">// check for quit event
-</span><span style="color:#75715e"></span>            SDL_Event e;
-            <span style="color:#66d9ef">if</span> (SDL_PollEvent(<span style="color:#f92672">&amp;</span>e)) {
-                <span style="color:#66d9ef">if</span> (e.type <span style="color:#f92672">==</span> SDL_QUIT) {
-                    <span style="color:#66d9ef">break</span>;
-                }
-            }
-
-            SDL_UpdateTexture(sdl_texture, NULL, screenbuffer, H_RES<span style="color:#f92672">*</span><span style="color:#66d9ef">sizeof</span>(Pixel));
-            SDL_RenderClear(sdl_renderer);
-            SDL_RenderCopy(sdl_renderer, sdl_texture, NULL, NULL);
-            SDL_RenderPresent(sdl_renderer);
-            frame_count<span style="color:#f92672">++</span>;
-        }
-    }
-
-    <span style="color:#75715e">// calculate frame rate
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">uint64_t</span> end_ticks <span style="color:#f92672">=</span> SDL_GetPerformanceCounter();
-    <span style="color:#66d9ef">double</span> duration <span style="color:#f92672">=</span> ((<span style="color:#66d9ef">double</span>)(end_ticks<span style="color:#f92672">-</span>start_ticks))<span style="color:#f92672">/</span>SDL_GetPerformanceFrequency();
-    <span style="color:#66d9ef">double</span> fps <span style="color:#f92672">=</span> (<span style="color:#66d9ef">double</span>)frame_count<span style="color:#f92672">/</span>duration;
-    printf(<span style="color:#e6db74">&#34;Frames per second: %.1f</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, fps);
-
-    top<span style="color:#f92672">-&gt;</span><span style="color:#66d9ef">final</span>();  <span style="color:#75715e">// simulation done
-</span><span style="color:#75715e"></span>
-    SDL_DestroyTexture(sdl_texture);
-    SDL_DestroyRenderer(sdl_renderer);
-    SDL_DestroyWindow(sdl_window);
-    SDL_Quit();
-    <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
-}
-</code></pre></div><p>I&rsquo;ll now go through the code step-by-step, explaining how it works. Remember, you can find all the source files in the <a href="https://github.com/projf/projf-explore/tree/master/graphics/fpga-graphics/sim">projf-explore</a> repo. If you&rsquo;re eager to get it running right away, you can skip on to <a href="#building-and-running">Building &amp; Running</a>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c++" data-lang="c++"><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;stdio.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;SDL.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;verilated.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&#34;Vtop_square.h&#34;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// screen dimensions
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">const</span> <span style="color:#66d9ef">int</span> H_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">640</span>;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">const</span> <span style="color:#66d9ef">int</span> V_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">480</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">typedef</span> <span style="color:#66d9ef">struct</span> <span style="color:#a6e22e">Pixel</span> {  <span style="color:#75715e">// for SDL texture
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">uint8_t</span> a;  <span style="color:#75715e">// transparency
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">uint8_t</span> b;  <span style="color:#75715e">// blue
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">uint8_t</span> g;  <span style="color:#75715e">// green
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">uint8_t</span> r;  <span style="color:#75715e">// red
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>} Pixel;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">main</span>(<span style="color:#66d9ef">int</span> argc, <span style="color:#66d9ef">char</span><span style="color:#f92672">*</span> argv[]) {
+</span></span><span style="display:flex;"><span>    Verilated<span style="color:#f92672">::</span>commandArgs(argc, argv);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (SDL_Init(SDL_INIT_VIDEO) <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0</span>) {
+</span></span><span style="display:flex;"><span>        printf(<span style="color:#e6db74">&#34;SDL init failed.</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    Pixel screenbuffer[H_RES<span style="color:#f92672">*</span>V_RES];
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    SDL_Window<span style="color:#f92672">*</span>   sdl_window   <span style="color:#f92672">=</span> NULL;
+</span></span><span style="display:flex;"><span>    SDL_Renderer<span style="color:#f92672">*</span> sdl_renderer <span style="color:#f92672">=</span> NULL;
+</span></span><span style="display:flex;"><span>    SDL_Texture<span style="color:#f92672">*</span>  sdl_texture  <span style="color:#f92672">=</span> NULL;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    sdl_window <span style="color:#f92672">=</span> SDL_CreateWindow(<span style="color:#e6db74">&#34;Square&#34;</span>, SDL_WINDOWPOS_CENTERED,
+</span></span><span style="display:flex;"><span>        SDL_WINDOWPOS_CENTERED, H_RES, V_RES, SDL_WINDOW_SHOWN);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>sdl_window) {
+</span></span><span style="display:flex;"><span>        printf(<span style="color:#e6db74">&#34;Window creation failed: %s</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, SDL_GetError());
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    sdl_renderer <span style="color:#f92672">=</span> SDL_CreateRenderer(sdl_window, <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>,
+</span></span><span style="display:flex;"><span>        SDL_RENDERER_ACCELERATED <span style="color:#f92672">|</span> SDL_RENDERER_PRESENTVSYNC);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>sdl_renderer) {
+</span></span><span style="display:flex;"><span>        printf(<span style="color:#e6db74">&#34;Renderer creation failed: %s</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, SDL_GetError());
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    sdl_texture <span style="color:#f92672">=</span> SDL_CreateTexture(sdl_renderer, SDL_PIXELFORMAT_RGBA8888,
+</span></span><span style="display:flex;"><span>        SDL_TEXTUREACCESS_TARGET, H_RES, V_RES);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>sdl_texture) {
+</span></span><span style="display:flex;"><span>        printf(<span style="color:#e6db74">&#34;Texture creation failed: %s</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, SDL_GetError());
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// initialize Verilog module
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    Vtop_square<span style="color:#f92672">*</span> top <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> Vtop_square;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// reset
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    top<span style="color:#f92672">-&gt;</span>sim_rst <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>    top<span style="color:#f92672">-&gt;</span>clk_pix <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>    top<span style="color:#f92672">-&gt;</span>eval();
+</span></span><span style="display:flex;"><span>    top<span style="color:#f92672">-&gt;</span>clk_pix <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>    top<span style="color:#f92672">-&gt;</span>eval();
+</span></span><span style="display:flex;"><span>    top<span style="color:#f92672">-&gt;</span>sim_rst <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>    top<span style="color:#f92672">-&gt;</span>clk_pix <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>    top<span style="color:#f92672">-&gt;</span>eval();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// initialize frame rate
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">uint64_t</span> start_ticks <span style="color:#f92672">=</span> SDL_GetPerformanceCounter();
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">uint64_t</span> frame_count <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// main loop
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">while</span> (<span style="color:#ae81ff">1</span>) {
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// cycle the clock
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        top<span style="color:#f92672">-&gt;</span>clk_pix <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>        top<span style="color:#f92672">-&gt;</span>eval();
+</span></span><span style="display:flex;"><span>        top<span style="color:#f92672">-&gt;</span>clk_pix <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>        top<span style="color:#f92672">-&gt;</span>eval();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// update pixel if not in blanking interval
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (top<span style="color:#f92672">-&gt;</span>sdl_de) {
+</span></span><span style="display:flex;"><span>            Pixel<span style="color:#f92672">*</span> p <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;</span>screenbuffer[top<span style="color:#f92672">-&gt;</span>sdl_sy<span style="color:#f92672">*</span>H_RES <span style="color:#f92672">+</span> top<span style="color:#f92672">-&gt;</span>sdl_sx];
+</span></span><span style="display:flex;"><span>            p<span style="color:#f92672">-&gt;</span>a <span style="color:#f92672">=</span> <span style="color:#ae81ff">0xFF</span>;  <span style="color:#75715e">// transparency
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            p<span style="color:#f92672">-&gt;</span>b <span style="color:#f92672">=</span> top<span style="color:#f92672">-&gt;</span>sdl_b;
+</span></span><span style="display:flex;"><span>            p<span style="color:#f92672">-&gt;</span>g <span style="color:#f92672">=</span> top<span style="color:#f92672">-&gt;</span>sdl_g;
+</span></span><span style="display:flex;"><span>            p<span style="color:#f92672">-&gt;</span>r <span style="color:#f92672">=</span> top<span style="color:#f92672">-&gt;</span>sdl_r;
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// update texture once per frame (in blanking)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (top<span style="color:#f92672">-&gt;</span>sdl_sy <span style="color:#f92672">==</span> V_RES <span style="color:#f92672">&amp;&amp;</span> top<span style="color:#f92672">-&gt;</span>sdl_sx <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) {
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e">// check for quit event
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            SDL_Event e;
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> (SDL_PollEvent(<span style="color:#f92672">&amp;</span>e)) {
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">if</span> (e.type <span style="color:#f92672">==</span> SDL_QUIT) {
+</span></span><span style="display:flex;"><span>                    <span style="color:#66d9ef">break</span>;
+</span></span><span style="display:flex;"><span>                }
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>            SDL_UpdateTexture(sdl_texture, NULL, screenbuffer, H_RES<span style="color:#f92672">*</span><span style="color:#66d9ef">sizeof</span>(Pixel));
+</span></span><span style="display:flex;"><span>            SDL_RenderClear(sdl_renderer);
+</span></span><span style="display:flex;"><span>            SDL_RenderCopy(sdl_renderer, sdl_texture, NULL, NULL);
+</span></span><span style="display:flex;"><span>            SDL_RenderPresent(sdl_renderer);
+</span></span><span style="display:flex;"><span>            frame_count<span style="color:#f92672">++</span>;
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// calculate frame rate
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">uint64_t</span> end_ticks <span style="color:#f92672">=</span> SDL_GetPerformanceCounter();
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">double</span> duration <span style="color:#f92672">=</span> ((<span style="color:#66d9ef">double</span>)(end_ticks<span style="color:#f92672">-</span>start_ticks))<span style="color:#f92672">/</span>SDL_GetPerformanceFrequency();
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">double</span> fps <span style="color:#f92672">=</span> (<span style="color:#66d9ef">double</span>)frame_count<span style="color:#f92672">/</span>duration;
+</span></span><span style="display:flex;"><span>    printf(<span style="color:#e6db74">&#34;Frames per second: %.1f</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, fps);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    top<span style="color:#f92672">-&gt;</span><span style="color:#66d9ef">final</span>();  <span style="color:#75715e">// simulation done
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    SDL_DestroyTexture(sdl_texture);
+</span></span><span style="display:flex;"><span>    SDL_DestroyRenderer(sdl_renderer);
+</span></span><span style="display:flex;"><span>    SDL_DestroyWindow(sdl_window);
+</span></span><span style="display:flex;"><span>    SDL_Quit();
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>I&rsquo;ll now go through the code step-by-step, explaining how it works. Remember, you can find all the source files in the <a href="https://github.com/projf/projf-explore/tree/master/graphics/fpga-graphics/sim">projf-explore</a> repo. If you&rsquo;re eager to get it running right away, you can skip on to <a href="#building-and-running">Building &amp; Running</a>.</p>
 <p>You might also like to read the official Verilator doc: <a href="https://verilator.org/guide/latest/connecting.html">Connecting to Verilated Models</a>.</p>
 <h3 id="c-includes">C++ Includes</h3>
 <p>There are four includes:</p>
@@ -408,25 +408,25 @@ apt install verilator libsdl2-dev
 <p><em>NB. The name of the final include depends on the name of your top module.</em></p>
 <h3 id="screen-size">Screen Size</h3>
 <p>We define our screen size to match our display module, <code>simple_480p</code>:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++"><span style="color:#75715e">// screen dimensions
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">const</span> <span style="color:#66d9ef">int</span> H_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">640</span>;
-<span style="color:#66d9ef">const</span> <span style="color:#66d9ef">int</span> V_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">480</span>;
-</code></pre></div><h3 id="pixel-type">Pixel Type</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c++" data-lang="c++"><span style="display:flex;"><span><span style="color:#75715e">// screen dimensions
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">const</span> <span style="color:#66d9ef">int</span> H_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">640</span>;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">const</span> <span style="color:#66d9ef">int</span> V_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">480</span>;
+</span></span></code></pre></div><h3 id="pixel-type">Pixel Type</h3>
 <p>We create a 32-bit <code>Pixel</code> type to represent each pixel:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++"><span style="color:#66d9ef">typedef</span> <span style="color:#66d9ef">struct</span> <span style="color:#a6e22e">Pixel</span> {  <span style="color:#75715e">// for SDL texture
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">uint8_t</span> a;  <span style="color:#75715e">// transparency
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">uint8_t</span> b;  <span style="color:#75715e">// blue
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">uint8_t</span> g;  <span style="color:#75715e">// green
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">uint8_t</span> r;  <span style="color:#75715e">// red
-</span><span style="color:#75715e"></span>} Pixel;
-</code></pre></div><h3 id="sdl-initialization">SDL Initialization</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c++" data-lang="c++"><span style="display:flex;"><span><span style="color:#66d9ef">typedef</span> <span style="color:#66d9ef">struct</span> <span style="color:#a6e22e">Pixel</span> {  <span style="color:#75715e">// for SDL texture
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">uint8_t</span> a;  <span style="color:#75715e">// transparency
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">uint8_t</span> b;  <span style="color:#75715e">// blue
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">uint8_t</span> g;  <span style="color:#75715e">// green
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">uint8_t</span> r;  <span style="color:#75715e">// red
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>} Pixel;
+</span></span></code></pre></div><h3 id="sdl-initialization">SDL Initialization</h3>
 <p>The next few lines create the pixel array and three SDL objects: window, renderer, and texture.</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++">Pixel screenbuffer[H_RES<span style="color:#f92672">*</span>V_RES];
-
-SDL_Window<span style="color:#f92672">*</span>   sdl_window   <span style="color:#f92672">=</span> NULL;
-SDL_Renderer<span style="color:#f92672">*</span> sdl_renderer <span style="color:#f92672">=</span> NULL;
-SDL_Texture<span style="color:#f92672">*</span>  sdl_texture  <span style="color:#f92672">=</span> NULL;
-</code></pre></div><p>I&rsquo;ll not explain the SDL create call options in this post; you can read about them on the SDL wiki:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c++" data-lang="c++"><span style="display:flex;"><span>Pixel screenbuffer[H_RES<span style="color:#f92672">*</span>V_RES];
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>SDL_Window<span style="color:#f92672">*</span>   sdl_window   <span style="color:#f92672">=</span> NULL;
+</span></span><span style="display:flex;"><span>SDL_Renderer<span style="color:#f92672">*</span> sdl_renderer <span style="color:#f92672">=</span> NULL;
+</span></span><span style="display:flex;"><span>SDL_Texture<span style="color:#f92672">*</span>  sdl_texture  <span style="color:#f92672">=</span> NULL;
+</span></span></code></pre></div><p>I&rsquo;ll not explain the SDL create call options in this post; you can read about them on the SDL wiki:</p>
 <ul>
 <li><a href="https://wiki.libsdl.org/SDL_CreateWindow">SDL_CreateWindow</a></li>
 <li><a href="https://wiki.libsdl.org/SDL_CreateRenderer">SDL_CreateRenderer</a></li>
@@ -434,112 +434,112 @@ SDL_Texture<span style="color:#f92672">*</span>  sdl_texture  <span style="color
 </ul>
 <h3 id="verilog-initialization">Verilog Initialization</h3>
 <p>We create an instance of our Verilog module, then reset it:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++"><span style="color:#75715e">// initialize Verilog module
-</span><span style="color:#75715e"></span>Vtop_square<span style="color:#f92672">*</span> top <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> Vtop_square;
-
-<span style="color:#75715e">// reset
-</span><span style="color:#75715e"></span>top<span style="color:#f92672">-&gt;</span>sim_rst <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
-top<span style="color:#f92672">-&gt;</span>clk_pix <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-top<span style="color:#f92672">-&gt;</span>eval();
-top<span style="color:#f92672">-&gt;</span>clk_pix <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
-top<span style="color:#f92672">-&gt;</span>eval();
-top<span style="color:#f92672">-&gt;</span>sim_rst <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-top<span style="color:#f92672">-&gt;</span>clk_pix <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-top<span style="color:#f92672">-&gt;</span>eval();
-</code></pre></div><p>The model is run (evaluated) when you call <code>top-&gt;eval()</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c++" data-lang="c++"><span style="display:flex;"><span><span style="color:#75715e">// initialize Verilog module
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>Vtop_square<span style="color:#f92672">*</span> top <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> Vtop_square;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// reset
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>top<span style="color:#f92672">-&gt;</span>sim_rst <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>top<span style="color:#f92672">-&gt;</span>clk_pix <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>top<span style="color:#f92672">-&gt;</span>eval();
+</span></span><span style="display:flex;"><span>top<span style="color:#f92672">-&gt;</span>clk_pix <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>top<span style="color:#f92672">-&gt;</span>eval();
+</span></span><span style="display:flex;"><span>top<span style="color:#f92672">-&gt;</span>sim_rst <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>top<span style="color:#f92672">-&gt;</span>clk_pix <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>top<span style="color:#f92672">-&gt;</span>eval();
+</span></span></code></pre></div><p>The model is run (evaluated) when you call <code>top-&gt;eval()</code>.</p>
 <h3 id="performance-counters">Performance Counters</h3>
 <p>We create a couple of counters to measure the frame rate:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++"><span style="color:#75715e">// initialize frame rate
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">uint64_t</span> start_ticks <span style="color:#f92672">=</span> SDL_GetPerformanceCounter();
-<span style="color:#66d9ef">uint64_t</span> frame_count <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-</code></pre></div><h3 id="main-loop">Main Loop</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c++" data-lang="c++"><span style="display:flex;"><span><span style="color:#75715e">// initialize frame rate
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">uint64_t</span> start_ticks <span style="color:#f92672">=</span> SDL_GetPerformanceCounter();
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">uint64_t</span> frame_count <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span></code></pre></div><h3 id="main-loop">Main Loop</h3>
 <p>Our simulation runs in the main loop, which has four parts.</p>
 <p>The pixel clock drives our hardware; we flip it to 1 and back to 0, evaluating our model each time:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++">    <span style="color:#75715e">// cycle the clock
-</span><span style="color:#75715e"></span>    top<span style="color:#f92672">-&gt;</span>clk_pix <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
-    top<span style="color:#f92672">-&gt;</span>eval();
-    top<span style="color:#f92672">-&gt;</span>clk_pix <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-    top<span style="color:#f92672">-&gt;</span>eval();
-</code></pre></div><p>If we&rsquo;re in the active drawing part of the screen (i.e. not the blanking interval), we get a pointer to the current pixel then update its colour:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++">    <span style="color:#75715e">// update pixel if not in blanking interval
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">if</span> (top<span style="color:#f92672">-&gt;</span>sdl_de) {
-        Pixel<span style="color:#f92672">*</span> p <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;</span>screenbuffer[top<span style="color:#f92672">-&gt;</span>sdl_sy<span style="color:#f92672">*</span>H_RES <span style="color:#f92672">+</span> top<span style="color:#f92672">-&gt;</span>sdl_sx];
-        p<span style="color:#f92672">-&gt;</span>a <span style="color:#f92672">=</span> <span style="color:#ae81ff">0xFF</span>;  <span style="color:#75715e">// transparency
-</span><span style="color:#75715e"></span>        p<span style="color:#f92672">-&gt;</span>b <span style="color:#f92672">=</span> top<span style="color:#f92672">-&gt;</span>sdl_b;
-        p<span style="color:#f92672">-&gt;</span>g <span style="color:#f92672">=</span> top<span style="color:#f92672">-&gt;</span>sdl_g;
-        p<span style="color:#f92672">-&gt;</span>r <span style="color:#f92672">=</span> top<span style="color:#f92672">-&gt;</span>sdl_r;
-    }
-</code></pre></div><p>We don&rsquo;t check the screenbuffer array index is valid. Our display module <em>should</em> handle this correctly, but this assumption is dangerous: you’ll probably get a core dump if the index is not in range.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c++" data-lang="c++"><span style="display:flex;"><span>    <span style="color:#75715e">// cycle the clock
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    top<span style="color:#f92672">-&gt;</span>clk_pix <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>    top<span style="color:#f92672">-&gt;</span>eval();
+</span></span><span style="display:flex;"><span>    top<span style="color:#f92672">-&gt;</span>clk_pix <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>    top<span style="color:#f92672">-&gt;</span>eval();
+</span></span></code></pre></div><p>If we&rsquo;re in the active drawing part of the screen (i.e. not the blanking interval), we get a pointer to the current pixel then update its colour:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c++" data-lang="c++"><span style="display:flex;"><span>    <span style="color:#75715e">// update pixel if not in blanking interval
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">if</span> (top<span style="color:#f92672">-&gt;</span>sdl_de) {
+</span></span><span style="display:flex;"><span>        Pixel<span style="color:#f92672">*</span> p <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;</span>screenbuffer[top<span style="color:#f92672">-&gt;</span>sdl_sy<span style="color:#f92672">*</span>H_RES <span style="color:#f92672">+</span> top<span style="color:#f92672">-&gt;</span>sdl_sx];
+</span></span><span style="display:flex;"><span>        p<span style="color:#f92672">-&gt;</span>a <span style="color:#f92672">=</span> <span style="color:#ae81ff">0xFF</span>;  <span style="color:#75715e">// transparency
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        p<span style="color:#f92672">-&gt;</span>b <span style="color:#f92672">=</span> top<span style="color:#f92672">-&gt;</span>sdl_b;
+</span></span><span style="display:flex;"><span>        p<span style="color:#f92672">-&gt;</span>g <span style="color:#f92672">=</span> top<span style="color:#f92672">-&gt;</span>sdl_g;
+</span></span><span style="display:flex;"><span>        p<span style="color:#f92672">-&gt;</span>r <span style="color:#f92672">=</span> top<span style="color:#f92672">-&gt;</span>sdl_r;
+</span></span><span style="display:flex;"><span>    }
+</span></span></code></pre></div><p>We don&rsquo;t check the screenbuffer array index is valid. Our display module <em>should</em> handle this correctly, but this assumption is dangerous: you’ll probably get a core dump if the index is not in range.</p>
 <p>Once per frame we poll for a quit event:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++">    <span style="color:#75715e">// update texture once per frame (in blanking)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">if</span> (top<span style="color:#f92672">-&gt;</span>sdl_sy <span style="color:#f92672">==</span> V_RES <span style="color:#f92672">&amp;&amp;</span> top<span style="color:#f92672">-&gt;</span>sdl_sx <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) {
-        <span style="color:#75715e">// check for quit event
-</span><span style="color:#75715e"></span>        SDL_Event e;
-        <span style="color:#66d9ef">if</span> (SDL_PollEvent(<span style="color:#f92672">&amp;</span>e)) {
-            <span style="color:#66d9ef">if</span> (e.type <span style="color:#f92672">==</span> SDL_QUIT) {
-                <span style="color:#66d9ef">break</span>;
-            }
-        }
-</code></pre></div><p>Then we update the texture and increment the frame counter:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++">        SDL_UpdateTexture(sdl_texture, NULL, screenbuffer, H_RES<span style="color:#f92672">*</span><span style="color:#66d9ef">sizeof</span>(Pixel));
-        SDL_RenderClear(sdl_renderer);
-        SDL_RenderCopy(sdl_renderer, sdl_texture, NULL, NULL);
-        SDL_RenderPresent(sdl_renderer);
-        frame_count<span style="color:#f92672">++</span>;
-    }
-</code></pre></div><p>The call to <a href="https://wiki.libsdl.org/SDL_UpdateTexture">SDL_UpdateTexture</a> is expensive, so we limit it to once per frame. Of course, you can update the texture after every pixel, but your simulation will run approximately 1000x slower!</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c++" data-lang="c++"><span style="display:flex;"><span>    <span style="color:#75715e">// update texture once per frame (in blanking)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">if</span> (top<span style="color:#f92672">-&gt;</span>sdl_sy <span style="color:#f92672">==</span> V_RES <span style="color:#f92672">&amp;&amp;</span> top<span style="color:#f92672">-&gt;</span>sdl_sx <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) {
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// check for quit event
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        SDL_Event e;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (SDL_PollEvent(<span style="color:#f92672">&amp;</span>e)) {
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> (e.type <span style="color:#f92672">==</span> SDL_QUIT) {
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">break</span>;
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>        }
+</span></span></code></pre></div><p>Then we update the texture and increment the frame counter:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c++" data-lang="c++"><span style="display:flex;"><span>        SDL_UpdateTexture(sdl_texture, NULL, screenbuffer, H_RES<span style="color:#f92672">*</span><span style="color:#66d9ef">sizeof</span>(Pixel));
+</span></span><span style="display:flex;"><span>        SDL_RenderClear(sdl_renderer);
+</span></span><span style="display:flex;"><span>        SDL_RenderCopy(sdl_renderer, sdl_texture, NULL, NULL);
+</span></span><span style="display:flex;"><span>        SDL_RenderPresent(sdl_renderer);
+</span></span><span style="display:flex;"><span>        frame_count<span style="color:#f92672">++</span>;
+</span></span><span style="display:flex;"><span>    }
+</span></span></code></pre></div><p>The call to <a href="https://wiki.libsdl.org/SDL_UpdateTexture">SDL_UpdateTexture</a> is expensive, so we limit it to once per frame. Of course, you can update the texture after every pixel, but your simulation will run approximately 1000x slower!</p>
 <h3 id="clean-up">Clean Up</h3>
 <p>After breaking out of the <code>while</code> loop, we calculate the frame rate:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++">    <span style="color:#75715e">// calculate frame rate
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">uint64_t</span> end_ticks <span style="color:#f92672">=</span> SDL_GetPerformanceCounter();
-    <span style="color:#66d9ef">double</span> duration <span style="color:#f92672">=</span> ((<span style="color:#66d9ef">double</span>)(end_ticks<span style="color:#f92672">-</span>start_ticks))<span style="color:#f92672">/</span>SDL_GetPerformanceFrequency();
-    <span style="color:#66d9ef">double</span> fps <span style="color:#f92672">=</span> (<span style="color:#66d9ef">double</span>)frame_count<span style="color:#f92672">/</span>duration;
-    printf(<span style="color:#e6db74">&#34;Frames per second: %.1f</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, fps);
-</code></pre></div><p>The perform some clean up before quitting:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++">    top<span style="color:#f92672">-&gt;</span><span style="color:#66d9ef">final</span>();  <span style="color:#75715e">// simulation done
-</span><span style="color:#75715e"></span>
-    SDL_DestroyTexture(sdl_texture);
-    SDL_DestroyRenderer(sdl_renderer);
-    SDL_DestroyWindow(sdl_window);
-    SDL_Quit();
-    <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
-}
-</code></pre></div><h2 id="building-and-running">Building and Running</h2>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c++" data-lang="c++"><span style="display:flex;"><span>    <span style="color:#75715e">// calculate frame rate
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">uint64_t</span> end_ticks <span style="color:#f92672">=</span> SDL_GetPerformanceCounter();
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">double</span> duration <span style="color:#f92672">=</span> ((<span style="color:#66d9ef">double</span>)(end_ticks<span style="color:#f92672">-</span>start_ticks))<span style="color:#f92672">/</span>SDL_GetPerformanceFrequency();
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">double</span> fps <span style="color:#f92672">=</span> (<span style="color:#66d9ef">double</span>)frame_count<span style="color:#f92672">/</span>duration;
+</span></span><span style="display:flex;"><span>    printf(<span style="color:#e6db74">&#34;Frames per second: %.1f</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, fps);
+</span></span></code></pre></div><p>The perform some clean up before quitting:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c++" data-lang="c++"><span style="display:flex;"><span>    top<span style="color:#f92672">-&gt;</span><span style="color:#66d9ef">final</span>();  <span style="color:#75715e">// simulation done
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    SDL_DestroyTexture(sdl_texture);
+</span></span><span style="display:flex;"><span>    SDL_DestroyRenderer(sdl_renderer);
+</span></span><span style="display:flex;"><span>    SDL_DestroyWindow(sdl_window);
+</span></span><span style="display:flex;"><span>    SDL_Quit();
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="building-and-running">Building and Running</h2>
 <p>Building and running Verilator simulations is pleasantly simple. We use <code>sdl2-config</code> to set the correct compiler and linker options for us.</p>
 <p>To build the square simulation from the Project F repo:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell">cd projf-explore/graphics/fpga-graphics/sim
-
-verilator -I../ -cc top_square.sv --exe main_square.cpp -o square <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>    -CFLAGS <span style="color:#e6db74">&#34;</span><span style="color:#66d9ef">$(</span>sdl2-config --cflags<span style="color:#66d9ef">)</span><span style="color:#e6db74">&#34;</span> -LDFLAGS <span style="color:#e6db74">&#34;</span><span style="color:#66d9ef">$(</span>sdl2-config --libs<span style="color:#66d9ef">)</span><span style="color:#e6db74">&#34;</span>
-
-make -C ./obj_dir -f Vtop_square.mk
-</code></pre></div><p>You can then run the simulation executable from <code>obj_dir</code>:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell">./obj_dir/square
-</code></pre></div><p>When building your own designs, you may need to adjust the <code>-I</code> option that tells Verilator where to find included Verilog modules.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>cd projf-explore/graphics/fpga-graphics/sim
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>verilator -I../ -cc top_square.sv --exe main_square.cpp -o square <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>    -CFLAGS <span style="color:#e6db74">&#34;</span><span style="color:#66d9ef">$(</span>sdl2-config --cflags<span style="color:#66d9ef">)</span><span style="color:#e6db74">&#34;</span> -LDFLAGS <span style="color:#e6db74">&#34;</span><span style="color:#66d9ef">$(</span>sdl2-config --libs<span style="color:#66d9ef">)</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>make -C ./obj_dir -f Vtop_square.mk
+</span></span></code></pre></div><p>You can then run the simulation executable from <code>obj_dir</code>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>./obj_dir/square
+</span></span></code></pre></div><p>When building your own designs, you may need to adjust the <code>-I</code> option that tells Verilator where to find included Verilog modules.</p>
 <h3 id="makefile">Makefile</h3>
 <p>We can automate building with a simple <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/fpga-graphics/sim/Makefile">Makefile</a>]</strong>:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-makefile" data-lang="makefile">SDL_CFLAGS <span style="color:#f92672">=</span> <span style="color:#e6db74">`</span>sdl2-config --cflags<span style="color:#e6db74">`</span>
-SDL_LDFLAGS <span style="color:#f92672">=</span> <span style="color:#e6db74">`</span>sdl2-config --libs<span style="color:#e6db74">`</span>
-
-<span style="color:#a6e22e">square</span><span style="color:#f92672">:</span> square.exe
-<span style="color:#a6e22e">flag_ethiopia</span><span style="color:#f92672">:</span> flag_ethiopia.exe
-<span style="color:#a6e22e">flag_sweden</span><span style="color:#f92672">:</span> flag_sweden.exe
-<span style="color:#a6e22e">colour</span><span style="color:#f92672">:</span> colour.exe
-
-<span style="color:#a6e22e">%.exe</span><span style="color:#f92672">:</span> %.mk
-	make -C ./obj_dir -f Vtop_$&lt;
-
-<span style="color:#a6e22e">%.mk</span><span style="color:#f92672">:</span> top_%.sv
-	verilator -I../ -cc $&lt; --exe main_<span style="color:#66d9ef">$(</span>basename $@<span style="color:#66d9ef">)</span>.cpp -o <span style="color:#66d9ef">$(</span>basename $@<span style="color:#66d9ef">)</span> <span style="color:#ae81ff">\
-</span><span style="color:#ae81ff"></span>		-CFLAGS <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>SDL_CFLAGS<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span> -LDFLAGS <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>SDL_LDFLAGS<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>
-
-<span style="color:#a6e22e">all</span><span style="color:#f92672">:</span> square flag_ethiopia flag_sweden colour
-
-<span style="color:#a6e22e">clean</span><span style="color:#f92672">:</span>
-	rm -rf ./obj_dir
-
-<span style="color:#a6e22e">.PHONY</span><span style="color:#f92672">:</span> all clean
-</code></pre></div><p>With the Makefile in place you can simply run <code>make square</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-makefile" data-lang="makefile"><span style="display:flex;"><span>SDL_CFLAGS <span style="color:#f92672">=</span> <span style="color:#e6db74">`</span>sdl2-config --cflags<span style="color:#e6db74">`</span>
+</span></span><span style="display:flex;"><span>SDL_LDFLAGS <span style="color:#f92672">=</span> <span style="color:#e6db74">`</span>sdl2-config --libs<span style="color:#e6db74">`</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">square</span><span style="color:#f92672">:</span> square.exe
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">flag_ethiopia</span><span style="color:#f92672">:</span> flag_ethiopia.exe
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">flag_sweden</span><span style="color:#f92672">:</span> flag_sweden.exe
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">colour</span><span style="color:#f92672">:</span> colour.exe
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">%.exe</span><span style="color:#f92672">:</span> %.mk
+</span></span><span style="display:flex;"><span>	make -C ./obj_dir -f Vtop_$&lt;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">%.mk</span><span style="color:#f92672">:</span> top_%.sv
+</span></span><span style="display:flex;"><span>	verilator -I../ -cc $&lt; --exe main_<span style="color:#66d9ef">$(</span>basename $@<span style="color:#66d9ef">)</span>.cpp -o <span style="color:#66d9ef">$(</span>basename $@<span style="color:#66d9ef">)</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>		-CFLAGS <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>SDL_CFLAGS<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span> -LDFLAGS <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>SDL_LDFLAGS<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">all</span><span style="color:#f92672">:</span> square flag_ethiopia flag_sweden colour
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">clean</span><span style="color:#f92672">:</span>
+</span></span><span style="display:flex;"><span>	rm -rf ./obj_dir
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">.PHONY</span><span style="color:#f92672">:</span> all clean
+</span></span></code></pre></div><p>With the Makefile in place you can simply run <code>make square</code>.</p>
 <h3 id="simulation-running">Simulation Running</h3>
 <p>The simulation looks like this:</p>
 <p><img src="/img/posts/fpga-graphics/square.png" alt="Simulating Square" title="Hip to be square!"></p>
@@ -559,7 +559,7 @@ My hardware designs are open source, and my blog is advert free.</p>
 </blockquote>
 <h2 id="taking-it-further">Taking it Further</h2>
 <p>I&rsquo;m gradually adding simulations for my existing designs; for example, check out <a href="https://github.com/projf/projf-explore/tree/master/graphics/pong/sim">Pong Simulation</a>.</p>
-<p>To learn more about Verilator, read the <a href="https://verilator.org/guide/latest/verilating.html">Verilating User Guide</a> and check out my guide to <a href="/posts/verilog-lint-with-verilator/">Verilog Lint with Verilator</a>. To learn more about SDL, consult the <a href="https://wiki.libsdl.org/FrontPage">SDL Wiki</a> and <a href="https://lazyfoo.net/tutorials/SDL/index.php">Lazy Foo' Productions</a>.</p>
+<p>To learn more about Verilator, read the <a href="https://verilator.org/guide/latest/verilating.html">Verilating User Guide</a> and check out my guide to <a href="/posts/verilog-lint-with-verilator/">Verilog Lint with Verilator</a>. To learn more about SDL, consult the <a href="https://wiki.libsdl.org/FrontPage">SDL Wiki</a> and <a href="https://lazyfoo.net/tutorials/SDL/index.php">Lazy Foo&rsquo; Productions</a>.</p>
 <p>Find inspiration from these projects simulating graphics:</p>
 <ul>
 <li><a href="https://github.com/mattvenn/vga-clock">VGA Clock</a> by Matthew Venn - show the time on a 640x480 VGA display</li>
@@ -575,20 +575,6 @@ My hardware designs are open source, and my blog is advert free.</p>
 <h2 id="acknowledgements">Acknowledgements</h2>
 <p>Thanks to <a href="https://github.com/ddribin">Dave Dribin</a> for improving the performance of these designs and adding the framerate reporting.</p>
 
-      
-      <div class="related">
-
-<h3>Similar articles:</h3>
-<ul>
-	
-	<li><a href="/posts/verilog-lint-with-verilator/">Verilog Lint with Verilator</a></li>
-	
-	<li><a href="/posts/building-ice40-fpga-toolchain/">iCE40 FPGA Toolchain on Linux</a></li>
-	
-	<li><a href="/posts/fpga-dev-ubuntu-20.04/">FPGA Tooling on Ubuntu 20.04</a></li>
-	
-</ul>
-</div>
       
     </div>
     

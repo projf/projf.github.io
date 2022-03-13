@@ -164,44 +164,44 @@ My hardware designs are open source, and my blog is advert free.</p>
 </ul>
 <p>See the <a href="https://github.com/projf/projf-explore/tree/master/graphics/racing-the-beam">README</a> for build instructions.</p>
 <p>The following Verilog snippet shows the logic that generates the bars:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#75715e">// screen dimensions (must match display_inst)
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">localparam</span> V_RES_FULL <span style="color:#f92672">=</span> <span style="color:#ae81ff">525</span>;  <span style="color:#75715e">// vertical screen resolution (including blanking)
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">localparam</span> H_RES      <span style="color:#f92672">=</span> <span style="color:#ae81ff">640</span>;  <span style="color:#75715e">// horizontal screen resolution
-</span><span style="color:#75715e"></span>
-<span style="color:#66d9ef">localparam</span> START_COLR <span style="color:#f92672">=</span> <span style="color:#ae81ff">12&#39;h126</span>;  <span style="color:#75715e">// bar start colour (blue: 12&#39;h126) (gold: 12&#39;h640)
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">localparam</span> COLR_NUM   <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>;       <span style="color:#75715e">// colours steps in each bar (don&#39;t overflow)
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">localparam</span> LINE_NUM   <span style="color:#f92672">=</span>  <span style="color:#ae81ff">2</span>;       <span style="color:#75715e">// lines of each colour
-</span><span style="color:#75715e"></span>
-<span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] bar_colr;  <span style="color:#75715e">// 12 bit colour (4 bits per channel)
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> bar_inc;  <span style="color:#75715e">// increase (or decrease) brightness
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> [$clog2(COLR_NUM)<span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_colr;  <span style="color:#75715e">// count colours in each bar
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> [$clog2(LINE_NUM)<span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_line;  <span style="color:#75715e">// count lines of each colour
-</span><span style="color:#75715e"></span>
-<span style="color:#75715e">// update colour for each screen line
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
-    <span style="color:#66d9ef">if</span> (sx <span style="color:#f92672">==</span> H_RES) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// on each screen line at the start of blanking
-</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> V_RES_FULL<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// reset colour on last line of screen
-</span><span style="color:#75715e"></span>            bar_colr <span style="color:#f92672">&lt;=</span> START_COLR;
-            bar_inc <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// start by increasing brightness
-</span><span style="color:#75715e"></span>            cnt_colr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-            cnt_line <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (cnt_line <span style="color:#f92672">==</span> LINE_NUM<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// colour complete
-</span><span style="color:#75715e"></span>            cnt_line <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-            <span style="color:#66d9ef">if</span> (cnt_colr <span style="color:#f92672">==</span> COLR_NUM<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// switch increase/decrease
-</span><span style="color:#75715e"></span>                bar_inc <span style="color:#f92672">&lt;=</span> <span style="color:#f92672">~</span>bar_inc;
-                cnt_colr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
-                bar_colr <span style="color:#f92672">&lt;=</span> (bar_inc) <span style="color:#f92672">?</span> bar_colr <span style="color:#f92672">+</span> <span style="color:#ae81ff">12&#39;h111</span> <span style="color:#f92672">:</span> bar_colr <span style="color:#f92672">-</span> <span style="color:#ae81ff">12&#39;h111</span>;
-                cnt_colr <span style="color:#f92672">&lt;=</span> cnt_colr <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-            <span style="color:#66d9ef">end</span>
-        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> cnt_line <span style="color:#f92672">&lt;=</span> cnt_line <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-    <span style="color:#66d9ef">end</span>
-<span style="color:#66d9ef">end</span>
-
-<span style="color:#75715e">// separate colour channels
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] paint_r, paint_g, paint_b;
-<span style="color:#66d9ef">always_comb</span> {paint_r, paint_g, paint_b} <span style="color:#f92672">=</span> bar_colr;
-</code></pre></div><p>As discussed in <a href="/posts/fpga-graphics/#12-bit-colour">Beginning FPGA Graphics</a>, we represent colours using a 12-bit hex triplet. For example, <code>#FF0</code> is orange, <code>#137</code> dark green, and <code>#FFF</code> is white.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#75715e">// screen dimensions (must match display_inst)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">localparam</span> V_RES_FULL <span style="color:#f92672">=</span> <span style="color:#ae81ff">525</span>;  <span style="color:#75715e">// vertical screen resolution (including blanking)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">localparam</span> H_RES      <span style="color:#f92672">=</span> <span style="color:#ae81ff">640</span>;  <span style="color:#75715e">// horizontal screen resolution
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">localparam</span> START_COLR <span style="color:#f92672">=</span> <span style="color:#ae81ff">12&#39;h126</span>;  <span style="color:#75715e">// bar start colour (blue: 12&#39;h126) (gold: 12&#39;h640)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">localparam</span> COLR_NUM   <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>;       <span style="color:#75715e">// colours steps in each bar (don&#39;t overflow)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">localparam</span> LINE_NUM   <span style="color:#f92672">=</span>  <span style="color:#ae81ff">2</span>;       <span style="color:#75715e">// lines of each colour
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] bar_colr;  <span style="color:#75715e">// 12 bit colour (4 bits per channel)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> bar_inc;  <span style="color:#75715e">// increase (or decrease) brightness
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> [$clog2(COLR_NUM)<span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_colr;  <span style="color:#75715e">// count colours in each bar
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> [$clog2(LINE_NUM)<span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_line;  <span style="color:#75715e">// count lines of each colour
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// update colour for each screen line
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (sx <span style="color:#f92672">==</span> H_RES) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// on each screen line at the start of blanking
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> V_RES_FULL<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// reset colour on last line of screen
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            bar_colr <span style="color:#f92672">&lt;=</span> START_COLR;
+</span></span><span style="display:flex;"><span>            bar_inc <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// start by increasing brightness
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            cnt_colr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>            cnt_line <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (cnt_line <span style="color:#f92672">==</span> LINE_NUM<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// colour complete
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            cnt_line <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> (cnt_colr <span style="color:#f92672">==</span> COLR_NUM<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// switch increase/decrease
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                bar_inc <span style="color:#f92672">&lt;=</span> <span style="color:#f92672">~</span>bar_inc;
+</span></span><span style="display:flex;"><span>                cnt_colr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>                bar_colr <span style="color:#f92672">&lt;=</span> (bar_inc) <span style="color:#f92672">?</span> bar_colr <span style="color:#f92672">+</span> <span style="color:#ae81ff">12&#39;h111</span> <span style="color:#f92672">:</span> bar_colr <span style="color:#f92672">-</span> <span style="color:#ae81ff">12&#39;h111</span>;
+</span></span><span style="display:flex;"><span>                cnt_colr <span style="color:#f92672">&lt;=</span> cnt_colr <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> cnt_line <span style="color:#f92672">&lt;=</span> cnt_line <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// separate colour channels
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] paint_r, paint_g, paint_b;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">always_comb</span> {paint_r, paint_g, paint_b} <span style="color:#f92672">=</span> bar_colr;
+</span></span></code></pre></div><p>As discussed in <a href="/posts/fpga-graphics/#12-bit-colour">Beginning FPGA Graphics</a>, we represent colours using a 12-bit hex triplet. For example, <code>#FF0</code> is orange, <code>#137</code> dark green, and <code>#FFF</code> is white.</p>
 <p>Adding <code>0x111</code> to a colour increases the brightness of red, green, and blue by one step. To avoid ugly colour jumps, we mustn&rsquo;t let any colour channel overflow. Our start colour is <code>12'h126</code> (dark blue), so we use ten colour steps, finishing with <code>12'hABF</code> (pale blue). We then reverse direction, subtracting <code>0x111</code> from the colour until we return to dark blue.</p>
 <p>Try replacing the start colour with <code>12'h640</code>.</p>
 <h2 id="hitomezashi">Hitomezashi</h2>
@@ -214,35 +214,35 @@ My hardware designs are open source, and my blog is advert free.</p>
 <li>Verilator Sim: <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/racing-the-beam/sim/top_hitomezashi.sv">sim/top_hitomezashi.sv</a></strong></li>
 </ul>
 <p>This pattern requires only equality and boolean operators:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#75715e">// stitch start values: big-endian vector, so we can write left to right
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">0</span><span style="color:#f92672">:</span><span style="color:#ae81ff">39</span>] v_start;  <span style="color:#75715e">// 40 vertical lines
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">0</span><span style="color:#f92672">:</span><span style="color:#ae81ff">29</span>] h_start;  <span style="color:#75715e">// 30 horizontal lines
-</span><span style="color:#75715e"></span>
-<span style="color:#66d9ef">initial</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// random start values
-</span><span style="color:#75715e"></span>    v_start <span style="color:#f92672">=</span> <span style="color:#ae81ff">40</span><span style="color:#ae81ff">&#39;b01100</span>_00101_00110_10011_10101_10101_01111_01101;
-    h_start <span style="color:#f92672">=</span> <span style="color:#ae81ff">30</span><span style="color:#ae81ff">&#39;b10111</span>_01001_00001_10100_00111_01010;
-<span style="color:#66d9ef">end</span>
-
-<span style="color:#75715e">// paint stitch pattern with 16x16 pixel grid
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> stitch;
-<span style="color:#66d9ef">logic</span> v_line, v_on;
-<span style="color:#66d9ef">logic</span> h_line, h_on;
-<span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-    v_line <span style="color:#f92672">=</span> (sx[<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] <span style="color:#f92672">==</span> <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;b0000</span>);
-    h_line <span style="color:#f92672">=</span> (sy[<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] <span style="color:#f92672">==</span> <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;b0000</span>);
-    v_on <span style="color:#f92672">=</span> sy[<span style="color:#ae81ff">4</span>] <span style="color:#f92672">^</span> v_start[sx[<span style="color:#ae81ff">9</span><span style="color:#f92672">:</span><span style="color:#ae81ff">4</span>]];
-    h_on <span style="color:#f92672">=</span> sx[<span style="color:#ae81ff">4</span>] <span style="color:#f92672">^</span> h_start[sy[<span style="color:#ae81ff">8</span><span style="color:#f92672">:</span><span style="color:#ae81ff">4</span>]];
-    stitch <span style="color:#f92672">=</span> (v_line <span style="color:#f92672">&amp;&amp;</span> v_on) <span style="color:#f92672">||</span> (h_line <span style="color:#f92672">&amp;&amp;</span> h_on);
-<span style="color:#66d9ef">end</span>
-
-<span style="color:#75715e">// paint colours: yellow lines, blue background
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] paint_r, paint_g, paint_b;
-<span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-    paint_r <span style="color:#f92672">=</span> (stitch) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h1</span>;
-    paint_g <span style="color:#f92672">=</span> (stitch) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hC</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h3</span>;
-    paint_b <span style="color:#f92672">=</span> (stitch) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h0</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h7</span>;
-<span style="color:#66d9ef">end</span>
-</code></pre></div><p>We draw a line every 16 pixels: 640x480 divided by 16 is 40x30. 40 requires five bits to represent it, while 30 requires only four; otherwise, the horizontal and vertical designs are the same.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#75715e">// stitch start values: big-endian vector, so we can write left to right
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">0</span><span style="color:#f92672">:</span><span style="color:#ae81ff">39</span>] v_start;  <span style="color:#75715e">// 40 vertical lines
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">0</span><span style="color:#f92672">:</span><span style="color:#ae81ff">29</span>] h_start;  <span style="color:#75715e">// 30 horizontal lines
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">initial</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// random start values
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    v_start <span style="color:#f92672">=</span> <span style="color:#ae81ff">40</span><span style="color:#ae81ff">&#39;b01100</span>_00101_00110_10011_10101_10101_01111_01101;
+</span></span><span style="display:flex;"><span>    h_start <span style="color:#f92672">=</span> <span style="color:#ae81ff">30</span><span style="color:#ae81ff">&#39;b10111</span>_01001_00001_10100_00111_01010;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// paint stitch pattern with 16x16 pixel grid
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> stitch;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">logic</span> v_line, v_on;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">logic</span> h_line, h_on;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>    v_line <span style="color:#f92672">=</span> (sx[<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] <span style="color:#f92672">==</span> <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;b0000</span>);
+</span></span><span style="display:flex;"><span>    h_line <span style="color:#f92672">=</span> (sy[<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] <span style="color:#f92672">==</span> <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;b0000</span>);
+</span></span><span style="display:flex;"><span>    v_on <span style="color:#f92672">=</span> sy[<span style="color:#ae81ff">4</span>] <span style="color:#f92672">^</span> v_start[sx[<span style="color:#ae81ff">9</span><span style="color:#f92672">:</span><span style="color:#ae81ff">4</span>]];
+</span></span><span style="display:flex;"><span>    h_on <span style="color:#f92672">=</span> sx[<span style="color:#ae81ff">4</span>] <span style="color:#f92672">^</span> h_start[sy[<span style="color:#ae81ff">8</span><span style="color:#f92672">:</span><span style="color:#ae81ff">4</span>]];
+</span></span><span style="display:flex;"><span>    stitch <span style="color:#f92672">=</span> (v_line <span style="color:#f92672">&amp;&amp;</span> v_on) <span style="color:#f92672">||</span> (h_line <span style="color:#f92672">&amp;&amp;</span> h_on);
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// paint colours: yellow lines, blue background
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] paint_r, paint_g, paint_b;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>    paint_r <span style="color:#f92672">=</span> (stitch) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h1</span>;
+</span></span><span style="display:flex;"><span>    paint_g <span style="color:#f92672">=</span> (stitch) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hC</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h3</span>;
+</span></span><span style="display:flex;"><span>    paint_b <span style="color:#f92672">=</span> (stitch) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h0</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h7</span>;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">end</span>
+</span></span></code></pre></div><p>We draw a line every 16 pixels: 640x480 divided by 16 is 40x30. 40 requires five bits to represent it, while 30 requires only four; otherwise, the horizontal and vertical designs are the same.</p>
 <p>The initial block creates a simple ROM to hold our start values. I generated these start values randomly; what happens if you set the start value to all zeros or all ones?</p>
 <p>This design makes good use of XOR (exclusive or), denoted by the caret symbol <code>^</code>.</p>
 <h3 id="missing-pixels">Missing Pixels</h3>
@@ -261,45 +261,45 @@ My hardware designs are open source, and my blog is advert free.</p>
 <li>Verilator Sim: <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/racing-the-beam/sim/top_hello.sv">sim/top_hello.sv</a></strong></li>
 </ul>
 <p>This design is little more than an array lookup:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#75715e">// bitmap: big-endian vector, so we can write pixels left to right
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">0</span><span style="color:#f92672">:</span><span style="color:#ae81ff">19</span>] bmap [<span style="color:#ae81ff">15</span>];  <span style="color:#75715e">// 20 pixels by 15 lines
-</span><span style="color:#75715e"></span>
-    <span style="color:#66d9ef">initial</span> <span style="color:#66d9ef">begin</span>
-        bmap[<span style="color:#ae81ff">0</span>]  <span style="color:#f92672">=</span> <span style="color:#ae81ff">20</span><span style="color:#ae81ff">&#39;b1010</span>_1110_1000_1000_0110;
-        bmap[<span style="color:#ae81ff">1</span>]  <span style="color:#f92672">=</span> <span style="color:#ae81ff">20</span><span style="color:#ae81ff">&#39;b1010</span>_1000_1000_1000_1010;
-        bmap[<span style="color:#ae81ff">2</span>]  <span style="color:#f92672">=</span> <span style="color:#ae81ff">20</span><span style="color:#ae81ff">&#39;b1110</span>_1100_1000_1000_1010;
-        bmap[<span style="color:#ae81ff">3</span>]  <span style="color:#f92672">=</span> <span style="color:#ae81ff">20</span><span style="color:#ae81ff">&#39;b1010</span>_1000_1000_1000_1010;
-        bmap[<span style="color:#ae81ff">4</span>]  <span style="color:#f92672">=</span> <span style="color:#ae81ff">20</span><span style="color:#ae81ff">&#39;b1010</span>_1110_1110_1110_1100;
-        bmap[<span style="color:#ae81ff">5</span>]  <span style="color:#f92672">=</span> <span style="color:#ae81ff">20</span><span style="color:#ae81ff">&#39;b0000</span>_0000_0000_0000_0000;
-        bmap[<span style="color:#ae81ff">6</span>]  <span style="color:#f92672">=</span> <span style="color:#ae81ff">20</span><span style="color:#ae81ff">&#39;b1010</span>_0110_1110_1000_1100;
-        bmap[<span style="color:#ae81ff">7</span>]  <span style="color:#f92672">=</span> <span style="color:#ae81ff">20</span><span style="color:#ae81ff">&#39;b1010</span>_1010_1010_1000_1010;
-        bmap[<span style="color:#ae81ff">8</span>]  <span style="color:#f92672">=</span> <span style="color:#ae81ff">20</span><span style="color:#ae81ff">&#39;b1010</span>_1010_1100_1000_1010;
-        bmap[<span style="color:#ae81ff">9</span>]  <span style="color:#f92672">=</span> <span style="color:#ae81ff">20</span><span style="color:#ae81ff">&#39;b1110</span>_1010_1010_1000_1010;
-        bmap[<span style="color:#ae81ff">10</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">20</span><span style="color:#ae81ff">&#39;b1110</span>_1100_1010_1110_1110;
-        bmap[<span style="color:#ae81ff">11</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">20</span><span style="color:#ae81ff">&#39;b0000</span>_0000_0000_0000_0000;
-        bmap[<span style="color:#ae81ff">12</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">20</span><span style="color:#ae81ff">&#39;b0000</span>_0000_0000_0000_0000;
-        bmap[<span style="color:#ae81ff">13</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">20</span><span style="color:#ae81ff">&#39;b0000</span>_0000_0000_0000_0000;
-        bmap[<span style="color:#ae81ff">14</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">20</span><span style="color:#ae81ff">&#39;b0000</span>_0000_0000_0000_0000;
-    <span style="color:#66d9ef">end</span>
-
-    <span style="color:#75715e">// paint at 32x scale in active screen area
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> picture;
-    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">4</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x;  <span style="color:#75715e">// 20 columns need five bits
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] y;  <span style="color:#75715e">// 15 rows need four bits
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        x <span style="color:#f92672">=</span> sx[<span style="color:#ae81ff">9</span><span style="color:#f92672">:</span><span style="color:#ae81ff">5</span>];  <span style="color:#75715e">// every 32 horizontal pixels
-</span><span style="color:#75715e"></span>        y <span style="color:#f92672">=</span> sy[<span style="color:#ae81ff">8</span><span style="color:#f92672">:</span><span style="color:#ae81ff">5</span>];  <span style="color:#75715e">// every 32 vertical pixels
-</span><span style="color:#75715e"></span>        picture <span style="color:#f92672">=</span> de <span style="color:#f92672">?</span> bmap[y][x] <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// look up pixel (unless we&#39;re in blanking)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">end</span>
-
-    <span style="color:#75715e">// paint colours: yellow lines, blue background
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] paint_r, paint_g, paint_b;
-    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        paint_r <span style="color:#f92672">=</span> (picture) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h1</span>;
-        paint_g <span style="color:#f92672">=</span> (picture) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hC</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h3</span>;
-        paint_b <span style="color:#f92672">=</span> (picture) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h0</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h7</span>;
-    <span style="color:#66d9ef">end</span>
-</code></pre></div><p>Typically, vectors are defined <code>[19:0]</code> (little-endian) rather than <code>[0:19]</code> (big-endian). We chose big-endian, so we can write the initial block pixels left to right.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span>    <span style="color:#75715e">// bitmap: big-endian vector, so we can write pixels left to right
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">0</span><span style="color:#f92672">:</span><span style="color:#ae81ff">19</span>] bmap [<span style="color:#ae81ff">15</span>];  <span style="color:#75715e">// 20 pixels by 15 lines
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">initial</span> <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>        bmap[<span style="color:#ae81ff">0</span>]  <span style="color:#f92672">=</span> <span style="color:#ae81ff">20</span><span style="color:#ae81ff">&#39;b1010</span>_1110_1000_1000_0110;
+</span></span><span style="display:flex;"><span>        bmap[<span style="color:#ae81ff">1</span>]  <span style="color:#f92672">=</span> <span style="color:#ae81ff">20</span><span style="color:#ae81ff">&#39;b1010</span>_1000_1000_1000_1010;
+</span></span><span style="display:flex;"><span>        bmap[<span style="color:#ae81ff">2</span>]  <span style="color:#f92672">=</span> <span style="color:#ae81ff">20</span><span style="color:#ae81ff">&#39;b1110</span>_1100_1000_1000_1010;
+</span></span><span style="display:flex;"><span>        bmap[<span style="color:#ae81ff">3</span>]  <span style="color:#f92672">=</span> <span style="color:#ae81ff">20</span><span style="color:#ae81ff">&#39;b1010</span>_1000_1000_1000_1010;
+</span></span><span style="display:flex;"><span>        bmap[<span style="color:#ae81ff">4</span>]  <span style="color:#f92672">=</span> <span style="color:#ae81ff">20</span><span style="color:#ae81ff">&#39;b1010</span>_1110_1110_1110_1100;
+</span></span><span style="display:flex;"><span>        bmap[<span style="color:#ae81ff">5</span>]  <span style="color:#f92672">=</span> <span style="color:#ae81ff">20</span><span style="color:#ae81ff">&#39;b0000</span>_0000_0000_0000_0000;
+</span></span><span style="display:flex;"><span>        bmap[<span style="color:#ae81ff">6</span>]  <span style="color:#f92672">=</span> <span style="color:#ae81ff">20</span><span style="color:#ae81ff">&#39;b1010</span>_0110_1110_1000_1100;
+</span></span><span style="display:flex;"><span>        bmap[<span style="color:#ae81ff">7</span>]  <span style="color:#f92672">=</span> <span style="color:#ae81ff">20</span><span style="color:#ae81ff">&#39;b1010</span>_1010_1010_1000_1010;
+</span></span><span style="display:flex;"><span>        bmap[<span style="color:#ae81ff">8</span>]  <span style="color:#f92672">=</span> <span style="color:#ae81ff">20</span><span style="color:#ae81ff">&#39;b1010</span>_1010_1100_1000_1010;
+</span></span><span style="display:flex;"><span>        bmap[<span style="color:#ae81ff">9</span>]  <span style="color:#f92672">=</span> <span style="color:#ae81ff">20</span><span style="color:#ae81ff">&#39;b1110</span>_1010_1010_1000_1010;
+</span></span><span style="display:flex;"><span>        bmap[<span style="color:#ae81ff">10</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">20</span><span style="color:#ae81ff">&#39;b1110</span>_1100_1010_1110_1110;
+</span></span><span style="display:flex;"><span>        bmap[<span style="color:#ae81ff">11</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">20</span><span style="color:#ae81ff">&#39;b0000</span>_0000_0000_0000_0000;
+</span></span><span style="display:flex;"><span>        bmap[<span style="color:#ae81ff">12</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">20</span><span style="color:#ae81ff">&#39;b0000</span>_0000_0000_0000_0000;
+</span></span><span style="display:flex;"><span>        bmap[<span style="color:#ae81ff">13</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">20</span><span style="color:#ae81ff">&#39;b0000</span>_0000_0000_0000_0000;
+</span></span><span style="display:flex;"><span>        bmap[<span style="color:#ae81ff">14</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">20</span><span style="color:#ae81ff">&#39;b0000</span>_0000_0000_0000_0000;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// paint at 32x scale in active screen area
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> picture;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">4</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x;  <span style="color:#75715e">// 20 columns need five bits
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] y;  <span style="color:#75715e">// 15 rows need four bits
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>        x <span style="color:#f92672">=</span> sx[<span style="color:#ae81ff">9</span><span style="color:#f92672">:</span><span style="color:#ae81ff">5</span>];  <span style="color:#75715e">// every 32 horizontal pixels
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        y <span style="color:#f92672">=</span> sy[<span style="color:#ae81ff">8</span><span style="color:#f92672">:</span><span style="color:#ae81ff">5</span>];  <span style="color:#75715e">// every 32 vertical pixels
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        picture <span style="color:#f92672">=</span> de <span style="color:#f92672">?</span> bmap[y][x] <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// look up pixel (unless we&#39;re in blanking)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// paint colours: yellow lines, blue background
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] paint_r, paint_g, paint_b;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>        paint_r <span style="color:#f92672">=</span> (picture) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h1</span>;
+</span></span><span style="display:flex;"><span>        paint_g <span style="color:#f92672">=</span> (picture) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hC</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h3</span>;
+</span></span><span style="display:flex;"><span>        paint_b <span style="color:#f92672">=</span> (picture) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;h0</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h7</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
+</span></span></code></pre></div><p>Typically, vectors are defined <code>[19:0]</code> (little-endian) rather than <code>[0:19]</code> (big-endian). We chose big-endian, so we can write the initial block pixels left to right.</p>
 <p>We cover bitmap graphics in detail later in this series.</p>
 <h2 id="colour-cycle">Colour Cycle</h2>
 <p>So far, we&rsquo;ve created static designs. This demo takes the colour gradient from <a href="/posts/fpga-graphics/#colour-test">Beginning FPGA Graphics</a> and cycles through all 16 blue levels. This demo lets you see all 4,096 colours our graphics output supports.</p>
@@ -311,34 +311,34 @@ My hardware designs are open source, and my blog is advert free.</p>
 <li>Verilator Sim: <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/racing-the-beam/sim/top_colour_cycle.sv">sim/top_colour_cycle.sv</a></strong></li>
 </ul>
 <p>This design is built around a frame counter:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#75715e">// screen dimensions (must match display_inst)
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">localparam</span> V_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">480</span>;  <span style="color:#75715e">// vertical screen resolution
-</span><span style="color:#75715e"></span>
-<span style="color:#66d9ef">logic</span> frame;  <span style="color:#75715e">// high for one clock tick at the start of vertical blanking
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">always_comb</span> frame <span style="color:#f92672">=</span> (sy <span style="color:#f92672">==</span> V_RES <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>);
-
-<span style="color:#75715e">// update the colour level every N frames
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">localparam</span> FRAME_NUM <span style="color:#f92672">=</span> <span style="color:#ae81ff">30</span>;  <span style="color:#75715e">// frames between colour level change
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> [$clog2(FRAME_NUM)<span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_frame;  <span style="color:#75715e">// frame counter
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] colr_level;  <span style="color:#75715e">// level of colour being cycled
-</span><span style="color:#75715e"></span>
-<span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
-    <span style="color:#66d9ef">if</span> (frame) <span style="color:#66d9ef">begin</span>
-        <span style="color:#66d9ef">if</span> (cnt_frame <span style="color:#f92672">==</span> FRAME_NUM<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// every FRAME_NUM frames
-</span><span style="color:#75715e"></span>            cnt_frame <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-            colr_level <span style="color:#f92672">&lt;=</span> colr_level <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> cnt_frame <span style="color:#f92672">&lt;=</span> cnt_frame <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-    <span style="color:#66d9ef">end</span>
-<span style="color:#66d9ef">end</span>
-
-<span style="color:#75715e">// determine colour from screen position
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] paint_r, paint_g, paint_b;
-<span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-    paint_r <span style="color:#f92672">=</span> sx[<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">4</span>];  <span style="color:#75715e">// 16 horizontal pixels of each red level
-</span><span style="color:#75715e"></span>    paint_g <span style="color:#f92672">=</span> sy[<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">4</span>];  <span style="color:#75715e">// 16 vertical pixels of each green level
-</span><span style="color:#75715e"></span>    paint_b <span style="color:#f92672">=</span> colr_level;  <span style="color:#75715e">// blue level changes over time
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">end</span>
-</code></pre></div><p>Once per frame, at the start of vertical blanking, we update a counter, <code>cnt_frame</code>. We determine the width of the counter using <code>$clog2</code>, so it&rsquo;s always the correct size.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#75715e">// screen dimensions (must match display_inst)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">localparam</span> V_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">480</span>;  <span style="color:#75715e">// vertical screen resolution
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">logic</span> frame;  <span style="color:#75715e">// high for one clock tick at the start of vertical blanking
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">always_comb</span> frame <span style="color:#f92672">=</span> (sy <span style="color:#f92672">==</span> V_RES <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// update the colour level every N frames
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">localparam</span> FRAME_NUM <span style="color:#f92672">=</span> <span style="color:#ae81ff">30</span>;  <span style="color:#75715e">// frames between colour level change
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> [$clog2(FRAME_NUM)<span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_frame;  <span style="color:#75715e">// frame counter
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] colr_level;  <span style="color:#75715e">// level of colour being cycled
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (frame) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (cnt_frame <span style="color:#f92672">==</span> FRAME_NUM<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// every FRAME_NUM frames
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            cnt_frame <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>            colr_level <span style="color:#f92672">&lt;=</span> colr_level <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> cnt_frame <span style="color:#f92672">&lt;=</span> cnt_frame <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// determine colour from screen position
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] paint_r, paint_g, paint_b;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>    paint_r <span style="color:#f92672">=</span> sx[<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">4</span>];  <span style="color:#75715e">// 16 horizontal pixels of each red level
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    paint_g <span style="color:#f92672">=</span> sy[<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">4</span>];  <span style="color:#75715e">// 16 vertical pixels of each green level
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    paint_b <span style="color:#f92672">=</span> colr_level;  <span style="color:#75715e">// blue level changes over time
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">end</span>
+</span></span></code></pre></div><p>Once per frame, at the start of vertical blanking, we update a counter, <code>cnt_frame</code>. We determine the width of the counter using <code>$clog2</code>, so it&rsquo;s always the correct size.</p>
 <p>I&rsquo;ve chosen to update the colour every 30 frames (0.5 seconds). Change the value of <code>FRAME_NUM</code> to set the cycle speed.</p>
 <p>When the blue intensity reaches <code>0xF</code>, it automatically overflows to <code>0x0</code>, creating a disconcerting jump in the blue level. Try updating the design, so the blue level smoothly falls and rises; you can use the <a href="#raster-bars">raster bars</a> design for inspiration.</p>
 <h2 id="bounce">Bounce</h2>
@@ -352,71 +352,71 @@ My hardware designs are open source, and my blog is advert free.</p>
 </ul>
 <p>On the surface, bouncing seems simple: reverse direction when we hit an edge. In practice, it&rsquo;s a little more complex: we need to account for the square&rsquo;s size and speed.</p>
 <p>I&rsquo;ve chosen to draw the square at the edge of the screen, irrespective of its speed.</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#75715e">// screen dimensions (must match display_inst)
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">localparam</span> H_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">640</span>;  <span style="color:#75715e">// horizontal screen resolution
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">localparam</span> V_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">480</span>;  <span style="color:#75715e">// vertical screen resolution
-</span><span style="color:#75715e"></span>
-<span style="color:#66d9ef">logic</span> frame;  <span style="color:#75715e">// high for one clock tick at the start of vertical blanking
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">always_comb</span> frame <span style="color:#f92672">=</span> (sy <span style="color:#f92672">==</span> V_RES <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>);
-
-<span style="color:#75715e">// frame counter lets us to slow down the action
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">localparam</span> FRAME_NUM <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// slow-mo: animate every N frames
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> [$clog2(FRAME_NUM)<span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_frame;  <span style="color:#75715e">// frame counter
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
-    <span style="color:#66d9ef">if</span> (frame) cnt_frame <span style="color:#f92672">&lt;=</span> (cnt_frame <span style="color:#f92672">==</span> FRAME_NUM<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#f92672">?</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">:</span> cnt_frame <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-<span style="color:#66d9ef">end</span>
-
-<span style="color:#75715e">// square parameters
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">localparam</span> Q_SIZE <span style="color:#f92672">=</span> <span style="color:#ae81ff">200</span>;   <span style="color:#75715e">// size in pixels
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] qx, qy;  <span style="color:#75715e">// position (origin at top left)
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> qdx, qdy;            <span style="color:#75715e">// direction: 0 is right/down
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] qs <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span>;  <span style="color:#75715e">// speed in pixels/frame
-</span><span style="color:#75715e"></span>
-<span style="color:#75715e">// update square position once per frame
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
-    <span style="color:#66d9ef">if</span> (frame <span style="color:#f92672">&amp;&amp;</span> cnt_frame <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">begin</span>
-        <span style="color:#75715e">// horizontal position
-</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (qdx <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// moving right
-</span><span style="color:#75715e"></span>            <span style="color:#66d9ef">if</span> (qx <span style="color:#f92672">+</span> Q_SIZE <span style="color:#f92672">+</span> qs <span style="color:#f92672">&gt;=</span> H_RES<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// hitting right of screen?
-</span><span style="color:#75715e"></span>                qx <span style="color:#f92672">&lt;=</span> H_RES <span style="color:#f92672">-</span> Q_SIZE <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// move right as far as we can
-</span><span style="color:#75715e"></span>                qdx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// move left next frame
-</span><span style="color:#75715e"></span>            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> qx <span style="color:#f92672">&lt;=</span> qx <span style="color:#f92672">+</span> qs;  <span style="color:#75715e">// continue moving right
-</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// moving left
-</span><span style="color:#75715e"></span>            <span style="color:#66d9ef">if</span> (qx <span style="color:#f92672">&lt;</span> qs) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// hitting left of screen?
-</span><span style="color:#75715e"></span>                qx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// move left as far as we can
-</span><span style="color:#75715e"></span>                qdx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// move right next frame
-</span><span style="color:#75715e"></span>            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> qx <span style="color:#f92672">&lt;=</span> qx <span style="color:#f92672">-</span> qs;  <span style="color:#75715e">// continue moving left
-</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">end</span>
-
-        <span style="color:#75715e">// vertical position
-</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (qdy <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// moving down
-</span><span style="color:#75715e"></span>            <span style="color:#66d9ef">if</span> (qy <span style="color:#f92672">+</span> Q_SIZE <span style="color:#f92672">+</span> qs <span style="color:#f92672">&gt;=</span> V_RES<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// hitting bottom of screen?
-</span><span style="color:#75715e"></span>                qy <span style="color:#f92672">&lt;=</span> V_RES <span style="color:#f92672">-</span> Q_SIZE <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// move down as far as we can
-</span><span style="color:#75715e"></span>                qdy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// move up next frame
-</span><span style="color:#75715e"></span>            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> qy <span style="color:#f92672">&lt;=</span> qy <span style="color:#f92672">+</span> qs;  <span style="color:#75715e">// continue moving down
-</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// moving up
-</span><span style="color:#75715e"></span>            <span style="color:#66d9ef">if</span> (qy <span style="color:#f92672">&lt;</span> qs) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// hitting top of screen?
-</span><span style="color:#75715e"></span>                qy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// move up as far as we can
-</span><span style="color:#75715e"></span>                qdy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// move down next frame
-</span><span style="color:#75715e"></span>            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> qy <span style="color:#f92672">&lt;=</span> qy <span style="color:#f92672">-</span> qs;  <span style="color:#75715e">// continue moving up
-</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">end</span>
-    <span style="color:#66d9ef">end</span>
-<span style="color:#66d9ef">end</span>
-
-<span style="color:#75715e">// define a square with screen coordinates
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> square;
-<span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-    square <span style="color:#f92672">=</span> (sx <span style="color:#f92672">&gt;=</span> qx) <span style="color:#f92672">&amp;&amp;</span> (sx <span style="color:#f92672">&lt;</span> qx <span style="color:#f92672">+</span> Q_SIZE) <span style="color:#f92672">&amp;&amp;</span> (sy <span style="color:#f92672">&gt;=</span> qy) <span style="color:#f92672">&amp;&amp;</span> (sy <span style="color:#f92672">&lt;</span> qy <span style="color:#f92672">+</span> Q_SIZE);
-<span style="color:#66d9ef">end</span>
-
-<span style="color:#75715e">// paint colours: white inside square, blue outside
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] paint_r, paint_g, paint_b;
-<span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-    paint_r <span style="color:#f92672">=</span> (square) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h1</span>;
-    paint_g <span style="color:#f92672">=</span> (square) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h3</span>;
-    paint_b <span style="color:#f92672">=</span> (square) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h7</span>;
-<span style="color:#66d9ef">end</span>
-</code></pre></div><p><em>ProTip: Our coordinates are unsigned, so <code>(qx &lt; 0)</code> is always true.</em></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#75715e">// screen dimensions (must match display_inst)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">localparam</span> H_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">640</span>;  <span style="color:#75715e">// horizontal screen resolution
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">localparam</span> V_RES <span style="color:#f92672">=</span> <span style="color:#ae81ff">480</span>;  <span style="color:#75715e">// vertical screen resolution
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">logic</span> frame;  <span style="color:#75715e">// high for one clock tick at the start of vertical blanking
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">always_comb</span> frame <span style="color:#f92672">=</span> (sy <span style="color:#f92672">==</span> V_RES <span style="color:#f92672">&amp;&amp;</span> sx <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// frame counter lets us to slow down the action
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">localparam</span> FRAME_NUM <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// slow-mo: animate every N frames
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> [$clog2(FRAME_NUM)<span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_frame;  <span style="color:#75715e">// frame counter
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (frame) cnt_frame <span style="color:#f92672">&lt;=</span> (cnt_frame <span style="color:#f92672">==</span> FRAME_NUM<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#f92672">?</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">:</span> cnt_frame <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// square parameters
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">localparam</span> Q_SIZE <span style="color:#f92672">=</span> <span style="color:#ae81ff">200</span>;   <span style="color:#75715e">// size in pixels
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] qx, qy;  <span style="color:#75715e">// position (origin at top left)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> qdx, qdy;            <span style="color:#75715e">// direction: 0 is right/down
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] qs <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span>;  <span style="color:#75715e">// speed in pixels/frame
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// update square position once per frame
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (frame <span style="color:#f92672">&amp;&amp;</span> cnt_frame <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// horizontal position
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (qdx <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// moving right
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#66d9ef">if</span> (qx <span style="color:#f92672">+</span> Q_SIZE <span style="color:#f92672">+</span> qs <span style="color:#f92672">&gt;=</span> H_RES<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// hitting right of screen?
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                qx <span style="color:#f92672">&lt;=</span> H_RES <span style="color:#f92672">-</span> Q_SIZE <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// move right as far as we can
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                qdx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// move left next frame
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> qx <span style="color:#f92672">&lt;=</span> qx <span style="color:#f92672">+</span> qs;  <span style="color:#75715e">// continue moving right
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// moving left
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#66d9ef">if</span> (qx <span style="color:#f92672">&lt;</span> qs) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// hitting left of screen?
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                qx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// move left as far as we can
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                qdx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// move right next frame
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> qx <span style="color:#f92672">&lt;=</span> qx <span style="color:#f92672">-</span> qs;  <span style="color:#75715e">// continue moving left
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// vertical position
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (qdy <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// moving down
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#66d9ef">if</span> (qy <span style="color:#f92672">+</span> Q_SIZE <span style="color:#f92672">+</span> qs <span style="color:#f92672">&gt;=</span> V_RES<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// hitting bottom of screen?
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                qy <span style="color:#f92672">&lt;=</span> V_RES <span style="color:#f92672">-</span> Q_SIZE <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// move down as far as we can
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                qdy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// move up next frame
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> qy <span style="color:#f92672">&lt;=</span> qy <span style="color:#f92672">+</span> qs;  <span style="color:#75715e">// continue moving down
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// moving up
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#66d9ef">if</span> (qy <span style="color:#f92672">&lt;</span> qs) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// hitting top of screen?
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                qy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// move up as far as we can
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                qdy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// move down next frame
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> qy <span style="color:#f92672">&lt;=</span> qy <span style="color:#f92672">-</span> qs;  <span style="color:#75715e">// continue moving up
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// define a square with screen coordinates
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> square;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>    square <span style="color:#f92672">=</span> (sx <span style="color:#f92672">&gt;=</span> qx) <span style="color:#f92672">&amp;&amp;</span> (sx <span style="color:#f92672">&lt;</span> qx <span style="color:#f92672">+</span> Q_SIZE) <span style="color:#f92672">&amp;&amp;</span> (sy <span style="color:#f92672">&gt;=</span> qy) <span style="color:#f92672">&amp;&amp;</span> (sy <span style="color:#f92672">&lt;</span> qy <span style="color:#f92672">+</span> Q_SIZE);
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// paint colours: white inside square, blue outside
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] paint_r, paint_g, paint_b;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>    paint_r <span style="color:#f92672">=</span> (square) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h1</span>;
+</span></span><span style="display:flex;"><span>    paint_g <span style="color:#f92672">=</span> (square) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h3</span>;
+</span></span><span style="display:flex;"><span>    paint_b <span style="color:#f92672">=</span> (square) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4&#39;hF</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4&#39;h7</span>;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">end</span>
+</span></span></code></pre></div><p><em>ProTip: Our coordinates are unsigned, so <code>(qx &lt; 0)</code> is always true.</em></p>
 <h2 id="explore">Explore</h2>
 <p>I hope you enjoyed this instalment of <em>Exploring FPGA Graphics</em>, but nothing beats creating your own designs. Here are a few suggestions to get you started:</p>
 <ul>
@@ -426,27 +426,9 @@ My hardware designs are open source, and my blog is advert free.</p>
 <li>Combine multiple effects into a single demo</li>
 </ul>
 <h2 id="next-time">Next Time</h2>
-<p>Next time, you&rsquo;ll be playing <a href="/posts/fpga-pong/">Pong</a> against your FPGA.</p>
+<p>Next time, we&rsquo;ll be playing <a href="/posts/fpga-pong/">Pong</a>. Or check out the <a href="/sitemap/">site map</a> for more FPGA posts.</p>
 <p><em>Constructive feedback is always welcome. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 
-      
-      <div class="related">
-
-<h3>Similar articles:</h3>
-<ul>
-	
-	<li><a href="/posts/animated-shapes/">Animated Shapes</a></li>
-	
-	<li><a href="/posts/fpga-shapes/">2D Shapes</a></li>
-	
-	<li><a href="/posts/lines-and-triangles/">Lines and Triangles</a></li>
-	
-	<li><a href="/posts/framebuffers/">Framebuffers</a></li>
-	
-	<li><a href="/posts/hardware-sprites/">Hardware Sprites</a></li>
-	
-</ul>
-</div>
       
     </div>
     

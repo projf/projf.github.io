@@ -170,7 +170,7 @@ b. Every cell with zero or one neighbours dies from isolation.</li>
 <li>Births: Every empty cell with exactly three neighbours comes to life.</li>
 </ol>
 <p>To understand this, it helps to see some practical examples. Common patterns within the Life universe have been given names. The diagram below shows two patterns: &ldquo;Beehive&rdquo; and &ldquo;Beacon&rdquo;.</p>
-<p><img src="/img/posts/life-on-screen/life-examples.jpg" alt="Conway&rsquo;s Life Examples" title="Life Examples: Beehive &amp; Beacon"></p>
+<p><img src="/img/posts/life-on-screen/life-examples.jpg" alt="Conway&amp;rsquo;s Life Examples" title="Life Examples: Beehive &amp; Beacon"></p>
 <p>Every live cell in the <strong>Beehive</strong> pattern has two or three neighbours: so, no cells die. No dead cells in Beehive have three neighbours: so, no cells come to life. This pattern is categorised as a &ldquo;still life&rdquo;, because it doesn&rsquo;t change from one generation to the next.</p>
 <p>The <strong>Beacon</strong> pattern is a bit more interesting: it oscillates between two states. Two dead cells in the centre of the pattern have three neighbours, so come to life. However, they then have four neighbours, so die the next generation due to overcrowding: this pattern repeats endlessly.</p>
 <p>However, things start to get <em>really</em> interesting with slightly more complex patters. The following photo shows the <strong>Gosper glider gun</strong> running on the Arty board. The gun repeatedly generates small patterns called gliders that step across the world.</p>
@@ -195,219 +195,219 @@ b. otherwise, it&rsquo;s dead next generation</li>
 <p>Both approaches have their advantages and disadvantages, so we&rsquo;ll support both, but start with option 1.</p>
 <p>Since a cell&rsquo;s state depends on all those around it, we can&rsquo;t calculate the new state of each cell with one array. Instead, we have two array (or buffers): one contains the current generation; we use it to calculate the next generation in the second buffer. Every generation, we swap buffers and repeat the generation process.</p>
 <p>Create a life module with the following design - <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/life-on-screen/life.sv">life.sv</a>]</strong>:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> life #(
-    <span style="color:#66d9ef">parameter</span> CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>,   <span style="color:#75715e">// signed coordinate width
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">6</span>,    <span style="color:#75715e">// world width in cells
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> HEIGHT<span style="color:#f92672">=</span><span style="color:#ae81ff">6</span>,   <span style="color:#75715e">// world height in cells
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> F_INIT<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;&#34;</span>   <span style="color:#75715e">// initial world state
-</span><span style="color:#75715e"></span>    ) (
-    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,      <span style="color:#75715e">// clock
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst,      <span style="color:#75715e">// reset
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> start,    <span style="color:#75715e">// start generation
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> ready,    <span style="color:#75715e">// cell state ready to be read
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> alive,    <span style="color:#75715e">// is the cell alive? (when ready)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> changed,  <span style="color:#75715e">// cell&#39;s state changed (when ready)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x,  <span style="color:#75715e">// horizontal cell position
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] y,  <span style="color:#75715e">// vertical cell position
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> running,  <span style="color:#75715e">// life is running
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> done      <span style="color:#75715e">// generation complete (high for one tick)
-</span><span style="color:#75715e"></span>    );
-
-    <span style="color:#75715e">// world buffer selection
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> next_gen;  <span style="color:#75715e">// where to write the next generation
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
-        <span style="color:#66d9ef">if</span> (start) next_gen <span style="color:#f92672">&lt;=</span> <span style="color:#f92672">~</span>next_gen;  <span style="color:#75715e">// swap every generation
-</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (rst) next_gen <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-    <span style="color:#66d9ef">end</span>
-
-    <span style="color:#75715e">// world in BRAM
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> DATAW <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// cells are either dead or alive
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> WORLD_WIDTH  <span style="color:#f92672">=</span> WIDTH  <span style="color:#f92672">+</span> <span style="color:#ae81ff">2</span>;  <span style="color:#75715e">// wider to handle boundary
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> WORLD_HEIGHT <span style="color:#f92672">=</span> HEIGHT <span style="color:#f92672">+</span> <span style="color:#ae81ff">2</span>;  <span style="color:#75715e">// taller to handle boundary
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> WORLD_CELLS <span style="color:#f92672">=</span> WORLD_WIDTH <span style="color:#f92672">*</span> WORLD_HEIGHT;
-    <span style="color:#66d9ef">localparam</span> DEPTH <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span> <span style="color:#f92672">*</span> WORLD_CELLS;
-    <span style="color:#66d9ef">localparam</span> ADDRW <span style="color:#f92672">=</span> $clog2(DEPTH);
-
-    <span style="color:#66d9ef">logic</span> we;
-    <span style="color:#66d9ef">logic</span> [ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cell_id, addr_read;  <span style="color:#75715e">// cell_id is basis of write address
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [DATAW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] data_in, data_out;
-
-    <span style="color:#75715e">// add offset to read and write addresses to match buffer used
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] addr_read_offs, addr_write_offs;
-    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-        addr_read_offs <span style="color:#f92672">=</span> addr_read <span style="color:#f92672">+</span> ((next_gen) <span style="color:#f92672">?</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">:</span> WORLD_CELLS);
-        addr_write_offs <span style="color:#f92672">=</span> cell_id <span style="color:#f92672">+</span> ((next_gen) <span style="color:#f92672">?</span> WORLD_CELLS <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>);
-    <span style="color:#66d9ef">end</span>
-
-    bram_sdp #(
-        .WIDTH(DATAW),
-        .DEPTH(DEPTH),
-        .INIT_F(F_INIT)
-    ) bram_inst (
-        .clk_write(clk),
-        .clk_read(clk),
-        .we,
-        .addr_write(addr_write_offs),
-        .addr_read(addr_read_offs),
-        .data_in,
-        .data_out
-    );
-
-    <span style="color:#75715e">// cell coordinates
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> GRID <span style="color:#f92672">=</span> <span style="color:#ae81ff">3</span>;    <span style="color:#75715e">// neighbours are a 3x3 grid
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> STEPS <span style="color:#f92672">=</span> <span style="color:#ae81ff">11</span>;  <span style="color:#75715e">// 9 reads and 2 cycles of latency
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(WORLD_WIDTH)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>]  cell_x;  <span style="color:#75715e">// active cell (horizontal)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(WORLD_HEIGHT)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cell_y;  <span style="color:#75715e">// active cell (vertical)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(STEPS)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] read_step;      <span style="color:#75715e">// reading step
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> inc_read;                           <span style="color:#75715e">// perform incremental read
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [GRID<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] top_sr, mid_sr, bot_sr;  <span style="color:#75715e">// shift reg for neighbours
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(GRID<span style="color:#f92672">*</span>GRID)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] neigh_cnt;  <span style="color:#75715e">// count of neighbours
-</span><span style="color:#75715e"></span>
-    <span style="color:#75715e">// life generation state
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">enum</span> {IDLE, INIT, READ, NEIGH, UPDATE, NEW_CELL, NEW_LINE} state;
-    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
-        <span style="color:#75715e">// single-cycle flags: 0 by default
-</span><span style="color:#75715e"></span>        ready <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-        we <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-        done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-
-        <span style="color:#66d9ef">case</span>(state)
-            INIT: <span style="color:#66d9ef">begin</span>
-                read_step <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-                inc_read <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-                top_sr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-                mid_sr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-                bot_sr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-                neigh_cnt <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-                state <span style="color:#f92672">&lt;=</span> READ;
-                running <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-
-                <span style="color:#75715e">// first cell after padding
-</span><span style="color:#75715e"></span>                cell_x <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-                cell_y <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-                cell_id <span style="color:#f92672">&lt;=</span> WORLD_WIDTH <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-            <span style="color:#66d9ef">end</span>
-            READ: <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// 1 cycle to set address and 1 cycle BRAM read latency
-</span><span style="color:#75715e"></span>                <span style="color:#66d9ef">case</span> (read_step)
-                    <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d0</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>
-                        addr_read <span style="color:#f92672">&lt;=</span> cell_id <span style="color:#f92672">-</span> WORLD_WIDTH <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// A
-</span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
-                    <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d1</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>
-                        addr_read <span style="color:#f92672">&lt;=</span> cell_id <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// B
-</span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
-                    <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d2</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>
-                        addr_read <span style="color:#f92672">&lt;=</span> cell_id <span style="color:#f92672">+</span> WORLD_WIDTH <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// C
-</span><span style="color:#75715e"></span>                        <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>inc_read) top_sr <span style="color:#f92672">&lt;=</span> {top_sr[<span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>], data_out};  <span style="color:#75715e">// A
-</span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
-                    <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d3</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>
-                        addr_read <span style="color:#f92672">&lt;=</span> cell_id <span style="color:#f92672">-</span> WORLD_WIDTH;  <span style="color:#75715e">// D
-</span><span style="color:#75715e"></span>                        <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>inc_read) mid_sr <span style="color:#f92672">&lt;=</span> {mid_sr[<span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>], data_out};  <span style="color:#75715e">// B
-</span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
-                    <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d4</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>
-                        addr_read <span style="color:#f92672">&lt;=</span> cell_id;  <span style="color:#75715e">// E
-</span><span style="color:#75715e"></span>                        <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>inc_read) bot_sr <span style="color:#f92672">&lt;=</span> {bot_sr[<span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>], data_out};  <span style="color:#75715e">// C
-</span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
-                    <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d5</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>
-                        addr_read <span style="color:#f92672">&lt;=</span> cell_id <span style="color:#f92672">+</span> WORLD_WIDTH;  <span style="color:#75715e">// F
-</span><span style="color:#75715e"></span>                        <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>inc_read) top_sr <span style="color:#f92672">&lt;=</span> {top_sr[<span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>], data_out};  <span style="color:#75715e">// D
-</span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
-                    <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d6</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>
-                        addr_read <span style="color:#f92672">&lt;=</span> cell_id <span style="color:#f92672">-</span> WORLD_WIDTH <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// G
-</span><span style="color:#75715e"></span>                        <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>inc_read) mid_sr <span style="color:#f92672">&lt;=</span> {mid_sr[<span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>], data_out};  <span style="color:#75715e">// E
-</span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
-                    <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d7</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>
-                        addr_read <span style="color:#f92672">&lt;=</span> cell_id <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// H
-</span><span style="color:#75715e"></span>                        <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>inc_read) bot_sr <span style="color:#f92672">&lt;=</span> {bot_sr[<span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>], data_out};  <span style="color:#75715e">// F
-</span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
-                    <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d8</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>
-                        addr_read <span style="color:#f92672">&lt;=</span> cell_id <span style="color:#f92672">+</span> WORLD_WIDTH <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// I
-</span><span style="color:#75715e"></span>                        top_sr <span style="color:#f92672">&lt;=</span> {top_sr[<span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>], data_out};  <span style="color:#75715e">// G
-</span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
-                    <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d9</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>
-                        mid_sr <span style="color:#f92672">&lt;=</span> {mid_sr[<span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>], data_out};  <span style="color:#75715e">// H
-</span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
-                    <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d10</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>
-                        bot_sr <span style="color:#f92672">&lt;=</span> {bot_sr[<span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>], data_out};  <span style="color:#75715e">// I
-</span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
-                    <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> addr_read <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-                <span style="color:#66d9ef">endcase</span>
-
-                <span style="color:#66d9ef">if</span> (read_step <span style="color:#f92672">==</span> STEPS<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) state <span style="color:#f92672">&lt;=</span> NEIGH;
-                <span style="color:#66d9ef">else</span> read_step <span style="color:#f92672">&lt;=</span> read_step <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-            <span style="color:#66d9ef">end</span>
-            NEIGH: <span style="color:#66d9ef">begin</span>
-                neigh_cnt <span style="color:#f92672">&lt;=</span> top_sr[<span style="color:#ae81ff">0</span>] <span style="color:#f92672">+</span> top_sr[<span style="color:#ae81ff">1</span>] <span style="color:#f92672">+</span> top_sr[<span style="color:#ae81ff">2</span>] <span style="color:#f92672">+</span>
-                             mid_sr[<span style="color:#ae81ff">0</span>]             <span style="color:#f92672">+</span> mid_sr[<span style="color:#ae81ff">2</span>] <span style="color:#f92672">+</span>
-                             bot_sr[<span style="color:#ae81ff">0</span>] <span style="color:#f92672">+</span> bot_sr[<span style="color:#ae81ff">1</span>] <span style="color:#f92672">+</span> bot_sr[<span style="color:#ae81ff">2</span>];
-                state <span style="color:#f92672">&lt;=</span> UPDATE;
-            <span style="color:#66d9ef">end</span>
-            UPDATE: <span style="color:#66d9ef">begin</span>
-                <span style="color:#75715e">// update cell state
-</span><span style="color:#75715e"></span>                we <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;     <span style="color:#75715e">// write new cell state next cycle
-</span><span style="color:#75715e"></span>                ready <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// ready for output next cycle
-</span><span style="color:#75715e"></span>                x <span style="color:#f92672">&lt;=</span> cell_x <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// correct horizontal position for padding
-</span><span style="color:#75715e"></span>                y <span style="color:#f92672">&lt;=</span> cell_y <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// correct vertical position for padding
-</span><span style="color:#75715e"></span>
-                <span style="color:#66d9ef">if</span> (mid_sr[<span style="color:#ae81ff">1</span>]) <span style="color:#66d9ef">begin</span> <span style="color:#75715e">// cell was alive this generation
-</span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">if</span> (neigh_cnt <span style="color:#f92672">==</span> <span style="color:#ae81ff">2</span> <span style="color:#f92672">||</span> neigh_cnt <span style="color:#f92672">==</span> <span style="color:#ae81ff">3</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// still alive
-</span><span style="color:#75715e"></span>                        data_in <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-                        alive <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-                        changed <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-                    <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// now dead
-</span><span style="color:#75715e"></span>                        data_in <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-                        alive <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-                        changed <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-                    <span style="color:#66d9ef">end</span>
-                <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// was dead this generation
-</span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">if</span> (neigh_cnt <span style="color:#f92672">==</span> <span style="color:#ae81ff">3</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// now alive
-</span><span style="color:#75715e"></span>                        data_in <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-                        alive <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-                        changed <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-                    <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// still dead
-</span><span style="color:#75715e"></span>                        data_in <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-                        alive <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-                        changed <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-                    <span style="color:#66d9ef">end</span>
-                <span style="color:#66d9ef">end</span>
-
-                <span style="color:#75715e">// what next?
-</span><span style="color:#75715e"></span>                <span style="color:#66d9ef">if</span> (cell_x <span style="color:#f92672">==</span> WORLD_WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">2</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// final cell on line
-</span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">if</span> (cell_y <span style="color:#f92672">==</span> WORLD_HEIGHT<span style="color:#f92672">-</span><span style="color:#ae81ff">2</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// final line of cells
-</span><span style="color:#75715e"></span>                        state <span style="color:#f92672">&lt;=</span> IDLE;
-                        running <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-                        done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-                    <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> state <span style="color:#f92672">&lt;=</span> NEW_LINE;
-                <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> state <span style="color:#f92672">&lt;=</span> NEW_CELL;
-            <span style="color:#66d9ef">end</span>
-            NEW_CELL: <span style="color:#66d9ef">begin</span>
-                cell_x <span style="color:#f92672">&lt;=</span> cell_x <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-                cell_id <span style="color:#f92672">&lt;=</span> cell_id <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-                inc_read  <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// incremental read
-</span><span style="color:#75715e"></span>                read_step <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">6</span>;  <span style="color:#75715e">// read new column of 3 cells (skip A-F)
-</span><span style="color:#75715e"></span>                state <span style="color:#f92672">&lt;=</span> READ;
-            <span style="color:#66d9ef">end</span>
-            NEW_LINE: <span style="color:#66d9ef">begin</span>
-                cell_y <span style="color:#f92672">&lt;=</span> cell_y <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-                cell_x <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-                cell_id <span style="color:#f92672">&lt;=</span> cell_id <span style="color:#f92672">+</span> <span style="color:#ae81ff">3</span>;  <span style="color:#75715e">// skip 2 cells of padding
-</span><span style="color:#75715e"></span>                read_step <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// read all nine cells at start of line
-</span><span style="color:#75715e"></span>                state <span style="color:#f92672">&lt;=</span> READ;
-            <span style="color:#66d9ef">end</span>
-            <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> state <span style="color:#f92672">&lt;=</span> (start) <span style="color:#f92672">?</span> INIT <span style="color:#f92672">:</span> IDLE;  <span style="color:#75715e">// IDLE
-</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">endcase</span>
-        <span style="color:#66d9ef">if</span> (rst) <span style="color:#66d9ef">begin</span>
-            state <span style="color:#f92672">&lt;=</span> IDLE;
-            ready <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-            alive <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-            changed <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-            x <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-            y <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-            running <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-            done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-        <span style="color:#66d9ef">end</span>
-    <span style="color:#66d9ef">end</span>
-<span style="color:#66d9ef">endmodule</span>
-</code></pre></div><p><em>Explanation of life module will be added shortly.</em></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> life #(
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>,   <span style="color:#75715e">// signed coordinate width
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">6</span>,    <span style="color:#75715e">// world width in cells
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> HEIGHT<span style="color:#f92672">=</span><span style="color:#ae81ff">6</span>,   <span style="color:#75715e">// world height in cells
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> F_INIT<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;&#34;</span>   <span style="color:#75715e">// initial world state
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    ) (
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,      <span style="color:#75715e">// clock
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst,      <span style="color:#75715e">// reset
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> start,    <span style="color:#75715e">// start generation
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> ready,    <span style="color:#75715e">// cell state ready to be read
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> alive,    <span style="color:#75715e">// is the cell alive? (when ready)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> changed,  <span style="color:#75715e">// cell&#39;s state changed (when ready)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x,  <span style="color:#75715e">// horizontal cell position
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] y,  <span style="color:#75715e">// vertical cell position
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> running,  <span style="color:#75715e">// life is running
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> done      <span style="color:#75715e">// generation complete (high for one tick)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    );
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// world buffer selection
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> next_gen;  <span style="color:#75715e">// where to write the next generation
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (start) next_gen <span style="color:#f92672">&lt;=</span> <span style="color:#f92672">~</span>next_gen;  <span style="color:#75715e">// swap every generation
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (rst) next_gen <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// world in BRAM
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> DATAW <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// cells are either dead or alive
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> WORLD_WIDTH  <span style="color:#f92672">=</span> WIDTH  <span style="color:#f92672">+</span> <span style="color:#ae81ff">2</span>;  <span style="color:#75715e">// wider to handle boundary
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> WORLD_HEIGHT <span style="color:#f92672">=</span> HEIGHT <span style="color:#f92672">+</span> <span style="color:#ae81ff">2</span>;  <span style="color:#75715e">// taller to handle boundary
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> WORLD_CELLS <span style="color:#f92672">=</span> WORLD_WIDTH <span style="color:#f92672">*</span> WORLD_HEIGHT;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">localparam</span> DEPTH <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span> <span style="color:#f92672">*</span> WORLD_CELLS;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">localparam</span> ADDRW <span style="color:#f92672">=</span> $clog2(DEPTH);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> we;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> [ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cell_id, addr_read;  <span style="color:#75715e">// cell_id is basis of write address
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [DATAW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] data_in, data_out;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// add offset to read and write addresses to match buffer used
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] addr_read_offs, addr_write_offs;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>        addr_read_offs <span style="color:#f92672">=</span> addr_read <span style="color:#f92672">+</span> ((next_gen) <span style="color:#f92672">?</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">:</span> WORLD_CELLS);
+</span></span><span style="display:flex;"><span>        addr_write_offs <span style="color:#f92672">=</span> cell_id <span style="color:#f92672">+</span> ((next_gen) <span style="color:#f92672">?</span> WORLD_CELLS <span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    bram_sdp #(
+</span></span><span style="display:flex;"><span>        .WIDTH(DATAW),
+</span></span><span style="display:flex;"><span>        .DEPTH(DEPTH),
+</span></span><span style="display:flex;"><span>        .INIT_F(F_INIT)
+</span></span><span style="display:flex;"><span>    ) bram_inst (
+</span></span><span style="display:flex;"><span>        .clk_write(clk),
+</span></span><span style="display:flex;"><span>        .clk_read(clk),
+</span></span><span style="display:flex;"><span>        .we,
+</span></span><span style="display:flex;"><span>        .addr_write(addr_write_offs),
+</span></span><span style="display:flex;"><span>        .addr_read(addr_read_offs),
+</span></span><span style="display:flex;"><span>        .data_in,
+</span></span><span style="display:flex;"><span>        .data_out
+</span></span><span style="display:flex;"><span>    );
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// cell coordinates
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> GRID <span style="color:#f92672">=</span> <span style="color:#ae81ff">3</span>;    <span style="color:#75715e">// neighbours are a 3x3 grid
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> STEPS <span style="color:#f92672">=</span> <span style="color:#ae81ff">11</span>;  <span style="color:#75715e">// 9 reads and 2 cycles of latency
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(WORLD_WIDTH)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>]  cell_x;  <span style="color:#75715e">// active cell (horizontal)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(WORLD_HEIGHT)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cell_y;  <span style="color:#75715e">// active cell (vertical)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(STEPS)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] read_step;      <span style="color:#75715e">// reading step
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> inc_read;                           <span style="color:#75715e">// perform incremental read
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [GRID<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] top_sr, mid_sr, bot_sr;  <span style="color:#75715e">// shift reg for neighbours
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(GRID<span style="color:#f92672">*</span>GRID)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] neigh_cnt;  <span style="color:#75715e">// count of neighbours
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// life generation state
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">enum</span> {IDLE, INIT, READ, NEIGH, UPDATE, NEW_CELL, NEW_LINE} state;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// single-cycle flags: 0 by default
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        ready <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>        we <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>        done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">case</span>(state)
+</span></span><span style="display:flex;"><span>            INIT: <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>                read_step <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>                inc_read <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>                top_sr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>                mid_sr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>                bot_sr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>                neigh_cnt <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>                state <span style="color:#f92672">&lt;=</span> READ;
+</span></span><span style="display:flex;"><span>                running <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>                <span style="color:#75715e">// first cell after padding
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                cell_x <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>                cell_y <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>                cell_id <span style="color:#f92672">&lt;=</span> WORLD_WIDTH <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>            READ: <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// 1 cycle to set address and 1 cycle BRAM read latency
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                <span style="color:#66d9ef">case</span> (read_step)
+</span></span><span style="display:flex;"><span>                    <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d0</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>                        addr_read <span style="color:#f92672">&lt;=</span> cell_id <span style="color:#f92672">-</span> WORLD_WIDTH <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// A
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d1</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>                        addr_read <span style="color:#f92672">&lt;=</span> cell_id <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// B
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d2</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>                        addr_read <span style="color:#f92672">&lt;=</span> cell_id <span style="color:#f92672">+</span> WORLD_WIDTH <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// C
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                        <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>inc_read) top_sr <span style="color:#f92672">&lt;=</span> {top_sr[<span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>], data_out};  <span style="color:#75715e">// A
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d3</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>                        addr_read <span style="color:#f92672">&lt;=</span> cell_id <span style="color:#f92672">-</span> WORLD_WIDTH;  <span style="color:#75715e">// D
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                        <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>inc_read) mid_sr <span style="color:#f92672">&lt;=</span> {mid_sr[<span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>], data_out};  <span style="color:#75715e">// B
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d4</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>                        addr_read <span style="color:#f92672">&lt;=</span> cell_id;  <span style="color:#75715e">// E
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                        <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>inc_read) bot_sr <span style="color:#f92672">&lt;=</span> {bot_sr[<span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>], data_out};  <span style="color:#75715e">// C
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d5</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>                        addr_read <span style="color:#f92672">&lt;=</span> cell_id <span style="color:#f92672">+</span> WORLD_WIDTH;  <span style="color:#75715e">// F
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                        <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>inc_read) top_sr <span style="color:#f92672">&lt;=</span> {top_sr[<span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>], data_out};  <span style="color:#75715e">// D
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d6</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>                        addr_read <span style="color:#f92672">&lt;=</span> cell_id <span style="color:#f92672">-</span> WORLD_WIDTH <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// G
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                        <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>inc_read) mid_sr <span style="color:#f92672">&lt;=</span> {mid_sr[<span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>], data_out};  <span style="color:#75715e">// E
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d7</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>                        addr_read <span style="color:#f92672">&lt;=</span> cell_id <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// H
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                        <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>inc_read) bot_sr <span style="color:#f92672">&lt;=</span> {bot_sr[<span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>], data_out};  <span style="color:#75715e">// F
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d8</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>                        addr_read <span style="color:#f92672">&lt;=</span> cell_id <span style="color:#f92672">+</span> WORLD_WIDTH <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// I
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                        top_sr <span style="color:#f92672">&lt;=</span> {top_sr[<span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>], data_out};  <span style="color:#75715e">// G
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d9</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>                        mid_sr <span style="color:#f92672">&lt;=</span> {mid_sr[<span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>], data_out};  <span style="color:#75715e">// H
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;d10</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>                        bot_sr <span style="color:#f92672">&lt;=</span> {bot_sr[<span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>], data_out};  <span style="color:#75715e">// I
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> addr_read <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">endcase</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">if</span> (read_step <span style="color:#f92672">==</span> STEPS<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) state <span style="color:#f92672">&lt;=</span> NEIGH;
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">else</span> read_step <span style="color:#f92672">&lt;=</span> read_step <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>            NEIGH: <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>                neigh_cnt <span style="color:#f92672">&lt;=</span> top_sr[<span style="color:#ae81ff">0</span>] <span style="color:#f92672">+</span> top_sr[<span style="color:#ae81ff">1</span>] <span style="color:#f92672">+</span> top_sr[<span style="color:#ae81ff">2</span>] <span style="color:#f92672">+</span>
+</span></span><span style="display:flex;"><span>                             mid_sr[<span style="color:#ae81ff">0</span>]             <span style="color:#f92672">+</span> mid_sr[<span style="color:#ae81ff">2</span>] <span style="color:#f92672">+</span>
+</span></span><span style="display:flex;"><span>                             bot_sr[<span style="color:#ae81ff">0</span>] <span style="color:#f92672">+</span> bot_sr[<span style="color:#ae81ff">1</span>] <span style="color:#f92672">+</span> bot_sr[<span style="color:#ae81ff">2</span>];
+</span></span><span style="display:flex;"><span>                state <span style="color:#f92672">&lt;=</span> UPDATE;
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>            UPDATE: <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#75715e">// update cell state
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                we <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;     <span style="color:#75715e">// write new cell state next cycle
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                ready <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// ready for output next cycle
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                x <span style="color:#f92672">&lt;=</span> cell_x <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// correct horizontal position for padding
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                y <span style="color:#f92672">&lt;=</span> cell_y <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// correct vertical position for padding
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">if</span> (mid_sr[<span style="color:#ae81ff">1</span>]) <span style="color:#66d9ef">begin</span> <span style="color:#75715e">// cell was alive this generation
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">if</span> (neigh_cnt <span style="color:#f92672">==</span> <span style="color:#ae81ff">2</span> <span style="color:#f92672">||</span> neigh_cnt <span style="color:#f92672">==</span> <span style="color:#ae81ff">3</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// still alive
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                        data_in <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>                        alive <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>                        changed <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>                    <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// now dead
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                        data_in <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>                        alive <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>                        changed <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>                    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// was dead this generation
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">if</span> (neigh_cnt <span style="color:#f92672">==</span> <span style="color:#ae81ff">3</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// now alive
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                        data_in <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>                        alive <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>                        changed <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>                    <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// still dead
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                        data_in <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>                        alive <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>                        changed <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>                    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>                <span style="color:#75715e">// what next?
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                <span style="color:#66d9ef">if</span> (cell_x <span style="color:#f92672">==</span> WORLD_WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">2</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// final cell on line
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">if</span> (cell_y <span style="color:#f92672">==</span> WORLD_HEIGHT<span style="color:#f92672">-</span><span style="color:#ae81ff">2</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// final line of cells
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                        state <span style="color:#f92672">&lt;=</span> IDLE;
+</span></span><span style="display:flex;"><span>                        running <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>                        done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>                    <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> state <span style="color:#f92672">&lt;=</span> NEW_LINE;
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> state <span style="color:#f92672">&lt;=</span> NEW_CELL;
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>            NEW_CELL: <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>                cell_x <span style="color:#f92672">&lt;=</span> cell_x <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>                cell_id <span style="color:#f92672">&lt;=</span> cell_id <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>                inc_read  <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// incremental read
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                read_step <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">6</span>;  <span style="color:#75715e">// read new column of 3 cells (skip A-F)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                state <span style="color:#f92672">&lt;=</span> READ;
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>            NEW_LINE: <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>                cell_y <span style="color:#f92672">&lt;=</span> cell_y <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>                cell_x <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>                cell_id <span style="color:#f92672">&lt;=</span> cell_id <span style="color:#f92672">+</span> <span style="color:#ae81ff">3</span>;  <span style="color:#75715e">// skip 2 cells of padding
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                read_step <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// read all nine cells at start of line
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                state <span style="color:#f92672">&lt;=</span> READ;
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> state <span style="color:#f92672">&lt;=</span> (start) <span style="color:#f92672">?</span> INIT <span style="color:#f92672">:</span> IDLE;  <span style="color:#75715e">// IDLE
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#66d9ef">endcase</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (rst) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>            state <span style="color:#f92672">&lt;=</span> IDLE;
+</span></span><span style="display:flex;"><span>            ready <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>            alive <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>            changed <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>            x <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>            y <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>            running <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>            done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
+</span></span></code></pre></div><p><em>Explanation of life module will be added shortly.</em></p>
 <p>To exercise this module we have a test bench for Vivado: <strong><a href="https://github.com/projf/projf-explore/tree/master/graphics/life-on-screen/xc7/life_tb.sv">life_tb.sv</a></strong>. If you have a Xilinx Vivado installed, try using the test bench with the included test seed files. You can find instructions for running the simulation in the design <a href="https://github.com/projf/projf-explore/tree/master/life-on-screen">README</a>.</p>
 <h3 id="top-life">Top Life</h3>
 <p>Now we have our life sim, we&rsquo;re ready to render it with the design from <a href="/posts/framebuffers/">Framebuffers</a>.</p>
@@ -416,144 +416,144 @@ b. otherwise, it&rsquo;s dead next generation</li>
 <li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/life-on-screen/ice40/top_life.sv">ice40/top_life.sv</a></strong></li>
 </ul>
 <p>The Arty version is shown below:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> top_life (
-    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_100m,     <span style="color:#75715e">// 100 MHz clock
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_rst,      <span style="color:#75715e">// reset button (active low)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> vga_hsync,    <span style="color:#75715e">// horizontal sync
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> vga_vsync,    <span style="color:#75715e">// vertical sync
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vga_r,  <span style="color:#75715e">// 4-bit VGA red
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vga_g,  <span style="color:#75715e">// 4-bit VGA green
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vga_b   <span style="color:#75715e">// 4-bit VGA blue
-</span><span style="color:#75715e"></span>    );
-
-    <span style="color:#66d9ef">localparam</span> GEN_FRAMES <span style="color:#f92672">=</span> <span style="color:#ae81ff">15</span>;  <span style="color:#75715e">// each generation lasts this many frames
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> SEED_FILE <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;simple_64x48.mem&#34;</span>;  <span style="color:#75715e">// world seed
-</span><span style="color:#75715e"></span>
-    <span style="color:#75715e">// generate pixel clock
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> clk_pix;
-    <span style="color:#66d9ef">logic</span> clk_locked;
-    clock_gen_480p clock_pix_inst (
-       .clk(clk_100m),
-       .rst(<span style="color:#f92672">!</span>btn_rst),  <span style="color:#75715e">// reset button is active low
-</span><span style="color:#75715e"></span>       .clk_pix,
-       .clk_locked
-    );
-
-    <span style="color:#75715e">// display sync signals and coordinates
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">16</span>;
-    <span style="color:#66d9ef">logic</span> hsync, vsync;
-    <span style="color:#66d9ef">logic</span> de, frame, line;
-    display_480p #(.CORDW(CORDW)) display_inst (
-        .clk_pix,
-        .rst(<span style="color:#f92672">!</span>clk_locked),
-        .sx(),
-        .sy(),
-        .hsync,
-        .vsync,
-        .de,
-        .frame,
-        .line
-    );
-
-    <span style="color:#66d9ef">logic</span> frame_sys;  <span style="color:#75715e">// start of new frame in system clock domain
-</span><span style="color:#75715e"></span>    xd xd_frame (.clk_i(clk_pix), .clk_o(clk_100m),
-                 .rst_i(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>), .rst_o(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>), .i(frame), .o(frame_sys));
-
-    <span style="color:#75715e">// life signals
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> life_start, life_alive, life_changed;
-
-    <span style="color:#75715e">// start life generation in blanking every GEN_FRAMES
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(GEN_FRAMES)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_frames;
-    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_100m) <span style="color:#66d9ef">begin</span>
-        life_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-        <span style="color:#66d9ef">if</span> (frame_sys) <span style="color:#66d9ef">begin</span>
-            <span style="color:#66d9ef">if</span> (cnt_frames <span style="color:#f92672">==</span> GEN_FRAMES<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
-                life_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-                cnt_frames <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> cnt_frames <span style="color:#f92672">&lt;=</span> cnt_frames <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-        <span style="color:#66d9ef">end</span>
-    <span style="color:#66d9ef">end</span>
-
-    <span style="color:#75715e">// framebuffer (FB)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> FB_WIDTH   <span style="color:#f92672">=</span> <span style="color:#ae81ff">64</span>;
-    <span style="color:#66d9ef">localparam</span> FB_HEIGHT  <span style="color:#f92672">=</span> <span style="color:#ae81ff">48</span>;
-    <span style="color:#66d9ef">localparam</span> FB_CIDXW   <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span>;
-    <span style="color:#66d9ef">localparam</span> FB_CHANW   <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;
-    <span style="color:#66d9ef">localparam</span> FB_SCALE   <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>;
-    <span style="color:#66d9ef">localparam</span> FB_IMAGE   <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;&#34;</span>;
-    <span style="color:#66d9ef">localparam</span> FB_PALETTE <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;life_palette.mem&#34;</span>;
-
-    <span style="color:#66d9ef">logic</span> fb_we;
-    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fbx, fby;  <span style="color:#75715e">// framebuffer coordinates
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [FB_CIDXW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_cidx;
-    <span style="color:#66d9ef">logic</span> fb_busy;  <span style="color:#75715e">// when framebuffer is busy it cannot accept writes
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [FB_CHANW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_red, fb_green, fb_blue;  <span style="color:#75715e">// colours for display
-</span><span style="color:#75715e"></span>
-    framebuffer_bram #(
-        .WIDTH(FB_WIDTH),
-        .HEIGHT(FB_HEIGHT),
-        .CIDXW(FB_CIDXW),
-        .CHANW(FB_CHANW),
-        .SCALE(FB_SCALE),
-        .F_IMAGE(FB_IMAGE),
-        .F_PALETTE(FB_PALETTE)
-    ) fb_inst (
-        .clk_sys(clk_100m),
-        .clk_pix,
-        .rst_sys(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),
-        .rst_pix(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),
-        .de,
-        .frame,
-        .line,
-        .we(fb_we),
-        .x(fbx),
-        .y(fby),
-        .cidx(fb_cidx),
-        .busy(fb_busy),
-        .clip(),
-        .red(fb_red),
-        .green(fb_green),
-        .blue(fb_blue)
-    );
-
-    <span style="color:#75715e">// select colour based on cell state
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> fb_cidx <span style="color:#f92672">=</span> {<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>, life_alive};
-
-    life #(
-        .CORDW(CORDW),
-        .WIDTH(FB_WIDTH),
-        .HEIGHT(FB_HEIGHT),
-        .F_INIT(SEED_FILE)
-    ) life_inst (
-        .clk(clk_100m),          <span style="color:#75715e">// clock
-</span><span style="color:#75715e"></span>        .rst(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),              <span style="color:#75715e">// reset
-</span><span style="color:#75715e"></span>        .start(life_start),      <span style="color:#75715e">// start generation
-</span><span style="color:#75715e"></span>        .ready(fb_we),           <span style="color:#75715e">// cell state ready to be read
-</span><span style="color:#75715e"></span>        .alive(life_alive),      <span style="color:#75715e">// is the cell alive? (when ready)
-</span><span style="color:#75715e"></span>        .changed(life_changed),  <span style="color:#75715e">// cell&#39;s state changed (when ready)
-</span><span style="color:#75715e"></span>        .x(fbx),                 <span style="color:#75715e">// horizontal cell position
-</span><span style="color:#75715e"></span>        .y(fby),                 <span style="color:#75715e">// vertical cell position
-</span><span style="color:#75715e"></span>        .running(),              <span style="color:#75715e">// life is running
-</span><span style="color:#75715e"></span>        .done()                  <span style="color:#75715e">// generation complete (high for one tick)
-</span><span style="color:#75715e"></span>    );
-
-    <span style="color:#75715e">// reading from FB takes one cycle: delay display signals to match
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> hsync_p1, vsync_p1;
-    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
-        hsync_p1 <span style="color:#f92672">&lt;=</span> hsync;
-        vsync_p1 <span style="color:#f92672">&lt;=</span> vsync;
-    <span style="color:#66d9ef">end</span>
-
-    <span style="color:#75715e">// VGA output
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
-        vga_hsync <span style="color:#f92672">&lt;=</span> hsync_p1;
-        vga_vsync <span style="color:#f92672">&lt;=</span> vsync_p1;
-        vga_r <span style="color:#f92672">&lt;=</span> fb_red;
-        vga_g <span style="color:#f92672">&lt;=</span> fb_green;
-        vga_b <span style="color:#f92672">&lt;=</span> fb_blue;
-    <span style="color:#66d9ef">end</span>
-<span style="color:#66d9ef">endmodule</span>
-</code></pre></div><p>We use a 64x48 world, which is a tenth of the 640x480 screen dimensions. With the padding of dead cells, each world array has <code>66 x 50 = 3,300</code> cells, which comfortably fits into 4Kb (though iCEBreaker BRAM has a minimum width of two bits, so it uses two BRAMs per world buffer).</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> top_life (
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_100m,     <span style="color:#75715e">// 100 MHz clock
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_rst,      <span style="color:#75715e">// reset button (active low)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> vga_hsync,    <span style="color:#75715e">// horizontal sync
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> vga_vsync,    <span style="color:#75715e">// vertical sync
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vga_r,  <span style="color:#75715e">// 4-bit VGA red
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vga_g,  <span style="color:#75715e">// 4-bit VGA green
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vga_b   <span style="color:#75715e">// 4-bit VGA blue
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    );
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">localparam</span> GEN_FRAMES <span style="color:#f92672">=</span> <span style="color:#ae81ff">15</span>;  <span style="color:#75715e">// each generation lasts this many frames
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> SEED_FILE <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;simple_64x48.mem&#34;</span>;  <span style="color:#75715e">// world seed
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// generate pixel clock
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> clk_pix;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> clk_locked;
+</span></span><span style="display:flex;"><span>    clock_gen_480p clock_pix_inst (
+</span></span><span style="display:flex;"><span>       .clk(clk_100m),
+</span></span><span style="display:flex;"><span>       .rst(<span style="color:#f92672">!</span>btn_rst),  <span style="color:#75715e">// reset button is active low
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>       .clk_pix,
+</span></span><span style="display:flex;"><span>       .clk_locked
+</span></span><span style="display:flex;"><span>    );
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// display sync signals and coordinates
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">16</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> hsync, vsync;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> de, frame, line;
+</span></span><span style="display:flex;"><span>    display_480p #(.CORDW(CORDW)) display_inst (
+</span></span><span style="display:flex;"><span>        .clk_pix,
+</span></span><span style="display:flex;"><span>        .rst(<span style="color:#f92672">!</span>clk_locked),
+</span></span><span style="display:flex;"><span>        .sx(),
+</span></span><span style="display:flex;"><span>        .sy(),
+</span></span><span style="display:flex;"><span>        .hsync,
+</span></span><span style="display:flex;"><span>        .vsync,
+</span></span><span style="display:flex;"><span>        .de,
+</span></span><span style="display:flex;"><span>        .frame,
+</span></span><span style="display:flex;"><span>        .line
+</span></span><span style="display:flex;"><span>    );
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> frame_sys;  <span style="color:#75715e">// start of new frame in system clock domain
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    xd xd_frame (.clk_i(clk_pix), .clk_o(clk_100m),
+</span></span><span style="display:flex;"><span>                 .rst_i(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>), .rst_o(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>), .i(frame), .o(frame_sys));
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// life signals
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> life_start, life_alive, life_changed;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// start life generation in blanking every GEN_FRAMES
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(GEN_FRAMES)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_frames;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_100m) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>        life_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (frame_sys) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> (cnt_frames <span style="color:#f92672">==</span> GEN_FRAMES<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>                life_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>                cnt_frames <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> cnt_frames <span style="color:#f92672">&lt;=</span> cnt_frames <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// framebuffer (FB)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> FB_WIDTH   <span style="color:#f92672">=</span> <span style="color:#ae81ff">64</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">localparam</span> FB_HEIGHT  <span style="color:#f92672">=</span> <span style="color:#ae81ff">48</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">localparam</span> FB_CIDXW   <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">localparam</span> FB_CHANW   <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">localparam</span> FB_SCALE   <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">localparam</span> FB_IMAGE   <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;&#34;</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">localparam</span> FB_PALETTE <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;life_palette.mem&#34;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> fb_we;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fbx, fby;  <span style="color:#75715e">// framebuffer coordinates
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [FB_CIDXW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_cidx;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> fb_busy;  <span style="color:#75715e">// when framebuffer is busy it cannot accept writes
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [FB_CHANW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_red, fb_green, fb_blue;  <span style="color:#75715e">// colours for display
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    framebuffer_bram #(
+</span></span><span style="display:flex;"><span>        .WIDTH(FB_WIDTH),
+</span></span><span style="display:flex;"><span>        .HEIGHT(FB_HEIGHT),
+</span></span><span style="display:flex;"><span>        .CIDXW(FB_CIDXW),
+</span></span><span style="display:flex;"><span>        .CHANW(FB_CHANW),
+</span></span><span style="display:flex;"><span>        .SCALE(FB_SCALE),
+</span></span><span style="display:flex;"><span>        .F_IMAGE(FB_IMAGE),
+</span></span><span style="display:flex;"><span>        .F_PALETTE(FB_PALETTE)
+</span></span><span style="display:flex;"><span>    ) fb_inst (
+</span></span><span style="display:flex;"><span>        .clk_sys(clk_100m),
+</span></span><span style="display:flex;"><span>        .clk_pix,
+</span></span><span style="display:flex;"><span>        .rst_sys(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),
+</span></span><span style="display:flex;"><span>        .rst_pix(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),
+</span></span><span style="display:flex;"><span>        .de,
+</span></span><span style="display:flex;"><span>        .frame,
+</span></span><span style="display:flex;"><span>        .line,
+</span></span><span style="display:flex;"><span>        .we(fb_we),
+</span></span><span style="display:flex;"><span>        .x(fbx),
+</span></span><span style="display:flex;"><span>        .y(fby),
+</span></span><span style="display:flex;"><span>        .cidx(fb_cidx),
+</span></span><span style="display:flex;"><span>        .busy(fb_busy),
+</span></span><span style="display:flex;"><span>        .clip(),
+</span></span><span style="display:flex;"><span>        .red(fb_red),
+</span></span><span style="display:flex;"><span>        .green(fb_green),
+</span></span><span style="display:flex;"><span>        .blue(fb_blue)
+</span></span><span style="display:flex;"><span>    );
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// select colour based on cell state
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> fb_cidx <span style="color:#f92672">=</span> {<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>, life_alive};
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    life #(
+</span></span><span style="display:flex;"><span>        .CORDW(CORDW),
+</span></span><span style="display:flex;"><span>        .WIDTH(FB_WIDTH),
+</span></span><span style="display:flex;"><span>        .HEIGHT(FB_HEIGHT),
+</span></span><span style="display:flex;"><span>        .F_INIT(SEED_FILE)
+</span></span><span style="display:flex;"><span>    ) life_inst (
+</span></span><span style="display:flex;"><span>        .clk(clk_100m),          <span style="color:#75715e">// clock
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        .rst(<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>),              <span style="color:#75715e">// reset
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        .start(life_start),      <span style="color:#75715e">// start generation
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        .ready(fb_we),           <span style="color:#75715e">// cell state ready to be read
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        .alive(life_alive),      <span style="color:#75715e">// is the cell alive? (when ready)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        .changed(life_changed),  <span style="color:#75715e">// cell&#39;s state changed (when ready)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        .x(fbx),                 <span style="color:#75715e">// horizontal cell position
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        .y(fby),                 <span style="color:#75715e">// vertical cell position
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        .running(),              <span style="color:#75715e">// life is running
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        .done()                  <span style="color:#75715e">// generation complete (high for one tick)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    );
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// reading from FB takes one cycle: delay display signals to match
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> hsync_p1, vsync_p1;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>        hsync_p1 <span style="color:#f92672">&lt;=</span> hsync;
+</span></span><span style="display:flex;"><span>        vsync_p1 <span style="color:#f92672">&lt;=</span> vsync;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// VGA output
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>        vga_hsync <span style="color:#f92672">&lt;=</span> hsync_p1;
+</span></span><span style="display:flex;"><span>        vga_vsync <span style="color:#f92672">&lt;=</span> vsync_p1;
+</span></span><span style="display:flex;"><span>        vga_r <span style="color:#f92672">&lt;=</span> fb_red;
+</span></span><span style="display:flex;"><span>        vga_g <span style="color:#f92672">&lt;=</span> fb_green;
+</span></span><span style="display:flex;"><span>        vga_b <span style="color:#f92672">&lt;=</span> fb_blue;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
+</span></span></code></pre></div><p>We use a 64x48 world, which is a tenth of the 640x480 screen dimensions. With the padding of dead cells, each world array has <code>66 x 50 = 3,300</code> cells, which comfortably fits into 4Kb (though iCEBreaker BRAM has a minimum width of two bits, so it uses two BRAMs per world buffer).</p>
 <blockquote>
 <p><strong>Building the Designs</strong><br>
 In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/life-on-screen">Life on Screen</a> section of the git repo, you&rsquo;ll find the design files, a makefile for iCEBreaker, a Vivado project for Arty, and instructions for building the designs for both boards.</p>
@@ -561,11 +561,11 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/life
 <p>Once you&rsquo;ve programmed your board, you should see a simple test pattern of oscillators and a still life (capture from FPGA board shown below).</p>
 <p><img src="/img/posts/life-on-screen/simple-life-capture.png" alt="Simple Life" title="Simple Life captured from my FPGA board."></p>
 <p>If that works, try the Gosper glider gun by changing the seed file in <code>top_life.sv</code>:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">localparam</span> SEED_FILE <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;gosper_gun_64x48.mem&#34;</span>;  <span style="color:#75715e">// world seed
-</span></code></pre></div><p>The Gosper pattern repeatedly generates small gliders that move down the screen. Our gliders doesn&rsquo;t continue indefinitely because our world is currently surrounded by dead cells, which kill the gliders when they collide with it.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">localparam</span> SEED_FILE <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;gosper_gun_64x48.mem&#34;</span>;  <span style="color:#75715e">// world seed
+</span></span></span></code></pre></div><p>The Gosper pattern repeatedly generates small gliders that move down the screen. Our gliders doesn&rsquo;t continue indefinitely because our world is currently surrounded by dead cells, which kill the gliders when they collide with it.</p>
 <p>You can also change how fast Life runs by adjusting <code>GEN_FRAMES</code>:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">localparam</span> GEN_FRAMES <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;  <span style="color:#75715e">// each generation lasts this many frames
-</span></code></pre></div><p>At 60 frames per second, a value of &lsquo;4&rsquo; results in 15 generations per second.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">localparam</span> GEN_FRAMES <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;  <span style="color:#75715e">// each generation lasts this many frames
+</span></span></span></code></pre></div><p>At 60 frames per second, a value of &lsquo;4&rsquo; results in 15 generations per second.</p>
 <p><img src="/img/posts/life-on-screen/gosper-glider-gun-capture.png" alt="Gosper Glider Gun" title="Gosper Glider Gun captured from my FPGA board."></p>
 <h2 id="wrap-around">Wrap Around</h2>
 <p>Let&rsquo;s wrap our world around at left and right, and at top and bottom; this is known as a <a href="https://en.wikipedia.org/wiki/Torus">toroidal</a> array. Contrast a toroidal array with a 2D map of Earth: the map wraps around at the east and west, but <em>not</em> at the north and south.</p>
@@ -584,27 +584,9 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/life
 <li><a href="https://k155la3.blog/2020/10/09/conways-game-of-life-on-fpga/">Game of Life in Chisel</a> - simulate every cell simultaneously!</li>
 </ul>
 <h2 id="next-time">Next Time</h2>
-<p>In part seven of this series, we&rsquo;ll learn how to draw <a href="/posts/lines-and-triangles/">Lines and Triangles</a>: the basis of 2D and 3D graphics.</p>
+<p>In part seven of this series, we&rsquo;ll learn how to draw <a href="/posts/lines-and-triangles/">Lines and Triangles</a>: the basis of 2D and 3D graphics. Or check out the <a href="/sitemap/">site map</a> for more FPGA posts.</p>
 <p><em>Constructive feedback is always welcome. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
 
-      
-      <div class="related">
-
-<h3>Similar articles:</h3>
-<ul>
-	
-	<li><a href="/posts/fpga-pong/">Pong</a></li>
-	
-	<li><a href="/posts/fpga-ad-astra/">Ad Astra</a></li>
-	
-	<li><a href="/posts/fpga-graphics/">Beginning FPGA Graphics</a></li>
-	
-	<li><a href="/posts/video-timings-vga-720p-1080p/">Video Timings: VGA, SVGA, 720p, 1080p</a></li>
-	
-	<li><a href="/posts/hello-arty-2/">Hello Arty - Part 2</a></li>
-	
-</ul>
-</div>
       
     </div>
     

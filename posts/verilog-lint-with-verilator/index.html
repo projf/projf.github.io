@@ -127,123 +127,111 @@ Updated 2021-07-20. Share your thoughts with @WillFlux or find me on 1BitSquared
 <h2 id="installing-verilator">Installing Verilator</h2>
 <p>Verilator is available in most Linux distribution repos and will run on <a href="https://docs.microsoft.com/en-us/windows/wsl/install-win10">Windows Subsystem for Linux</a>.</p>
 <p>For <strong>Debian</strong> and <strong>Ubuntu</strong>-based Linux distros, you can use the following, but if your distro is old, you may wish to follow my instructions for <a href="/posts/building-ice40-fpga-toolchain/">compiling Verilator on Linux</a>.</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell">apt update
-apt install verilator
-</code></pre></div><p>On macOS, you can install via the <a href="https://brew.sh/">Homebrew</a> package manager:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell">brew install verilator
-</code></pre></div><p>To compile or install on other platforms, such as FreeBSD, see the official <a href="https://www.veripool.org/projects/verilator/wiki/Installing">Verilator install guide</a>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>apt update
+</span></span><span style="display:flex;"><span>apt install verilator
+</span></span></code></pre></div><p>On macOS, you can install via the <a href="https://brew.sh/">Homebrew</a> package manager:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>brew install verilator
+</span></span></code></pre></div><p>To compile or install on other platforms, such as FreeBSD, see the official <a href="https://www.veripool.org/projects/verilator/wiki/Installing">Verilator install guide</a>.</p>
 <h2 id="basic-linting">Basic Linting</h2>
 <p>For a standalone module, linting is simplicity itself:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell">verilator --lint-only -Wall foo.v
-</code></pre></div><p><code>--lint-only</code> - tells Verilator to lint but not to generate any simulation output<br>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>verilator --lint-only -Wall foo.v
+</span></span></code></pre></div><p><code>--lint-only</code> - tells Verilator to lint but not to generate any simulation output<br>
 <code>-Wall</code> - turns on extra stylistic checks</p>
 <p>If all is well, you&rsquo;ll see no messages from Verilator.</p>
 <p>If Verilator finds a potential issue, it provides clear advice, including how to disable the warning. The Verilator manual includes the <a href="https://www.veripool.org/wiki/verilator/Manual-verilator#ERRORS-AND-WARNINGS">list of possible warnings</a>.</p>
 <p>Let&rsquo;s create a simple &ldquo;add&rdquo; module with a couple of problems, then lint it:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">`default_nettype</span> none
-
-<span style="color:#66d9ef">module</span> add (
-    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> clk,
-    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x,
-    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] y,
-    <span style="color:#66d9ef">output</span> <span style="color:#66d9ef">reg</span> z,
-    <span style="color:#66d9ef">output</span> <span style="color:#66d9ef">reg</span> c
-    );
-
-    <span style="color:#66d9ef">always</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
-        z <span style="color:#f92672">&lt;=</span> x <span style="color:#f92672">+</span> y;
-    <span style="color:#66d9ef">end</span>
-<span style="color:#66d9ef">endmodule</span>
-</code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">$ verilator --lint-only -Wall add.v
-%Warning-WIDTH: add.v:12:11: Operator ASSIGNDLY expects 1 bits on the Assign RHS, but Assign RHS&#39;s ADD generates 4 bits.
-                           : ... In instance add
-   12 |         z &lt;= x + y;
-      |           ^~
-                ... Use &#34;/* verilator lint_off WIDTH */&#34; and lint_on around source to disable this message.
-%Warning-UNDRIVEN: add.v:8:16: Signal is not driven: &#39;c&#39;
-                             : ... In instance add
-    8 |     output reg c
-      |                ^
-%Error: Exiting due to 2 warning(s)
-</code></pre></div><p>The first problem is with widths: <code>x</code> and <code>y</code> are 4 bits wide, but <code>z</code> has no explicit width, so is only 1 bit wide.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">`default_nettype</span> none
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">module</span> add (
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> clk,
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x,
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] y,
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">output</span> <span style="color:#66d9ef">reg</span> z,
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">output</span> <span style="color:#66d9ef">reg</span> c
+</span></span><span style="display:flex;"><span>    );
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>        z <span style="color:#f92672">&lt;=</span> x <span style="color:#f92672">+</span> y;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-plaintext" data-lang="plaintext"><span style="display:flex;"><span>$ verilator --lint-only -Wall add.v
+</span></span><span style="display:flex;"><span>%Warning-WIDTH: add.v:12:11: Operator ASSIGNDLY expects 1 bits on the Assign RHS, but Assign RHS&#39;s ADD generates 4 bits.
+</span></span><span style="display:flex;"><span>                           : ... In instance add
+</span></span><span style="display:flex;"><span>   12 |         z &lt;= x + y;
+</span></span><span style="display:flex;"><span>      |           ^~
+</span></span><span style="display:flex;"><span>                ... Use &#34;/* verilator lint_off WIDTH */&#34; and lint_on around source to disable this message.
+</span></span><span style="display:flex;"><span>%Warning-UNDRIVEN: add.v:8:16: Signal is not driven: &#39;c&#39;
+</span></span><span style="display:flex;"><span>                             : ... In instance add
+</span></span><span style="display:flex;"><span>    8 |     output reg c
+</span></span><span style="display:flex;"><span>      |                ^
+</span></span><span style="display:flex;"><span>%Error: Exiting due to 2 warning(s)
+</span></span></code></pre></div><p>The first problem is with widths: <code>x</code> and <code>y</code> are 4 bits wide, but <code>z</code> has no explicit width, so is only 1 bit wide.</p>
 <p>We could ignore the width warning by doing this:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">always</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
-        <span style="color:#75715e">/* verilator lint_off WIDTH */</span>
-        z <span style="color:#f92672">&lt;=</span> x <span style="color:#f92672">+</span> y;
-        <span style="color:#75715e">/* verilator lint_on WIDTH */</span>
-    <span style="color:#66d9ef">end</span>
-</code></pre></div><p>But this hides the problem without doing anything about it.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span>    <span style="color:#66d9ef">always</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">/* verilator lint_off WIDTH */</span>
+</span></span><span style="display:flex;"><span>        z <span style="color:#f92672">&lt;=</span> x <span style="color:#f92672">+</span> y;
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">/* verilator lint_on WIDTH */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
+</span></span></code></pre></div><p>But this hides the problem without doing anything about it.</p>
 <p>Instead, we can fix it by setting the width of <code>z</code> to 4 bits:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">output</span> <span style="color:#66d9ef">reg</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] z,
-</code></pre></div><p>While this removes the Verilator warning, it may not have fixed the problem completely.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span>    <span style="color:#66d9ef">output</span> <span style="color:#66d9ef">reg</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] z,
+</span></span></code></pre></div><p>While this removes the Verilator warning, it may not have fixed the problem completely.</p>
 <p>For example, what happens if <code>x</code> and <code>y</code> are both <code>4'b1000</code>? Our addition overflows, leaving <code>z</code> with the value <code>4'b0000</code>. This example illustrates one of the limitations of linting: it can look at the widths of different signals but can&rsquo;t account for all the logic applied to them.</p>
 <p>So, as well as fixing the width of <code>z</code>, we can use <code>c</code> as a carry signal, which also resolves the &ldquo;Signal is not driven&rdquo; warning:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">always</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
-        {c,z} <span style="color:#f92672">&lt;=</span> x <span style="color:#f92672">+</span> y;
-    <span style="color:#66d9ef">end</span>
-</code></pre></div><h2 id="dependencies-and-paths">Dependencies and Paths</h2>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span>    <span style="color:#66d9ef">always</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>        {c,z} <span style="color:#f92672">&lt;=</span> x <span style="color:#f92672">+</span> y;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
+</span></span></code></pre></div><h2 id="dependencies-and-paths">Dependencies and Paths</h2>
 <p>What happens if a module depends on another? Verilator will search the current path for matching modules. If you want to add additional directories to the module search path, we can use <code>-I</code>. For example, if <code>top.v</code> depends on modules in the <code>../maths</code> directory:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell">verilator --lint-only -Wall -I../maths top.v
-</code></pre></div><p>You can use multiple <code>-I</code> arguments to include multiple directories.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>verilator --lint-only -Wall -I../maths top.v
+</span></span></code></pre></div><p>You can use multiple <code>-I</code> arguments to include multiple directories.</p>
 <h2 id="black-boxes-and-null-modules">Black Boxes and Null Modules</h2>
 <p>Most designs depend on vendor primitives or IP cores for which you don&rsquo;t have the source, for example using a PLL to generate a clock. When you try to lint a module that refers to a vendor primitive, you&rsquo;ll get an error such as this:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plaintext" data-lang="plaintext">%Error: clock_pix.sv:29:5: Cannot find file containing module: &#39;MMCME2_BASE&#39;
-   29 |     MMCME2_BASE #(
-      |     ^~~~~~~~~~~
-%Error: clock_pix.sv:29:5: This may be because there&#39;s no search path specified with -I&lt;dir&gt;.
-   29 |     MMCME2_BASE #(
-      |     ^~~~~~~~~~~
-        ... Looked in:
-             MMCME2_BASE
-             MMCME2_BASE.v
-             MMCME2_BASE.sv
-             obj_dir/MMCME2_BASE
-             obj_dir/MMCME2_BASE.v
-             obj_dir/MMCME2_BASE.sv
-</code></pre></div><p>Your first thought is probably to find a way to exclude <code>MMCME2_BASE</code> from the lint. Alas, Verilog <a href="https://www.veripool.org/boards/2/topics/2241?r=2255">&ldquo;can&rsquo;t be linted without elaboration, which requires the whole design&rdquo;</a>. We can get around this by creating a null module for the primitive. A null module includes the IO but none of the logic.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-plaintext" data-lang="plaintext"><span style="display:flex;"><span>%Error: clock_pix.sv:29:5: Cannot find file containing module: &#39;MMCME2_BASE&#39;
+</span></span><span style="display:flex;"><span>   29 |     MMCME2_BASE #(
+</span></span><span style="display:flex;"><span>      |     ^~~~~~~~~~~
+</span></span><span style="display:flex;"><span>%Error: clock_pix.sv:29:5: This may be because there&#39;s no search path specified with -I&lt;dir&gt;.
+</span></span><span style="display:flex;"><span>   29 |     MMCME2_BASE #(
+</span></span><span style="display:flex;"><span>      |     ^~~~~~~~~~~
+</span></span><span style="display:flex;"><span>        ... Looked in:
+</span></span><span style="display:flex;"><span>             MMCME2_BASE
+</span></span><span style="display:flex;"><span>             MMCME2_BASE.v
+</span></span><span style="display:flex;"><span>             MMCME2_BASE.sv
+</span></span><span style="display:flex;"><span>             obj_dir/MMCME2_BASE
+</span></span><span style="display:flex;"><span>             obj_dir/MMCME2_BASE.v
+</span></span><span style="display:flex;"><span>             obj_dir/MMCME2_BASE.sv
+</span></span></code></pre></div><p>Your first thought is probably to find a way to exclude <code>MMCME2_BASE</code> from the lint. Alas, Verilog <a href="https://www.veripool.org/boards/2/topics/2241?r=2255">&ldquo;can&rsquo;t be linted without elaboration, which requires the whole design&rdquo;</a>. We can get around this by creating a null module for the primitive. A null module includes the IO but none of the logic.</p>
 <p>For example, I&rsquo;ve created a null module for Xilinx&rsquo;s BUFG primitive:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> BUFG (
-    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> I,
-    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> O
-    );
-
-    <span style="color:#75715e">// NULL MODULE
-</span><span style="color:#75715e"></span>
-<span style="color:#66d9ef">endmodule</span>
-</code></pre></div><p>Creating null modules is slightly tedious, but lets you lint your entire design. To use the null module ensure it&rsquo;s in Verilator&rsquo;s search path (see the previous section).</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> BUFG (
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> I,
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> O
+</span></span><span style="display:flex;"><span>    );
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// NULL MODULE
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
+</span></span></code></pre></div><p>Creating null modules is slightly tedious, but lets you lint your entire design. To use the null module ensure it&rsquo;s in Verilator&rsquo;s search path (see the previous section).</p>
 <h2 id="linting-waivers">Linting Waivers</h2>
 <p>If you need to silence linter warnings on larger designs, or those using third-party source, then <code>/* verilator lint_off */</code> comments may be impractical. Starting with Verilator 4.028, you can create waiver files to handle warnings without touching the source. To learn more, see Stefan Wallentowitz&rsquo;s post <a href="https://wallento.cs.hm.edu/post/20200612-verilator-waivers/">Verilator Waivers</a>.</p>
 <h2 id="linting-shell-script">Linting Shell Script</h2>
 <p>If you have many top modules and/or include directories you can automate checking with a Makefile or a simple shell script.</p>
 <p>The following shell script lints all top modules in the same directory as the script:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell"><span style="color:#75715e">#!/bin/sh
-</span><span style="color:#75715e"></span>
-DIR<span style="color:#f92672">=</span><span style="color:#e6db74">`</span>dirname $0<span style="color:#e6db74">`</span>
-
-echo <span style="color:#e6db74">&#34;## Linting top modules in </span><span style="color:#e6db74">${</span>DIR<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>
-<span style="color:#66d9ef">for</span> f in <span style="color:#e6db74">${</span>DIR<span style="color:#e6db74">}</span>/top_*<span style="color:#ae81ff">\.</span>*v; <span style="color:#66d9ef">do</span>
-    echo <span style="color:#e6db74">&#34;##   Checking </span><span style="color:#e6db74">${</span>f<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>;
-    verilator --lint-only -Wall -I<span style="color:#e6db74">${</span>DIR<span style="color:#e6db74">}</span> -I<span style="color:#e6db74">${</span>DIR<span style="color:#e6db74">}</span>/../common $f;
-<span style="color:#66d9ef">done</span>
-</code></pre></div><p>You can adjust the <code>-I</code> parameters to suit your setup. The glob <code>top_*\.*v</code> capture files with .v and .sv extensions.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span><span style="color:#75715e">#!/bin/sh
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>DIR<span style="color:#f92672">=</span><span style="color:#e6db74">`</span>dirname $0<span style="color:#e6db74">`</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>echo <span style="color:#e6db74">&#34;## Linting top modules in </span><span style="color:#e6db74">${</span>DIR<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">for</span> f in <span style="color:#e6db74">${</span>DIR<span style="color:#e6db74">}</span>/top_*<span style="color:#ae81ff">\.</span>*v; <span style="color:#66d9ef">do</span>
+</span></span><span style="display:flex;"><span>    echo <span style="color:#e6db74">&#34;##   Checking </span><span style="color:#e6db74">${</span>f<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>;
+</span></span><span style="display:flex;"><span>    verilator --lint-only -Wall -I<span style="color:#e6db74">${</span>DIR<span style="color:#e6db74">}</span> -I<span style="color:#e6db74">${</span>DIR<span style="color:#e6db74">}</span>/../common $f;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">done</span>
+</span></span></code></pre></div><p>You can adjust the <code>-I</code> parameters to suit your setup. The glob <code>top_*\.*v</code> capture files with .v and .sv extensions.</p>
 <blockquote>
 <p><strong>Sponsor Project F</strong><br>
 If you like what I do, consider <a href="https://github.com/sponsors/WillGreen">sponsoring me</a> on GitHub.<br>
 I use contributions to spend more time creating open-source FPGA designs and tutorials.</p>
 </blockquote>
 
-      
-      <div class="related">
-
-<h3>Similar articles:</h3>
-<ul>
-	
-	<li><a href="/posts/building-ice40-fpga-toolchain/">iCE40 FPGA Toolchain on Linux</a></li>
-	
-	<li><a href="/posts/fpga-dev-ubuntu-20.04/">FPGA Tooling on Ubuntu 20.04</a></li>
-	
-</ul>
-</div>
       
     </div>
     

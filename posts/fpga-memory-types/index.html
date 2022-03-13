@@ -149,11 +149,11 @@
 <h2 id="flip-flops">Flip-Flops</h2>
 <p>Flip-flops are the state keepers of FPGAs. Each flip-flop holds one bit.</p>
 <p>When you create a simple counter you&rsquo;re using flip-flops:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog">    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">15</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// 16 flip-flops
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
-        cnt <span style="color:#f92672">&lt;=</span> cnt <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-    <span style="color:#66d9ef">end</span>
-</code></pre></div><p>Flip-flops are great for saving state, but they&rsquo;re not ideal for all but the smallest memories: their numbers are limited, they&rsquo;re spread throughout the FPGA (making routing larger memories hard), and they don&rsquo;t support multiple ports.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">15</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// 16 flip-flops
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>        cnt <span style="color:#f92672">&lt;=</span> cnt <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
+</span></span></code></pre></div><p>Flip-flops are great for saving state, but they&rsquo;re not ideal for all but the smallest memories: their numbers are limited, they&rsquo;re spread throughout the FPGA (making routing larger memories hard), and they don&rsquo;t support multiple ports.</p>
 <p>The Lattice iCE40 UP5K has 5,280 flip-flops, while the Xilinx Spartan 7S25 has 29,200.</p>
 <h2 id="distributed-ram">Distributed RAM</h2>
 <p>Distributed ram is built with LUTs. LUTs are usually used to create the logic of your design, but can also support memory in some FPGAs. Distributed ram is, as its name suggests, distributed throughout the FPGA. A single 6-input LUT can store 64 bits.</p>
@@ -162,28 +162,28 @@
 <p>In Xilinx 7 Series FPGAs, only LUTs in SLICEM blocks may be used as memory. A Spartan 7S25 FPGA has 14,600 6-input LUTs, of which 5,000 are SLICEM, so you have a maximum of: 5,000 x 64 bits = 320,000 bits.</p>
 <p>For more on Xilinx distributed ram see <a href="https://www.xilinx.com/support/documentation/user_guides/ug474_7Series_CLB.pdf">UG474: 7 Series FPGAs Configurable Logic Block</a>.</p>
 <p>The following example shows a ROM module using distributed ram (note the lack of a clock):</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> rom_async #(
-    <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>, 
-    <span style="color:#66d9ef">parameter</span> DEPTH<span style="color:#f92672">=</span><span style="color:#ae81ff">256</span>, 
-    <span style="color:#66d9ef">parameter</span> INIT_F<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;&#34;</span>,
-    <span style="color:#66d9ef">localparam</span> ADDRW<span style="color:#f92672">=</span>$clog2(DEPTH)
-    ) (
-    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] addr,
-    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] data
-    );
-
-    <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] memory [DEPTH];
-
-    <span style="color:#66d9ef">initial</span> <span style="color:#66d9ef">begin</span>
-        <span style="color:#66d9ef">if</span> (INIT_F <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">begin</span>
-            $display(<span style="color:#e6db74">&#34;Creating rom_async from init file &#39;%s&#39;.&#34;</span>, INIT_F);
-            $readmemh(INIT_F, memory);
-        <span style="color:#66d9ef">end</span>
-    <span style="color:#66d9ef">end</span>
-
-    <span style="color:#66d9ef">always_comb</span> data <span style="color:#f92672">=</span> memory[addr];
-<span style="color:#66d9ef">endmodule</span>
-</code></pre></div><p>To learn more about loading memory with <code>$readmemh</code> and <code>$readmemb</code> see <a href="/posts/initialize-memory-in-verilog/">Initialize Memory in Verilog</a>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> rom_async #(
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>, 
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> DEPTH<span style="color:#f92672">=</span><span style="color:#ae81ff">256</span>, 
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> INIT_F<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">localparam</span> ADDRW<span style="color:#f92672">=</span>$clog2(DEPTH)
+</span></span><span style="display:flex;"><span>    ) (
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] addr,
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] data
+</span></span><span style="display:flex;"><span>    );
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] memory [DEPTH];
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">initial</span> <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (INIT_F <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>            $display(<span style="color:#e6db74">&#34;Creating rom_async from init file &#39;%s&#39;.&#34;</span>, INIT_F);
+</span></span><span style="display:flex;"><span>            $readmemh(INIT_F, memory);
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always_comb</span> data <span style="color:#f92672">=</span> memory[addr];
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
+</span></span></code></pre></div><p>To learn more about loading memory with <code>$readmemh</code> and <code>$readmemb</code> see <a href="/posts/initialize-memory-in-verilog/">Initialize Memory in Verilog</a>.</p>
 <h2 id="block-ram">Block RAM</h2>
 <p>Block ram (BRAM) is implemented using dedicated ram circuitry within the FPGA and is ideal for memories from a few hundred bits up to hundreds of kilobits. But BRAM is not just better than distributed ram for larger memories: I&rsquo;d go so far as to say that block RAM is one of the great things about developing hardware with FPGAs.</p>
 <p><em>Being written&hellip;</em></p>
@@ -214,69 +214,69 @@ Be careful when interpreting the headline BRAM capacity on FPGA data sheets. For
 <p>The following example shows a dual-por block ram module for iCE40 (a port can only be read or write on this FPGA):</p>
 <p><em>New example to be added</em></p>
 <p>The following example shows a simple Xilinx block ram module using a single read and a single write port (ports may be both read and write):</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> bram_basic_xc7 #(
-    <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>, 
-    <span style="color:#66d9ef">parameter</span> DEPTH<span style="color:#f92672">=</span><span style="color:#ae81ff">256</span>, 
-    <span style="color:#66d9ef">parameter</span> INIT_F<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;&#34;</span>,
-    <span style="color:#66d9ef">localparam</span> ADDRW<span style="color:#f92672">=</span>$clog2(DEPTH)
-    ) (
-    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,                       <span style="color:#75715e">// clock (port a &amp; b)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> we,                        <span style="color:#75715e">// write enable (port a)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] addr_write,    <span style="color:#75715e">// write address (port a)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] addr_read,     <span style="color:#75715e">// read address (port b)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] data_in,       <span style="color:#75715e">// data in (port a)
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] data_out       <span style="color:#75715e">// data out (port b)
-</span><span style="color:#75715e"></span>    );
-
-    <span style="color:#75715e">/* verilator lint_off MULTIDRIVEN */</span>
-    <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] memory [DEPTH];
-    <span style="color:#75715e">/* verilator lint_on MULTIDRIVEN */</span>
-
-    <span style="color:#66d9ef">initial</span> <span style="color:#66d9ef">begin</span>
-        <span style="color:#66d9ef">if</span> (INIT_F <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">begin</span>
-            $display(<span style="color:#e6db74">&#34;Loading memory init file &#39;%s&#39; into bram_basic.&#34;</span>, INIT_F);
-            $readmemh(INIT_F, memory);
-        <span style="color:#66d9ef">end</span>
-    <span style="color:#66d9ef">end</span>
-
-    <span style="color:#75715e">// Port A: Sync Write
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
-        <span style="color:#66d9ef">if</span> (we) <span style="color:#66d9ef">begin</span>
-            memory[addr_write] <span style="color:#f92672">&lt;=</span> data_in;
-        <span style="color:#66d9ef">end</span>
-    <span style="color:#66d9ef">end</span>
-
-    <span style="color:#75715e">// Port B: Sync Read
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
-        data_out <span style="color:#f92672">&lt;=</span> memory[addr_read];
-    <span style="color:#66d9ef">end</span>
-<span style="color:#66d9ef">endmodule</span>
-</code></pre></div><p>The following example shows a synchronous ROM module that should work with both Xilinx and Lattice BRAM:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-verilog" data-lang="verilog"><span style="color:#66d9ef">module</span> rom_sync #(
-    <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>, 
-    <span style="color:#66d9ef">parameter</span> DEPTH<span style="color:#f92672">=</span><span style="color:#ae81ff">512</span>, 
-    <span style="color:#66d9ef">parameter</span> INIT_F<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;&#34;</span>,
-    <span style="color:#66d9ef">localparam</span> ADDRW<span style="color:#f92672">=</span>$clog2(DEPTH)
-    ) (
-    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,
-    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] addr,
-    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] data
-    );
-
-    <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] memory [DEPTH];
-
-    <span style="color:#66d9ef">initial</span> <span style="color:#66d9ef">begin</span>
-        <span style="color:#66d9ef">if</span> (INIT_F <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">begin</span>
-            $display(<span style="color:#e6db74">&#34;Creating rom_sync from init file &#39;%s&#39;.&#34;</span>, INIT_F);
-            $readmemh(INIT_F, memory);
-        <span style="color:#66d9ef">end</span>
-    <span style="color:#66d9ef">end</span>
-
-    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
-        data <span style="color:#f92672">&lt;=</span> memory[addr];
-    <span style="color:#66d9ef">end</span>
-<span style="color:#66d9ef">endmodule</span>
-</code></pre></div><h3 id="ultraram">UltraRAM</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> bram_basic_xc7 #(
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>, 
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> DEPTH<span style="color:#f92672">=</span><span style="color:#ae81ff">256</span>, 
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> INIT_F<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">localparam</span> ADDRW<span style="color:#f92672">=</span>$clog2(DEPTH)
+</span></span><span style="display:flex;"><span>    ) (
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,                       <span style="color:#75715e">// clock (port a &amp; b)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> we,                        <span style="color:#75715e">// write enable (port a)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] addr_write,    <span style="color:#75715e">// write address (port a)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] addr_read,     <span style="color:#75715e">// read address (port b)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] data_in,       <span style="color:#75715e">// data in (port a)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] data_out       <span style="color:#75715e">// data out (port b)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    );
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* verilator lint_off MULTIDRIVEN */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] memory [DEPTH];
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* verilator lint_on MULTIDRIVEN */</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">initial</span> <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (INIT_F <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>            $display(<span style="color:#e6db74">&#34;Loading memory init file &#39;%s&#39; into bram_basic.&#34;</span>, INIT_F);
+</span></span><span style="display:flex;"><span>            $readmemh(INIT_F, memory);
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// Port A: Sync Write
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (we) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>            memory[addr_write] <span style="color:#f92672">&lt;=</span> data_in;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// Port B: Sync Read
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>        data_out <span style="color:#f92672">&lt;=</span> memory[addr_read];
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
+</span></span></code></pre></div><p>The following example shows a synchronous ROM module that should work with both Xilinx and Lattice BRAM:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> rom_sync #(
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>, 
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> DEPTH<span style="color:#f92672">=</span><span style="color:#ae81ff">512</span>, 
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> INIT_F<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">localparam</span> ADDRW<span style="color:#f92672">=</span>$clog2(DEPTH)
+</span></span><span style="display:flex;"><span>    ) (
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] addr,
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] data
+</span></span><span style="display:flex;"><span>    );
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] memory [DEPTH];
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">initial</span> <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (INIT_F <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>            $display(<span style="color:#e6db74">&#34;Creating rom_sync from init file &#39;%s&#39;.&#34;</span>, INIT_F);
+</span></span><span style="display:flex;"><span>            $readmemh(INIT_F, memory);
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>        data <span style="color:#f92672">&lt;=</span> memory[addr];
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
+</span></span></code></pre></div><h3 id="ultraram">UltraRAM</h3>
 <p>UltraRAM is a type of memory available in Xilinx UltraScale and UltraScale+ FPGAs. UltraRAM is like block ram on steroids: bigger but less agile. The blocks are 288 Kb in size (8x regular BRAM): combining all the blocks in a column gives you up to 36 Mb of memory to play with. However, while UltraRAM is dual-ported, it does not support independent clocks on each port, and is a fixed 72 bits wide.</p>
 <h2 id="high-bandwidth-memory">High Bandwidth Memory</h2>
 <p><em>Being written&hellip;</em></p>
@@ -310,22 +310,6 @@ If you like what I do, consider <a href="https://github.com/sponsors/WillGreen">
 I use contributions to spend more time creating open-source FPGA designs and tutorials.</p>
 </blockquote>
 
-      
-      <div class="related">
-
-<h3>Similar articles:</h3>
-<ul>
-	
-	<li><a href="/posts/initialize-memory-in-verilog/">Initialize Memory in Verilog</a></li>
-	
-	<li><a href="/posts/division-in-verilog/">Division in Verilog</a></li>
-	
-	<li><a href="/posts/video-timings-vga-720p-1080p/">Video Timings: VGA, SVGA, 720p, 1080p</a></li>
-	
-	<li><a href="/posts/fixed-point-numbers-in-verilog/">Fixed Point Numbers in Verilog</a></li>
-	
-</ul>
-</div>
       
     </div>
     
