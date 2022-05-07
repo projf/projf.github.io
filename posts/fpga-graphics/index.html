@@ -10,7 +10,7 @@
 <meta property='og:description' content='Welcome to Exploring FPGA Graphics. In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how screens work, play Pong, create starfields and sprites, paint Michelangelo&rsquo;s David, simulate life, draw lines and triangles, and animate characters and shapes. Along the way, you&rsquo;ll experience a range of designs and techniques, from memory and finite state machines to crossing clock domains and translating C algorithms into Verilog.'>
 <meta property='og:url' content='https://projectf.io/posts/fpga-graphics/'>
 <meta property='og:site_name' content='Project F: FPGA Dev'>
-<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/fpga-graphics/social-card.png'><meta property='article:published_time' content='2020-05-20T00:00:00Z'/><meta property='article:modified_time' content='2022-05-01T00:00:00Z'/><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
+<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/fpga-graphics/social-card.png'><meta property='article:published_time' content='2020-05-20T00:00:00Z'/><meta property='article:modified_time' content='2022-05-07T00:00:00Z'/><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
 
 
 <link href="https://projectf.io/index.xml" rel="alternate" type="application/rss+xml" title="Project F: FPGA Dev" />
@@ -23,7 +23,6 @@
 <link rel="canonical" href="https://projectf.io/posts/fpga-graphics/">
 <meta name="msapplication-TileColor" content="#da532c">
 <meta name="theme-color" content="#ffffff">
-<meta name="referrer" content="no-referrer, same-origin">
 </head>
 <body>
 <section class="section">
@@ -119,15 +118,16 @@
     <h1 class="title">Beginning FPGA Graphics</h1>
     
     <div class="content">
-      <p>Welcome to <em>Exploring FPGA Graphics</em>. In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how screens work, play Pong, create starfields and sprites, paint Michelangelo&rsquo;s David, simulate life, draw lines and triangles, and animate characters and shapes. Along the way, you&rsquo;ll experience a range of designs and techniques, from memory and finite state machines to crossing clock domains and translating C algorithms into Verilog.</p>
+      <p>Welcome to <em>Exploring FPGA Graphics</em>. In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how screens work, play Pong, create starfields and sprites, paint Michelangelo&rsquo;s David, simulate life, draw lines and triangles, and animate characters and shapes. Along the way, you&rsquo;ll experience a range of designs and techniques, from memory and finite state machines to crossing clock domains and translating C algorithms into Verilog. This post was last updated in May 2022.</p>
 <p><strong>This post was completely revised in March 2022.</strong></p>
-<p><em>Updated 2022-05-01. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><em>Get in touch: <a href="https://github.com/projf/projf-explore/issues">GitHub Issues</a>, <a href="https://1bitsquared.com/pages/chat">1BitSquared Discord</a>, <a href="https://mastodon.social/@WillFlux">@WillFlux</a> (Mastodon), <a href="https://twitter.com/WillFlux">@WillFlux</a> (Twitter)</em></p>
 <p><img src="/img/posts/fpga-graphics/banner.png" alt="" title=""></p>
 <h3 id="series-outline">Series Outline</h3>
 <ul>
 <li>Beginning FPGA Graphics (this post) - video signals and basic graphics</li>
 <li><a href="/posts/racing-the-beam/">Racing the Beam</a> - simple demos with minimal logic</li>
 <li><a href="/posts/fpga-pong/">FPGA Pong</a> - recreate the classic arcade on an FPGA</li>
+<li><a href="/posts/display-signals/">Display Signals</a> - revist display signals and meet colour palettes</li>
 <li><a href="/posts/hardware-sprites/">Hardware Sprites</a> - fast, colourful graphics for games</li>
 <li><a href="/posts/fpga-ad-astra/">Ad Astra</a> - demo with starfields and hardware sprites</li>
 <li><a href="/posts/framebuffers/">Framebuffers</a> - bitmap graphics featuring Michelangelo&rsquo;s David</li>
@@ -295,7 +295,7 @@ Modern displays, including <a href="https://en.wikipedia.org/wiki/Multisync_moni
 </span></span></code></pre></div><p><em>ProTip: The last assignment wins in Verilog, so the reset overrides existing values for <code>sx</code> and <code>sy</code>.</em></p>
 <p><strong>sx</strong> and <strong>sy</strong> store the horizontal and vertical screen position. Counting starts at zero, so the maximum values are 799 for <code>sx</code> and 524 for <code>sy</code>, requiring 10 bits to hold the coordinates (2<sup>10</sup> = 1024).</p>
 <p>For simplicity, we put blanking <em>after</em> the visible pixels; that way, <code>(0,0)</code> is the top-left visible pixel and <code>(639,479)</code> the bottom right.</p>
-<p>The following diagram shows the screen layout to scale with a couple of example graphics:</p>
+<p>The following diagram shows the display signals to scale with two 64x64 pixel squares drawn:</p>
 <p><img src="/img/posts/fpga-graphics/simple-display-signals.png" alt="Simple Display Signals" title=""></p>
 <p><strong>de</strong> is <em>data enable</em>, which is low during the blanking interval (grey area of above diagram) and tells us when it&rsquo;s safe to draw.</p>
 <p>From the display timings, we know our sync polarity is negative for both <strong>hsync</strong> and <strong>vsync</strong>. Negative polarity means that a <em>low voltage</em> indicates a sync.</p>
@@ -592,7 +592,7 @@ The SB_IO primitive (with registered outputs) ensures our DVI signals are in syn
 </span></span><span style="display:flex;"><span>        sdl_b <span style="color:#f92672">&lt;=</span> {<span style="color:#ae81ff">2</span>{paint_b}};
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
 </span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
-</span></span></code></pre></div><p>NB. The Verilator simulation receives its pixel clock from the C++ wrapper, so there&rsquo;s no pixel clock generation in this version.</p>
+</span></span></code></pre></div><p><em>NB. The Verilator simulation receives its pixel clock from the C++ wrapper, so there&rsquo;s no pixel clock generation in this version.</em></p>
 <h2 id="constraints">Constraints</h2>
 <p>Before building the design, we need board constraints. The constraints map the pins on the FPGA to the signals in our design. For example, we need to know which FPGA pin connects to the reset button and which to the vertical sync.</p>
 <p>Take a look at the constraints for your board:</p>
@@ -700,7 +700,7 @@ The SB_IO primitive (with registered outputs) ensures our DVI signals are in syn
 <li>Verilator Sim: <strong><a href="https://github.com/projf/projf-explore/blob/main/graphics/fpga-graphics/sim/top_colour.sv">sim/top_colour.sv</a></strong></li>
 </ul>
 <h2 id="next-time">Next Time</h2>
-<p>I hope you enjoyed this introduction to FPGA Graphics. Next time, we&rsquo;ll be <em><a href="/posts/racing-the-beam/">Racing the Beam</a></em> to create simple demos with our new graphics skills. Check out the <a href="/sitemap/">site map</a> for more FPGA projects.</p>
+<p>I hope you enjoyed this introduction to FPGA Graphics. Next time, we&rsquo;ll be <em><a href="/posts/racing-the-beam/">Racing the Beam</a></em> to create simple demos with our new graphics skills. Check out the <a href="/sitemap/">site map</a> for more FPGA projects and tutorials.</p>
 <h2 id="whats-possible">What&rsquo;s Possible?</h2>
 <p>Here are some projects to inspire you:</p>
 <ul>
@@ -710,7 +710,7 @@ The SB_IO primitive (with registered outputs) ensures our DVI signals are in syn
 <li><a href="https://tomverbeure.github.io/rtl/2018/11/26/Racing-the-Beam-Ray-Tracer.html">Racing the Beam Ray Tracer</a> by Tom Verbeure</li>
 <li><a href="https://github.com/ultraembedded/FPGAmp">FPGA Media Player</a> by ultraembedded</li>
 </ul>
-<p><em>Constructive feedback is always welcome. Get in touch with <a href="https://twitter.com/WillFlux">@WillFlux</a> or open an <a href="https://github.com/projf/projf-explore/issues">issue on GitHub</a>.</em></p>
+<p><em>Get in touch: <a href="https://github.com/projf/projf-explore/issues">GitHub Issues</a>, <a href="https://1bitsquared.com/pages/chat">1BitSquared Discord</a>, <a href="https://mastodon.social/@WillFlux">@WillFlux</a> (Mastodon), <a href="https://twitter.com/WillFlux">@WillFlux</a> (Twitter)</em></p>
 
       
     </div>
@@ -730,7 +730,7 @@ The SB_IO primitive (with registered outputs) ensures our DVI signals are in syn
 </section>
 
 
-<script src="https://narwhal.projectf.io/script.js" site="EVCGKVDN" defer></script>
+<script src="https://badgers.projectf.io/script.js" data-site="EVCGKVDN" defer></script>
 </body>
 </html>
 
