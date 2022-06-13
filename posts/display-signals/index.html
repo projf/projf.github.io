@@ -7,11 +7,11 @@
 <title>Display Signals | Project F: FPGA Dev</title>
 
 <meta property='og:title' content='Display Signals - Project F: FPGA Dev'>
-<meta property='og:description' content='Welcome back to Exploring FPGA Graphics. Last time, we played Pong against our FPGA; this time, we revisit displays signals and learn about palettes and indexed colour.
+<meta property='og:description' content='Welcome back to Exploring FPGA Graphics. Last time, we played Pong against our FPGA; this time, we revisit displays signals and learn about palettes and indexed colour. This post was last updated in June 2022.
 In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how screens work, play Pong, create starfields and sprites, paint Michelangelo&rsquo;s David, simulate life, draw lines and triangles, and animate characters and shapes.'>
 <meta property='og:url' content='https://projectf.io/posts/display-signals/'>
 <meta property='og:site_name' content='Project F: FPGA Dev'>
-<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/display-signals/social-card.png'><meta property='article:published_time' content='2022-05-07T00:00:00Z'/><meta property='article:modified_time' content='2022-05-07T00:00:00Z'/><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
+<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/display-signals/social-card.png'><meta property='article:published_time' content='2022-05-07T00:00:00Z'/><meta property='article:modified_time' content='2022-06-13T00:00:00Z'/><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
 
 
 <link href="https://projectf.io/index.xml" rel="alternate" type="application/rss+xml" title="Project F: FPGA Dev" />
@@ -119,7 +119,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
     <h1 class="title">Display Signals</h1>
     
     <div class="content">
-      <p>Welcome back to <em>Exploring FPGA Graphics</em>. Last time, we <a href="/posts/fpga-pong/">played Pong against our FPGA</a>; this time, we revisit displays signals and learn about palettes and indexed colour.</p>
+      <p>Welcome back to <em>Exploring FPGA Graphics</em>. Last time, we <a href="/posts/fpga-pong/">played Pong against our FPGA</a>; this time, we revisit displays signals and learn about palettes and indexed colour.  This post was last updated in June 2022.</p>
 <p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how screens work, play Pong, create starfields and sprites, paint Michelangelo&rsquo;s David, simulate life, draw lines and triangles, and animate characters and shapes. New to the series? Start with <a href="/posts/fpga-graphics/">Beginning FPGA Graphics</a>.</p>
 <p><em>Get in touch: <a href="https://github.com/projf/projf-explore/issues">GitHub Issues</a>, <a href="https://1bitsquared.com/pages/chat">1BitSquared Discord</a>, <a href="https://mastodon.social/@WillFlux">@WillFlux</a> (Mastodon), <a href="https://twitter.com/WillFlux">@WillFlux</a> (Twitter)</em></p>
 <p><img src="/img/posts/display-signals/banner.png" alt="" title=""></p>
@@ -258,7 +258,7 @@ My hardware designs are open source, and my blog is advert free.</p>
 <p>For simplicity, our original <strong>[<a href="https://github.com/projf/projf-explore/blob/main/graphics/fpga-graphics/simple_480p.sv">simple_480p.sv</a>]</strong> design had sync and data enable signals directly derived from <code>sx</code> and <code>sy</code>. However, it&rsquo;s good practice to register module outputs: this maximises the time the module user has to work with.</p>
 <p>Our improved design registers all outputs, which forces us to delay <code>sx</code> and <code>sy</code> to match; otherwise, the sync and control signals would be one cycle late. We use <code>x</code> and <code>y</code> internally and assign <code>sx</code> and <code>sy</code> from them.</p>
 <h3 id="display-signals-in-action">Display Signals in Action</h3>
-<p>The revised <a href="/posts/hardware-sprites/">Hardware Sprites</a> post (due late May 2022) will include examples of the new display module.</p>
+<p>The revised <a href="/posts/hardware-sprites/">Hardware Sprites</a> post includes examples of this new display signals module.</p>
 <h2 id="a-refined-palette">A Refined Palette</h2>
 <p>So far in this series, we&rsquo;ve been using 12-bit colour values directly. For example, <code>#137</code> is dark blue and <code>#FFF</code> is white.
 However, using a full 12 bits for every pixel is wasteful for graphics with only a few colours.</p>
@@ -275,7 +275,7 @@ However, using a full 12 bits for every pixel is wasteful for graphics with only
 <p>For example, if we set a pixel index to &lsquo;3&rsquo;, it would appear orange with the second palette.</p>
 <h3 id="clut-module">CLUT Module</h3>
 <p>A CLUT needs a small amount of fast memory, for which block ram is ideal.
-I&rsquo;ve designed a simple CLUT module using a single BRAM (<em>GitHub source link will be added soon</em>):</p>
+I&rsquo;ve designed a simple CLUT module using a single BRAM <strong>[<a href="https://github.com/projf/projf-explore/blob/main/lib/display/clut_simple.sv">clut_simple.sv</a>]</strong>:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> clut_simple #(
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> COLRW<span style="color:#f92672">=</span><span style="color:#ae81ff">12</span>,  <span style="color:#75715e">// colour output width (bits)
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> CIDXW<span style="color:#f92672">=</span><span style="color:#ae81ff">4</span>,   <span style="color:#75715e">// colour index width (bits)
@@ -307,7 +307,7 @@ I&rsquo;ve designed a simple CLUT module using a single BRAM (<em>GitHub source 
 </span></span></code></pre></div><h3 id="palette-files">Palette Files</h3>
 <p>You can set the colours directly in logic, but loading an initial palette from a file is common. Our module supports this using the <code>F_PAL</code> parameter. The Project F Verilog Library includes several ready-to-use palettes in <code>$readmemh</code> format: <strong>[<a href="https://github.com/projf/projf-explore/tree/main/lib/res/palettes">lib/res/palettes</a>]</strong>.</p>
 <h3 id="colours-in-action">Colours in Action</h3>
-<p>The revised <a href="/posts/hardware-sprites/">Hardware Sprites</a> post (coming June 2022) will include examples of this CLUT module.</p>
+<p>The revised <a href="/posts/hardware-sprites/">Hardware Sprites</a> post includes examples of this CLUT module.</p>
 <h2 id="next-time">Next Time</h2>
 <p>Next, we&rsquo;ll learn about <a href="/posts/hardware-sprites/">hardware sprites</a>, generating fast, colourful graphics using our new CLUT and display signals modules. Check out the <a href="/sitemap/">site map</a> for more FPGA projects and tutorials.</p>
 <p><em>Get in touch: <a href="https://github.com/projf/projf-explore/issues">GitHub Issues</a>, <a href="https://1bitsquared.com/pages/chat">1BitSquared Discord</a>, <a href="https://mastodon.social/@WillFlux">@WillFlux</a> (Mastodon), <a href="https://twitter.com/WillFlux">@WillFlux</a> (Twitter)</em></p>
