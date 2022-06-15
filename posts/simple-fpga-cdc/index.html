@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"  lang="en-gb">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+<title>Simple Clock Domain Crossing | Project F: FPGA Dev</title>
+
+<meta property='og:title' content='Simple Clock Domain Crossing - Project F: FPGA Dev'>
+<meta property='og:description' content='Sometimes you need to send a single pulse from one clock domain to another. This is a simple case of clock domain crossing or CDC. This FPGA recipe uses the xd module from the Project F Library to handle such situations simply and safely.
+Get in touch: GitHub Issues, 1BitSquared Discord, @WillFlux (Mastodon), @WillFlux (Twitter)
+Sponsor My Work
+If you like what I do, consider sponsoring me on GitHub.
+I love FPGAs and want to help more people discover and use them in their projects.'>
+<meta property='og:url' content='https://projectf.io/posts/simple-fpga-cdc/'>
+<meta property='og:site_name' content='Project F: FPGA Dev'>
+<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/simple-fpga-cdc/social-card.png'><meta property='article:published_time' content='2022-06-15T00:00:00Z'/><meta property='article:modified_time' content='2022-06-15T00:00:00Z'/><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
+
+
+<link href="https://projectf.io/index.xml" rel="alternate" type="application/rss+xml" title="Project F: FPGA Dev" />
+
+<link rel="stylesheet" href="/css/style.css"/><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+<link rel="canonical" href="https://projectf.io/posts/simple-fpga-cdc/">
+<meta name="msapplication-TileColor" content="#da532c">
+<meta name="theme-color" content="#ffffff">
+</head>
+<body>
+<section class="section">
+  <div class="container">
+    <nav id="nav-main" class="nav">
+      <div id="nav-name" class="nav-left">
+        <a id="nav-anchor" class="nav-item" href="https://projectf.io">
+          <h1 id="nav-heading" class="title is-4">Project F: FPGA Dev</h1>
+        </a>
+      </div>
+      <div class="nav-right">
+        <nav id="nav-items" class="nav-item level is-mobile"><a class="level-item" aria-label="github" href='https://github.com/projf/projf-explore'
+            target='_blank' rel='noopener'>
+            <span class="icon">
+              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
+    
+    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
+    
+  </svg></i>
+            </span>
+          </a><a class="level-item" aria-label="twitter" href='https://twitter.com/WillFlux'
+            target='_blank' rel='noopener'>
+            <span class="icon">
+              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
+    
+    <path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"/>
+    
+  </svg></i>
+            </span>
+          </a><a class="level-item" aria-label="youtube" href='https://youtube.com/channel/UCaT0lvfWo1GStbp0neg8weg'
+            target='_blank' rel='noopener'>
+            <span class="icon">
+              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
+    
+    <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/>
+    <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/>
+    
+  </svg></i>
+            </span>
+          </a><a class="level-item" aria-label="rss" href='/index.xml'
+            target='_blank' rel='noopener'>
+            <span class="icon">
+              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
+    
+    <path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle>
+    
+  </svg></i>
+            </span>
+          </a></nav>
+      </div>
+    </nav>
+
+    <nav class="nav">
+      
+      <div class="nav-left"><a class="nav-item" href="/about">
+          <h2 class="title is-5">About</h2>
+        </a><a class="nav-item" href="/sitemap">
+          <h2 class="title is-5">Site Map</h2>
+        </a><a class="nav-item" href="/tags/cookbook">
+          <h2 class="title is-5">Cookbook</h2>
+        </a><a class="nav-item" href="/tags/graphics">
+          <h2 class="title is-5">Graphics</h2>
+        </a><a class="nav-item" href="/tags/maths">
+          <h2 class="title is-5">Maths</h2>
+        </a><a class="nav-item" href="/tags/tools">
+          <h2 class="title is-5">Tools</h2>
+        </a></div>
+      
+
+      
+    </nav>
+
+  </div>
+  <script src="/js/navicon-shift.js"></script>
+</section>
+<section class="section">
+  <div class="container">
+    <div class="subtitle tags is-6 is-pulled-right">
+      
+      
+<a class="subtitle is-6" href="/tags/lib/">#lib</a>
+
+
+
+  
+  | <a class="subtitle is-6" href="/tags/clock/">#clock</a>
+  
+  | <a class="subtitle is-6" href="/tags/cookbook/">#cookbook</a>
+  
+
+
+      
+    </div>
+    <h2 class="subtitle is-6">15 June 2022</h2>
+    <h1 class="title">Simple Clock Domain Crossing</h1>
+    
+    <div class="content">
+      <p>Sometimes you need to send a single pulse from one clock domain to another. This is a simple case of <strong>clock domain crossing</strong> or <strong>CDC</strong>. This <a href="/tags/cookbook">FPGA recipe</a> uses the <strong>xd</strong> module from the <a href="/posts/verilog-library-announcement/">Project F Library</a> to handle such situations simply and safely.</p>
+<p><em>Get in touch: <a href="https://github.com/projf/projf-explore/issues">GitHub Issues</a>, <a href="https://1bitsquared.com/pages/chat">1BitSquared Discord</a>, <a href="https://mastodon.social/@WillFlux">@WillFlux</a> (Mastodon), <a href="https://twitter.com/WillFlux">@WillFlux</a> (Twitter)</em></p>
+<blockquote>
+<p><strong>Sponsor My Work</strong><br>
+If you like what I do, consider <a href="https://github.com/sponsors/WillGreen">sponsoring me</a> on GitHub.<br>
+I love FPGAs and want to help more people discover and use them in their projects.<br>
+My hardware designs are open source, and my blog is advert free.</p>
+</blockquote>
+<h2 id="crossing-the-streams">Crossing the Streams</h2>
+<p>The standard advice for safely handling an async signal is to pass it through a pair of flip-flops. This works well if your source signal is lower frequency than your destination, such as a button press or UART. However, this approach fails when the source signal has a similar or higher frequency than the destination.</p>
+<p>A FIFO will work correctly for any frequencies, but this is relatively complex and logic-heavy. We can use a simple &ldquo;toggle&rdquo; trick for an isolated pulse to safely cross domains, irrespective of their frequencies.</p>
+<p>Thanks to <a href="https://www.fpga4fun.com/CrossClockDomain2.html">fpga4fun</a> for this approach to CDC.</p>
+<h2 id="xd-module">XD Module</h2>
+<p>Project F Library module <strong>[<a href="https://github.com/projf/projf-explore/blob/main/lib/clock/xd.sv">clock/xd.sv</a>]</strong>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> xd (
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_i,  <span style="color:#75715e">//  input clock: source domain
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_o,  <span style="color:#75715e">// output clock: destination domain
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst_i,  <span style="color:#75715e">//        reset: source domain
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst_o,  <span style="color:#75715e">//        reset: destination domain
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> i,      <span style="color:#75715e">//  input pulse: source domain
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> o       <span style="color:#75715e">// output pulse: destination domain
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    );
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// toggle reg when pulse received in source domain
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> toggle_i;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_i) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>        toggle_i <span style="color:#f92672">&lt;=</span> toggle_i <span style="color:#f92672">^</span> i;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (rst_i) toggle_i <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// cross to destination domain via shift reg
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] shr_o;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_o) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>        shr_o <span style="color:#f92672">&lt;=</span> {shr_o[<span style="color:#ae81ff">2</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>], toggle_i};
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (rst_o) shr_o <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;b0</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// output pulse when transition occurs
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>        o <span style="color:#f92672">=</span> shr_o[<span style="color:#ae81ff">3</span>] <span style="color:#f92672">^</span> shr_o[<span style="color:#ae81ff">2</span>];
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
+</span></span></code></pre></div><p>There&rsquo;s a Vivado test bench you can use to exercise the module with Vivado: <strong>[<a href="https://github.com/projf/projf-explore/blob/main/lib/clock/xc7/xd_tb.sv">clock/xc7/xd_tb.sv</a>]</strong>. Verilator test benches will be available later.</p>
+<h2 id="example">Example</h2>
+<p>My designs often have separate pixel and system clocks. When a new frame starts, we must pass the event from the pixel to the system clock domain.</p>
+<p>Along with the signal you wish to bring into the new clock domain, you need the clock and reset signals for both domains.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> frame;      <span style="color:#75715e">// start of new frame (pixel clock domain)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> frame_sys;  <span style="color:#75715e">// start of new frame (system clock domain)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    xd xd_frame (
+</span></span><span style="display:flex;"><span>        .clk_i(clk_pix),  <span style="color:#75715e">// source clock
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        .clk_o(clk_sys),  <span style="color:#75715e">// destination clock
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        .rst_i(rst_pix),  <span style="color:#75715e">// source reset
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        .rst_o(rst_sys),  <span style="color:#75715e">// destination reset
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        .i(frame),        <span style="color:#75715e">// source flag
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        .o(frame_sys)     <span style="color:#75715e">// destination flag
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    );
+</span></span></code></pre></div><p>You can see this module in action in many Project F designs, including <a href="/posts/framebuffers/">Framebuffers</a> and <a href="/posts/fpga-shapes/">2D Shapes</a>.</p>
+<h2 id="caution-advised">Caution Advised</h2>
+<p>Before you rush to add new clock domains to your designs, you need to be aware of a significant limitation: this approach only works for isolated pulses of one clock cycle. The <code>clock/xd</code> module is ideal for sending well-spaced events but can&rsquo;t be used to send arbitrary data from one clock domain to another: use dual-port BRAM or a proper FIFO instead.</p>
+<p>The following simulation shows what happens if you abuse the module:</p>
+<p><img src="/img/posts/simple-fpga-cdc/xd-sim.png" alt="xd module simulation" title="Where did my pulses go?"></p>
+<p>Note how the final two-cycle pulse becomes two separate pulses when sent from slow to fast but disappears altogether when sent from fast to slow. You have been warned!</p>
+<p>Check out the <a href="/sitemap/">site map</a> for more FPGA projects and tutorials.</p>
+
+      
+    </div>
+    
+  </div>
+</section>
+
+    <script src="/js/copycode.js"></script>
+
+
+
+<section class="section">
+  <div class="container has-text-centered">
+    <p>©2022 Will Green, Project F</p>
+    
+  </div>
+</section>
+
+
+<script src="https://badgers.projectf.io/script.js" data-site="EVCGKVDN" defer></script>
+</body>
+</html>
+
