@@ -1,22 +1,25 @@
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml"  lang="en-gb">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
 <title>2D Shapes | Project F: FPGA Dev</title>
 
 <meta property='og:title' content='2D Shapes - Project F: FPGA Dev'>
 <meta property='og:description' content='Welcome back to Exploring FPGA Graphics. Building on our designs in lines and triangles, we&rsquo;ll draw rectangles, filled triangles and circles. We&rsquo;ll finish off this part by drawing a castle with our shapes. This post was last updated in January 2022.
-In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how displays work, race the beam with Pong, animate starfields and sprites, paint Michelangelo&rsquo;s David, simulate life with bitmaps, draw lines and shapes, and create smooth animation with double buffering.'>
+New version with updated framebuffer design coming summer 2022.
+In this series, we learn about graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how screens work, play Pong, create starfields and sprites, paint Michelangelo&rsquo;s David, draw lines and triangles, and animate characters and shapes.'>
 <meta property='og:url' content='https://projectf.io/posts/fpga-shapes/'>
 <meta property='og:site_name' content='Project F: FPGA Dev'>
-<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/fpga-shapes/social-card.png'><meta property='article:published_time' content='2021-03-17T00:00:00Z'/><meta property='article:modified_time' content='2022-01-10T00:00:00Z'/><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
+<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/fpga-shapes/social-card.png'><meta property='article:published_time' content='2021-03-17T00:00:00Z'><meta property='article:modified_time' content='2022-07-25T00:00:00Z'><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
 
 
-<link href="https://projectf.io/index.xml" rel="alternate" type="application/rss+xml" title="Project F: FPGA Dev" />
+<link href="https://projectf.io/index.xml" rel="alternate" type="application/rss+xml" title="Project F: FPGA Dev">
 
-<link rel="stylesheet" href="/css/style.css"/><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="stylesheet" href="/css/style.css"><link rel='stylesheet' href='https://projectf.io/css/custom.css'>
+
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
 <link rel="manifest" href="/site.webmanifest">
@@ -26,6 +29,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
 <meta name="theme-color" content="#ffffff">
 </head>
 <body>
+
 <section class="section">
   <div class="container">
     <nav id="nav-main" class="nav">
@@ -53,7 +57,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
     
   </svg></i>
             </span>
-          </a><a class="level-item" aria-label="youtube" href='https://youtube.com/channel/UCaT0lvfWo1GStbp0neg8weg'
+          </a><a class="level-item" aria-label="youtube" href='https://youtube.com/user/UCaT0lvfWo1GStbp0neg8weg'
             target='_blank' rel='noopener'>
             <span class="icon">
               <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
@@ -80,16 +84,18 @@ In this series, we explore graphics at the hardware level and get a feel for the
       
       <div class="nav-left"><a class="nav-item" href="/about">
           <h2 class="title is-5">About</h2>
-        </a><a class="nav-item" href="/sitemap">
-          <h2 class="title is-5">Site Map</h2>
-        </a><a class="nav-item" href="/tags/cookbook">
-          <h2 class="title is-5">Cookbook</h2>
-        </a><a class="nav-item" href="/tags/graphics">
-          <h2 class="title is-5">Graphics</h2>
-        </a><a class="nav-item" href="/tags/maths">
-          <h2 class="title is-5">Maths</h2>
-        </a><a class="nav-item" href="/tags/tools">
-          <h2 class="title is-5">Tools</h2>
+        </a><a class="nav-item" href="/boards">
+          <h2 class="title is-5">Boards</h2>
+        </a><a class="nav-item" href="/demos">
+          <h2 class="title is-5">Demos</h2>
+        </a><a class="nav-item" href="/howto">
+          <h2 class="title is-5">How To</h2>
+        </a><a class="nav-item" href="/tags/news">
+          <h2 class="title is-5">News</h2>
+        </a><a class="nav-item" href="/tutorials">
+          <h2 class="title is-5">Tutorials</h2>
+        </a><a class="nav-item" href="/verilog-lib">
+          <h2 class="title is-5">Verilog Lib</h2>
         </a></div>
       
 
@@ -104,13 +110,9 @@ In this series, we explore graphics at the hardware level and get a feel for the
     <div class="subtitle tags is-6 is-pulled-right">
       
       
-<a class="subtitle is-6" href="/tags/explore/">#explore</a>
+<a class="subtitle is-6" href="/tags/graphics/">#graphics</a>
 
 
-
-  
-  | <a class="subtitle is-6" href="/tags/graphics/">#graphics</a>
-  
 
 
       
@@ -120,18 +122,17 @@ In this series, we explore graphics at the hardware level and get a feel for the
     
     <div class="content">
       <p>Welcome back to <em>Exploring FPGA Graphics</em>. Building on our designs in <a href="/posts/lines-and-triangles/">lines and triangles</a>, we&rsquo;ll draw rectangles, filled triangles and circles. We&rsquo;ll finish off this part by drawing a castle with our shapes. This post was last updated in January 2022.</p>
-<p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how displays work, race the beam with Pong, animate starfields and sprites, paint Michelangelo&rsquo;s David, simulate life with bitmaps, draw lines and shapes, and create smooth animation with double buffering. New to the series? Start with <a href="/posts/fpga-graphics/">Intro to FPGA Graphics</a>.</p>
+<p><strong>New version with updated framebuffer design coming summer 2022.</strong></p>
+<p>In this series, we learn about graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how screens work, play Pong, create starfields and sprites, paint Michelangelo&rsquo;s David, draw lines and triangles, and animate characters and shapes. New to the series? Start with <a href="/posts/fpga-graphics/">Beginning FPGA Graphics</a>.</p>
 <p><em>Get in touch: <a href="https://github.com/projf/projf-explore/issues">GitHub Issues</a>, <a href="https://1bitsquared.com/pages/chat">1BitSquared Discord</a>, <a href="https://mastodon.social/@WillFlux">@WillFlux</a> (Mastodon), <a href="https://twitter.com/WillFlux">@WillFlux</a> (Twitter)</em></p>
 <h3 id="series-outline">Series Outline</h3>
 <ul>
 <li><a href="/posts/fpga-graphics/">Beginning FPGA Graphics</a> - video signals and basic graphics</li>
 <li><a href="/posts/racing-the-beam/">Racing the Beam</a> - simple demos with minimal logic</li>
 <li><a href="/posts/fpga-pong/">FPGA Pong</a> - recreate the classic arcade on an FPGA</li>
-<li><a href="/posts/display-signals/">Display Signals</a> - revist display signals and meet colour palettes</li>
+<li><a href="/posts/display-signals/">Display Signals</a> - revisit display signals and meet colour palettes</li>
 <li><a href="/posts/hardware-sprites/">Hardware Sprites</a> - fast, colourful graphics for games</li>
-<li><a href="/posts/fpga-ad-astra/">Ad Astra</a> - demo with starfields and hardware sprites</li>
 <li><a href="/posts/framebuffers/">Framebuffers</a> - bitmap graphics featuring Michelangelo&rsquo;s David</li>
-<li><a href="/posts/life-on-screen/">Life on Screen</a> - Conway&rsquo;s Game of Life in logic</li>
 <li><a href="/posts/lines-and-triangles/">Lines and Triangles</a> - drawing lines and triangles</li>
 <li>2D Shapes (this post) - filled shapes and simple pictures</li>
 <li><a href="/posts/animated-shapes/">Animated Shapes</a> - animation and double-buffering</li>
@@ -153,7 +154,7 @@ My hardware designs are open source, and my blog is advert free.</p>
 <p>The SystemVerilog designs featured in this series are available from the <a href="https://github.com/projf/projf-explore/">projf-explore</a> git repo under the open-source MIT licence: build on them to your heart&rsquo;s content. The rest of the blog content is subject to standard copyright restrictions: don&rsquo;t republish it without permission.</p>
 <h2 id="the-rectangle">The Rectangle</h2>
 <p>Let&rsquo;s kick things off by creating a module for rectangle drawing; this is similar to the <a href="/posts/lines-and-triangles/#the-triangle">triangle</a> and provides a helpful stepping stone to drawing filled shapes.</p>
-<p>Create module <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lib/graphics/draw_rectangle.sv">draw_rectangle.sv</a>]</strong>:</p>
+<p>Create module <strong>[<a href="https://github.com/projf/projf-explore/blob/main/lib/graphics/draw_rectangle.sv">draw_rectangle.sv</a>]</strong>:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> draw_rectangle #(<span style="color:#66d9ef">parameter</span> CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>) (  <span style="color:#75715e">// signed coordinate width
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,             <span style="color:#75715e">// clock
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst,             <span style="color:#75715e">// reset
@@ -247,12 +248,12 @@ My hardware designs are open source, and my blog is advert free.</p>
 </span></span></code></pre></div><p>This module has similar I/O and state machine to <code>draw_triangle</code>, but a rectangle only needs two pairs of coordinates to define it.</p>
 <p>To demo our rectangle drawing, we will draw a series of rectangles inside each other using each colour in the 16-colour palette.</p>
 <ul>
-<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/2d-shapes/xc7/top_rectangles.sv">xc7/top_rectangles.sv</a></strong></li>
-<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/2d-shapes/ice40/top_rectangles.sv">ice40/top_rectangles.sv</a></strong></li>
+<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/main/graphics/2d-shapes/xc7/top_rectangles.sv">xc7/top_rectangles.sv</a></strong></li>
+<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/main/graphics/2d-shapes/ice40/top_rectangles.sv">ice40/top_rectangles.sv</a></strong></li>
 </ul>
 <blockquote>
 <p><strong>Building the Designs</strong><br>
-In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-shapes">2D Shapes</a> section of the git repo, you&rsquo;ll find the design files, a makefile for iCEBreaker, a Vivado project for Arty, and instructions for building the designs for both boards.</p>
+In the <a href="https://github.com/projf/projf-explore/tree/main/graphics/2d-shapes">2D Shapes</a> section of the git repo, you&rsquo;ll find the design files, a makefile for iCEBreaker, a Vivado project for Arty, and instructions for building the designs for both boards.</p>
 </blockquote>
 <p>The Arty version of <code>top_rectangles</code> looks like this:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> top_rectangles (
@@ -432,7 +433,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
 <p><img src="/img/posts/fpga-shapes/rectangles.png" alt="Rectangles" title="A nest of rectangles captured from my FPGA board."></p>
 <h2 id="filled-rectangle">Filled Rectangle</h2>
 <p>A rectangle is the simplest shape to fill: we draw a series of horizontal lines of the same length. We could use our regular <code>draw_line.sv</code> module to do this, but a simpler module, <code>draw_line_1d</code> will do the trick. By restricting line drawing to one dimension and left-to-right, we can take advantage of sequential memory access, which is important for dynamic (SDRAM, DDR, PSRAM) memory performance.</p>
-<p>Create module <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lib/graphics/draw_line_1d.sv">draw_line_1d.sv</a>]</strong>:</p>
+<p>Create module <strong>[<a href="https://github.com/projf/projf-explore/blob/main/lib/graphics/draw_line_1d.sv">draw_line_1d.sv</a>]</strong>:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> draw_line_1d #(<span style="color:#66d9ef">parameter</span> CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>) (  <span style="color:#75715e">// signed coordinate width
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,             <span style="color:#75715e">// clock
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst,             <span style="color:#75715e">// reset
@@ -480,8 +481,8 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
 </span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
 </span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
-</span></span></code></pre></div><p>This module retains the interface of draw_line but simplifies the implementation to one dimension. There&rsquo;s a test bench you can use to exercise the module with Vivado: <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lib/graphics/xc7/draw_line_1d_tb.sv">xc7/draw_line_1d_tb.sv</a>]</strong>.</p>
-<p>Next, create module <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lib/graphics/draw_rectangle_fill.sv">draw_rectangle_fill.sv</a>]</strong>:</p>
+</span></span></code></pre></div><p>This module retains the interface of draw_line but simplifies the implementation to one dimension. There&rsquo;s a test bench you can use to exercise the module with Vivado: <strong>[<a href="https://github.com/projf/projf-explore/blob/main/lib/graphics/xc7/draw_line_1d_tb.sv">xc7/draw_line_1d_tb.sv</a>]</strong>.</p>
+<p>Next, create module <strong>[<a href="https://github.com/projf/projf-explore/blob/main/lib/graphics/draw_rectangle_fill.sv">draw_rectangle_fill.sv</a>]</strong>:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> draw_rectangle_fill #(<span style="color:#66d9ef">parameter</span> CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>) (  <span style="color:#75715e">// signed coordinate width
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,             <span style="color:#75715e">// clock
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst,             <span style="color:#75715e">// reset
@@ -569,8 +570,8 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
 </span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
 </span></span></code></pre></div><p>For a simple demo of overlapping squares using the filled rectangle module, create a new top module:</p>
 <ul>
-<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/2d-shapes/xc7/top_rectangles_fill.sv">xc7/top_rectangles_fill.sv</a></strong></li>
-<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/2d-shapes/ice40/top_rectangles_fill.sv">ice40/top_rectangles_fill.sv</a></strong></li>
+<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/main/graphics/2d-shapes/xc7/top_rectangles_fill.sv">xc7/top_rectangles_fill.sv</a></strong></li>
+<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/main/graphics/2d-shapes/ice40/top_rectangles_fill.sv">ice40/top_rectangles_fill.sv</a></strong></li>
 </ul>
 <p>Drawing filled rectangles looks like this in the iCE40 version (note how we have to initialize the SPRAM framebuffer before use):</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span>    <span style="color:#75715e">// draw filled rectangles in framebuffer
@@ -670,7 +671,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
 </span></span></code></pre></div><h2 id="filled-triangle">Filled Triangle</h2>
 <p>A filled triangle requires more thought than a rectangle. There are several quite different approaches, for example barycentric coordinates can be used to render many pixels in parallel. We&rsquo;re going to stick with Bresenham&rsquo;s algorithm, as it&rsquo;s light on FPGA resources and can still draw over a million small triangles per second (based on 100 MHz Arty drawing clock and a 36-pixel triangle taking 97 clock cycles).</p>
 <p>We use Bresenham to determine the triangle edges, then join them with a horizontal line. First we sort the vertices, so we always draw down, then we split the triangle into two flat triangles. <em>More details to follow.</em></p>
-<p>Create module <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lib/graphics/draw_triangle_fill.sv">draw_triangle_fill.sv</a>]</strong>:</p>
+<p>Create module <strong>[<a href="https://github.com/projf/projf-explore/blob/main/lib/graphics/draw_triangle_fill.sv">draw_triangle_fill.sv</a>]</strong>:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> draw_triangle_fill #(<span style="color:#66d9ef">parameter</span> CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>) (  <span style="color:#75715e">// signed coordinate width
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,             <span style="color:#75715e">// clock
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst,             <span style="color:#75715e">// reset
@@ -880,10 +881,10 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/2d-s
 </span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
 </span></span></code></pre></div><p>Here are are a couple of designs using filled triangles:</p>
 <ul>
-<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/2d-shapes/xc7/top_triangles_fill.sv">xc7/top_triangles_fill.sv</a></strong></li>
-<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/2d-shapes/xc7/top_cube_fill.sv">xc7/top_cube_fill.sv</a></strong></li>
-<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/2d-shapes/ice40/top_triangles_fill.sv">ice40/top_triangles_fill.sv</a></strong></li>
-<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/2d-shapes/ice40/top_cube_fill.sv">ice40/top_cube_fill.sv</a></strong></li>
+<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/main/graphics/2d-shapes/xc7/top_triangles_fill.sv">xc7/top_triangles_fill.sv</a></strong></li>
+<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/main/graphics/2d-shapes/xc7/top_cube_fill.sv">xc7/top_cube_fill.sv</a></strong></li>
+<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/main/graphics/2d-shapes/ice40/top_triangles_fill.sv">ice40/top_triangles_fill.sv</a></strong></li>
+<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/main/graphics/2d-shapes/ice40/top_cube_fill.sv">ice40/top_cube_fill.sv</a></strong></li>
 </ul>
 <p>For <code>top_triangles_fill</code>, we draw 50 pixels per frame so you can clearly see the algorithm working. For <code>top_cube_fill</code> we draw at full speed.</p>
 <p><img src="/img/posts/fpga-shapes/filled-cube.png" alt="Filled Cube" title="A cube from six triangles captured from my FPGA board."></p>
@@ -895,8 +896,8 @@ The standard approach is to draw the top and left edges, but we won&rsquo;t be h
 <h2 id="circles">Circles</h2>
 <p>Circles are straightforward to draw. I&rsquo;ve based my designs on the algorithm from <a href="http://members.chello.at/~easyfilter/bresenham.html">The Beauty of Bresenham&rsquo;s Algorithm</a>.</p>
 <ul>
-<li>Circle outline: <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lib/graphics/draw_circle.sv">draw_circle.sv</a>]</strong></li>
-<li>Filled circle: <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lib/graphics/draw_circle_fill.sv">draw_circle_fill.sv</a>]</strong></li>
+<li>Circle outline: <strong>[<a href="https://github.com/projf/projf-explore/blob/main/lib/graphics/draw_circle.sv">draw_circle.sv</a>]</strong></li>
+<li>Filled circle: <strong>[<a href="https://github.com/projf/projf-explore/blob/main/lib/graphics/draw_circle_fill.sv">draw_circle_fill.sv</a>]</strong></li>
 </ul>
 <p>The outline version is shown below:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> draw_circle #(<span style="color:#66d9ef">parameter</span> CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>) (  <span style="color:#75715e">// signed coordinate width
@@ -990,23 +991,23 @@ The standard approach is to draw the top and left edges, but we won&rsquo;t be h
 </span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
 </span></span></code></pre></div><p>You can see a simple demo of circle drawing in these modules:</p>
 <ul>
-<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/2d-shapes/xc7/top_circles.sv">xc7/top_circles.sv</a></strong></li>
-<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/2d-shapes/ice40/top_circles.sv">ice40/top_circles.sv</a></strong></li>
+<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/main/graphics/2d-shapes/xc7/top_circles.sv">xc7/top_circles.sv</a></strong></li>
+<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/main/graphics/2d-shapes/ice40/top_circles.sv">ice40/top_circles.sv</a></strong></li>
 </ul>
 <p>The demo slows drawing to just 30 pixels per frame, so you can see how the circle is formed.</p>
 <p>I&rsquo;ve also drawn a rainbow with filled circles:</p>
 <ul>
-<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/2d-shapes/xc7/top_rainbow.sv">xc7/top_rainbow.sv</a></strong></li>
-<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/2d-shapes/ice40/top_rainbow.sv">ice40/top_rainbow.sv</a></strong></li>
+<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/main/graphics/2d-shapes/xc7/top_rainbow.sv">xc7/top_rainbow.sv</a></strong></li>
+<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/main/graphics/2d-shapes/ice40/top_rainbow.sv">ice40/top_rainbow.sv</a></strong></li>
 </ul>
 <p><img src="/img/posts/fpga-shapes/rainbow.jpg" alt="Rainbow" title="Paint the whole world..."></p>
-<p>There&rsquo;s a Vivado test bench for circle module: <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lib/graphics/xc7/draw_circle_tb.sv">xc7/draw_circle_tb.sv</a>]</strong>.</p>
+<p>There&rsquo;s a Vivado test bench for circle module: <strong>[<a href="https://github.com/projf/projf-explore/blob/main/lib/graphics/xc7/draw_circle_tb.sv">xc7/draw_circle_tb.sv</a>]</strong>.</p>
 <p><em>Further explanation of circle drawing to follow.</em></p>
 <h2 id="making-a-scene">Making a Scene</h2>
 <p>We can combine different shapes to draw simple scenes. I knocked up this castle on graph paper.</p>
 <ul>
-<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/2d-shapes/xc7/top_castle.sv">xc7/top_castle.sv</a></strong></li>
-<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/2d-shapes/ice40/top_castle.sv">ice40/top_castle.sv</a></strong></li>
+<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/main/graphics/2d-shapes/xc7/top_castle.sv">xc7/top_castle.sv</a></strong></li>
+<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/main/graphics/2d-shapes/ice40/top_castle.sv">ice40/top_castle.sv</a></strong></li>
 </ul>
 <p>The castle design switches between three filled drawing modules: triangles, rectangles, and circles. You can see this as the start of a simple 2D graphics accelerator. Note how the background coordinate has to be one scaled unit below the castle because of how the coordinates work. <em>More details to follow.</em></p>
 <p><img src="/img/posts/fpga-shapes/castle.jpg" alt="Castle Scene" title="A royal residence generated by iCEBreaker."></p>
@@ -1038,7 +1039,20 @@ The standard approach is to draw the top and left edges, but we won&rsquo;t be h
 </section>
 
 
-<script src="https://badgers.projectf.io/script.js" data-site="EVCGKVDN" defer></script>
+<script>
+    (function(f, a, t, h, o, m){
+        a[h]=a[h]||function(){
+            (a[h].q=a[h].q||[]).push(arguments)
+        };
+        o=f.createElement('script'),
+        m=f.getElementsByTagName('script')[0];
+        o.async=1; o.src=t; o.id='fathom-script';
+        m.parentNode.insertBefore(o,m)
+    })(document, window, 'tracker.js', 'fathom');
+    fathom('trackPageview');
+</script>
+
+
 </body>
 </html>
 

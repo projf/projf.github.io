@@ -1,23 +1,26 @@
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml"  lang="en-gb">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
 <title>Ad Astra | Project F: FPGA Dev</title>
 
 <meta property='og:title' content='Ad Astra - Project F: FPGA Dev'>
-<meta property='og:description' content='Welcome back to Exploring FPGA Graphics. In the previous part we learnt how to create hardware sprites. In this sixth part, we create a demo by combining our knowledge of sprites with animated starfields.
-This post is based on my earliest FPGA designs from 2018, so it works differently from the rest of the series. I am working on a revised version for later in 2022.
-In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs.'>
+<meta property='og:description' content='This demo combines some of my earliest FPGA designs: simple sprites and an animated starfield generated with a linear-feedback shift register. I don&rsquo;t recommend using this approach to sprites in new designs, check out the latest hardware sprites tutorial instead. This post was last updated in July 2022.
+Get in touch: GitHub Issues, 1BitSquared Discord, @WillFlux (Mastodon), @WillFlux (Twitter)
+Sponsor My Work
+If you like what I do, consider sponsoring me on GitHub.'>
 <meta property='og:url' content='https://projectf.io/posts/fpga-ad-astra/'>
 <meta property='og:site_name' content='Project F: FPGA Dev'>
-<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/fpga-ad-astra/social-card.png'><meta property='article:published_time' content='2020-06-10T00:00:00Z'/><meta property='article:modified_time' content='2022-04-24T00:00:00Z'/><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
+<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/fpga-ad-astra/social-card.png'><meta property='article:published_time' content='2020-06-10T00:00:00Z'><meta property='article:modified_time' content='2022-07-25T00:00:00Z'><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
 
 
-<link href="https://projectf.io/index.xml" rel="alternate" type="application/rss+xml" title="Project F: FPGA Dev" />
+<link href="https://projectf.io/index.xml" rel="alternate" type="application/rss+xml" title="Project F: FPGA Dev">
 
-<link rel="stylesheet" href="/css/style.css"/><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="stylesheet" href="/css/style.css"><link rel='stylesheet' href='https://projectf.io/css/custom.css'>
+
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
 <link rel="manifest" href="/site.webmanifest">
@@ -27,6 +30,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
 <meta name="theme-color" content="#ffffff">
 </head>
 <body>
+
 <section class="section">
   <div class="container">
     <nav id="nav-main" class="nav">
@@ -54,7 +58,7 @@ In this series, we explore graphics at the hardware level and get a feel for the
     
   </svg></i>
             </span>
-          </a><a class="level-item" aria-label="youtube" href='https://youtube.com/channel/UCaT0lvfWo1GStbp0neg8weg'
+          </a><a class="level-item" aria-label="youtube" href='https://youtube.com/user/UCaT0lvfWo1GStbp0neg8weg'
             target='_blank' rel='noopener'>
             <span class="icon">
               <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
@@ -81,16 +85,18 @@ In this series, we explore graphics at the hardware level and get a feel for the
       
       <div class="nav-left"><a class="nav-item" href="/about">
           <h2 class="title is-5">About</h2>
-        </a><a class="nav-item" href="/sitemap">
-          <h2 class="title is-5">Site Map</h2>
-        </a><a class="nav-item" href="/tags/cookbook">
-          <h2 class="title is-5">Cookbook</h2>
-        </a><a class="nav-item" href="/tags/graphics">
-          <h2 class="title is-5">Graphics</h2>
-        </a><a class="nav-item" href="/tags/maths">
-          <h2 class="title is-5">Maths</h2>
-        </a><a class="nav-item" href="/tags/tools">
-          <h2 class="title is-5">Tools</h2>
+        </a><a class="nav-item" href="/boards">
+          <h2 class="title is-5">Boards</h2>
+        </a><a class="nav-item" href="/demos">
+          <h2 class="title is-5">Demos</h2>
+        </a><a class="nav-item" href="/howto">
+          <h2 class="title is-5">How To</h2>
+        </a><a class="nav-item" href="/tags/news">
+          <h2 class="title is-5">News</h2>
+        </a><a class="nav-item" href="/tutorials">
+          <h2 class="title is-5">Tutorials</h2>
+        </a><a class="nav-item" href="/verilog-lib">
+          <h2 class="title is-5">Verilog Lib</h2>
         </a></div>
       
 
@@ -105,13 +111,9 @@ In this series, we explore graphics at the hardware level and get a feel for the
     <div class="subtitle tags is-6 is-pulled-right">
       
       
-<a class="subtitle is-6" href="/tags/explore/">#explore</a>
+<a class="subtitle is-6" href="/tags/graphics/">#graphics</a>
 
 
-
-  
-  | <a class="subtitle is-6" href="/tags/graphics/">#graphics</a>
-  
 
 
       
@@ -120,24 +122,8 @@ In this series, we explore graphics at the hardware level and get a feel for the
     <h1 class="title">Ad Astra</h1>
     
     <div class="content">
-      <p>Welcome back to <em>Exploring FPGA Graphics</em>. In the previous part we learnt how to create <a href="/posts/hardware-sprites/">hardware sprites</a>. In this sixth part, we create a demo by combining our knowledge of sprites with animated starfields.</p>
-<p><strong>This post is based on my earliest FPGA designs from 2018, so it works differently from the rest of the series. I am working on a revised version for later in 2022.</strong></p>
-<p>In this series, we explore graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how displays work, race the beam with Pong, animate starfields and sprites, paint Michelangelo&rsquo;s David, simulate life with bitmaps, draw lines and shapes, and create smooth animation with double buffering. New to the series? Start with <a href="/posts/fpga-graphics/">Intro to FPGA Graphics</a>.</p>
+      <p>This <a href="/demos">demo</a> combines some of my earliest FPGA designs: simple sprites and an animated starfield generated with a linear-feedback shift register. I don&rsquo;t recommend using this approach to sprites in new designs, check out the latest <a href="/posts/hardware-sprites/">hardware sprites</a> tutorial instead. This post was last updated in July 2022.</p>
 <p><em>Get in touch: <a href="https://github.com/projf/projf-explore/issues">GitHub Issues</a>, <a href="https://1bitsquared.com/pages/chat">1BitSquared Discord</a>, <a href="https://mastodon.social/@WillFlux">@WillFlux</a> (Mastodon), <a href="https://twitter.com/WillFlux">@WillFlux</a> (Twitter)</em></p>
-<h3 id="series-outline">Series Outline</h3>
-<ul>
-<li><a href="/posts/fpga-graphics/">Beginning FPGA Graphics</a> - video signals and basic graphics</li>
-<li><a href="/posts/racing-the-beam/">Racing the Beam</a> - simple demos with minimal logic</li>
-<li><a href="/posts/fpga-pong/">FPGA Pong</a> - recreate the classic arcade on an FPGA</li>
-<li><a href="/posts/display-signals/">Display Signals</a> - revist display signals and meet colour palettes</li>
-<li><a href="/posts/hardware-sprites/">Hardware Sprites</a> - fast, colourful graphics for games</li>
-<li>Ad Astra (this post) - demo with starfields and hardware sprites</li>
-<li><a href="/posts/framebuffers/">Framebuffers</a> - bitmap graphics featuring Michelangelo&rsquo;s David</li>
-<li><a href="/posts/life-on-screen/">Life on Screen</a> - Conway&rsquo;s Game of Life in logic</li>
-<li><a href="/posts/lines-and-triangles/">Lines and Triangles</a> - drawing lines and triangles</li>
-<li><a href="/posts/fpga-shapes/">2D Shapes</a> - filled shapes and simple pictures</li>
-<li><a href="/posts/animated-shapes/">Animated Shapes</a> - animation and double-buffering</li>
-</ul>
 <blockquote>
 <p><strong>Sponsor My Work</strong><br>
 If you like what I do, consider <a href="https://github.com/sponsors/WillGreen">sponsoring me</a> on GitHub.<br>
@@ -145,8 +131,7 @@ I love FPGAs and want to help more people discover and use them in their project
 My hardware designs are open source, and my blog is advert free.</p>
 </blockquote>
 <h3 id="requirements">Requirements</h3>
-<p>You should be to run these designs to any recent FPGA board. I include complete designs for the <a href="https://docs.icebreaker-fpga.org/hardware/icebreaker/">iCEBreaker</a> with <a href="https://docs.icebreaker-fpga.org/hardware/pmod/dvi/">12-Bit DVI Pmod</a>, <a href="https://digilent.com/reference/programmable-logic/arty-a7/reference-manual">Digilent Arty A7-35T</a> with <a href="https://digilent.com/reference/pmod/pmodvga/reference-manual">Pmod VGA</a>. See <a href="/posts/fpga-graphics/#requirements">requirements</a> from <em>Beginning FPGA Graphics</em> for more details.</p>
-<p><em>NB. This older design is not currently available as a Verilator simulation.</em></p>
+<p>You should be to run these designs of any recent FPGA board. I include complete designs for the <a href="https://docs.icebreaker-fpga.org/hardware/icebreaker/">iCEBreaker</a> with <a href="https://docs.icebreaker-fpga.org/hardware/pmod/dvi/">12-Bit DVI Pmod</a>, <a href="https://digilent.com/reference/programmable-logic/arty-a7/reference-manual">Digilent Arty A7-35T</a> with <a href="https://digilent.com/reference/pmod/pmodvga/reference-manual">Pmod VGA</a>.</p>
 <h2 id="computer-space">Computer Space</h2>
 <p><a href="https://en.wikipedia.org/wiki/Computer_Space">Computer Space</a> was the first video arcade game: it features a simple backdrop of stars over which the player&rsquo;s rocket battles two flying saucers. The backdrop may have been simple, but this game was released in 1971, when a &ldquo;cheap&rdquo; computer, such as the <a href="https://www.computerhistory.org/revolution/minicomputers/11/338">Data General Nova</a>, cost around $8,000 (c. $40,000 in 2020). Unable to find anything both fast and cheap, developers Nolan Bushnell and Ted Dabney created their own custom hardware instead. It&rsquo;s strangely hard to find details of the Computer Space logic design on the Internet, but <a href="https://en.wikipedia.org/wiki/7400-series_integrated_circuits">TTL 7400s</a> were used.</p>
 <blockquote>
@@ -172,7 +157,7 @@ Computer Space had an amazing fibreglass cabinet. You can see more photos at <a 
 <p>For an 8-bit LFSR, we set tap bits 8, 6, 5, and 4. To find taps for other lengths, you can refer to the <a href="https://en.wikipedia.org/wiki/Linear-feedback_shift_register#Some_polynomials_for_maximal_LFSRs">feedback polynomials on Wikipedia</a>.</p>
 <p>To create a starfield, we need a sequence that&rsquo;s the same length as the number of pixels we&rsquo;re drawing. If we iterate through our shift register every time we get to a new pixel, then each pixel will always be associated with the same number in the shift register. We could take a single bit and draw a star if it were true, but that would cover half the pixels on the screen with stars; instead, we only draw a star if a group of bits are all 1.</p>
 <p>We&rsquo;ll start with a 17-bit LFSR, as its longest sequence, 2<sup>17</sup>-1, fits within 640x480. If we draw this within an area of 512x256, which has 2<sup>17</sup> pixels, then the starfield will move left by one pixel every frame.</p>
-<p>Create an LFSR module <strong>[<a href="https://github.com/projf/projf-explore/blob/master/lib/maths/lfsr.sv">lfsr.sv</a>]</strong>:</p>
+<p>Create an LFSR module <strong>[<a href="https://github.com/projf/projf-explore/blob/main/lib/maths/lfsr.sv">lfsr.sv</a>]</strong>:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> lfsr #(
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> LEN<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,                   <span style="color:#75715e">// shift register length
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> TAPS<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b10111000</span>         <span style="color:#75715e">// XOR taps
@@ -189,14 +174,14 @@ Computer Space had an amazing fibreglass cabinet. You can see more photos at <a 
 </span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (rst) sreg <span style="color:#f92672">&lt;=</span> (seed <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>) <span style="color:#f92672">?</span> seed <span style="color:#f92672">:</span> {LEN{<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b1</span>}};
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
 </span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
-</span></span></code></pre></div><p>We use a simple top module to drive it, based on the design we used in <a href="/posts/fpga-graphics/">Intro to FPGA Graphics</a>.</p>
+</span></span></code></pre></div><p>We use a simple top module to drive it using modules from the <a href="/verilog-lib">Verilog Library</a>.</p>
 <ul>
-<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/ad-astra/xc7/top_lfsr.sv">xc7/top_lfsr.sv</a></strong></li>
-<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/ad-astra/ice40/top_lfsr.sv">ice40/top_lfsr.sv</a></strong></li>
+<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/main/graphics/ad-astra/xc7/top_lfsr.sv">xc7/top_lfsr.sv</a></strong></li>
+<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/main/graphics/ad-astra/ice40/top_lfsr.sv">ice40/top_lfsr.sv</a></strong></li>
 </ul>
 <blockquote>
 <p><strong>Building the Designs</strong><br>
-In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/ad-astra">FPGA Ad Astra</a> section of the git repo, you&rsquo;ll find the design files, a makefile for iCEBreaker, a Vivado project for Arty, and instructions for building the designs for both boards.</p>
+In the <a href="https://github.com/projf/projf-explore/tree/main/graphics/ad-astra">FPGA Ad Astra</a> section of the git repo, you&rsquo;ll find the design files, a makefile for iCEBreaker, a Vivado project for Arty, and instructions for building the designs for both boards.</p>
 </blockquote>
 <p>Shown below is the LSFR top module for iCEBreaker:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> top_lfsr (
@@ -294,7 +279,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/ad-a
 </ol>
 <p>The first option is extremely efficient when it comes to logic. As each value appears only once, it uniquely describes a position in the sequence. Historically, LFSR were used as counters, including on FPGAs. Xilinx has a nice application note describing this: <a href="https://www.xilinx.com/support/documentation/application_notes/xapp210.pdf">XAPP210</a>.</p>
 <p>The second option requires separate counter logic, but on a contemporary FPGA, the cost is minimal. The advantage of this approach is we can easily adjust the direction and speed of the starfield by counting a little more or a little less. This is the approach we&rsquo;ll use in this project.</p>
-<p>We&rsquo;re going to want a few starfields, so let&rsquo;s create a dedicated module <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/ad-astra/starfield.sv">starfield.sv</a>]</strong>:</p>
+<p>We&rsquo;re going to want a few starfields, so let&rsquo;s create a dedicated module <strong>[<a href="https://github.com/projf/projf-explore/blob/main/graphics/ad-astra/starfield.sv">starfield.sv</a>]</strong>:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> starfield #(
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> H<span style="color:#f92672">=</span><span style="color:#ae81ff">800</span>,
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> V<span style="color:#f92672">=</span><span style="color:#ae81ff">525</span>,
@@ -341,8 +326,8 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/ad-a
 <h2 id="into-space">Into Space</h2>
 <p>Using our module, we can create multiple starfields at different speeds and densities to give that real in-space feeling. Our example top module has three starfields:</p>
 <ul>
-<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/ad-astra/xc7/top_starfields.sv">xc7/top_starfields.sv</a></strong></li>
-<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/ad-astra/ice40/top_starfields.sv">ice40/top_starfields.sv</a></strong></li>
+<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/main/graphics/ad-astra/xc7/top_starfields.sv">xc7/top_starfields.sv</a></strong></li>
+<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/main/graphics/ad-astra/ice40/top_starfields.sv">ice40/top_starfields.sv</a></strong></li>
 </ul>
 <p>Rebuild your project with the new starfield and top modules. Try experimenting with the <code>INC</code> and <code>MASK</code> parameters to create different speeds and densities.</p>
 <h2 id="greetings-world">Greetings, World!</h2>
@@ -351,8 +336,8 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/ad-a
 <p>If we&rsquo;re going to display text messages, we need a font. I&rsquo;ve experimented with a few simple bitmap fonts in the past, but <a href="http://viznut.fi/unscii/">Unscii</a> is one of the best. It&rsquo;s available in 8x8 and 8x16/16x16 pixels with thousands of glyphs for many languages and those for ASCII art. Plus, the GNU Unifont hexdump version is trivial to convert to <code>readmemh</code> format for use with Verilog.</p>
 <p>The full list of glyphs is too large to be held in internal FPGA memory. For the purposes of this demo, I&rsquo;ve created two subsets of the Unscii font: one for upper-case basic Latin (including punctuation and numbers), and one for <a href="https://en.wikipedia.org/wiki/Hiragana">Hiragana</a> (without marks):</p>
 <ul>
-<li><a href="https://github.com/projf/projf-explore/blob/master/graphics/ad-astra/res/font_unscii_8x8_latin_uc.mem"><code>font_unscii_8x8_latin_uc.mem</code></a>: (<a href="https://www.unicode.org/charts/PDF/U0000.pdf">U+0020 - U+005F</a>) - 4,096 bits (512 bytes)</li>
-<li><a href="https://github.com/projf/projf-explore/blob/master/graphics/ad-astra/res/font_unscii_16x16_hiragana.mem"><code>font_unscii_16x16_hiragana.mem</code></a>: (<a href="https://www.unicode.org/charts/PDF/U3040.pdf">U+3041 - U+3096</a>) - 22,016 bits (2,752 bytes)</li>
+<li><a href="https://github.com/projf/projf-explore/blob/main/graphics/ad-astra/res/font_unscii_8x8_latin_uc.mem"><code>font_unscii_8x8_latin_uc.mem</code></a>: (<a href="https://www.unicode.org/charts/PDF/U0000.pdf">U+0020 - U+005F</a>) - 4,096 bits (512 bytes)</li>
+<li><a href="https://github.com/projf/projf-explore/blob/main/graphics/ad-astra/res/font_unscii_16x16_hiragana.mem"><code>font_unscii_16x16_hiragana.mem</code></a>: (<a href="https://www.unicode.org/charts/PDF/U3040.pdf">U+3041 - U+3096</a>) - 22,016 bits (2,752 bytes)</li>
 </ul>
 <h4 id="hex-glyphs">Hex Glyphs</h4>
 <p>If you look at the entry for &lsquo;F&rsquo; in the Latin memory file you won&rsquo;t find an 8x8 array of 1s and 0s:<br>
@@ -370,10 +355,9 @@ In the <a href="https://github.com/projf/projf-explore/tree/master/graphics/ad-a
 <p><strong>Choosing Your Own Characters</strong><br>
 You can easily create your own font version with different characters: check out the hex source on the <a href="http://pelulamu.net/unscii/">Unscii site</a>. Use VS Code <em>Column Selection Mode</em> to quickly turn Unifont hex into readmemh format. Just be aware you can&rsquo;t mix different glyph sizes with our sprite design, and watch out for memory usage: the Hiragana file uses 6/30 iCEBreaker BRAMs.</p>
 </blockquote>
-<h3 id="new-sprite-features">New Sprite Features</h3>
-<p>We already have a solid sprite design from the <a href="/posts/hardware-sprites/">previous part</a>, but there are three improvements we&rsquo;ll make for working with fonts.</p>
+<h3 id="sprite-features">Sprite Features</h3>
 <h4 id="shared-memory-bus">Shared Memory Bus</h4>
-<p>In <a href="/posts/hardware-sprites/">Hardware Sprites</a>, each sprite had exclusive access to a memory instance. Exclusivity works well for simple sprites with fixed graphics, but doesn&rsquo;t make it easy to change or share sprite graphics. Instead, we&rsquo;ll load a set of font glyphs into memory, then share them amongst all the sprite instances.</p>
+<p>In <a href="/posts/hardware-sprites/">Hardware Sprites</a>, each sprite has exclusive access to a memory instance. Exclusivity works well for simple sprites with fixed graphics, but doesn&rsquo;t make it easy to change or share sprite graphics. Instead, we&rsquo;ll load a set of font glyphs into memory, then share them amongst all the sprite instances.</p>
 <p>Sharing requires arbitration between the different sprite instances: only one sprite can read from the memory at a time. We control access by adding a <code>dma_avail</code> signal to the sprite module: the sprite waits for this signal before reading from memory. To avoid potential clashes, we read the required data for each sprite in the blanking interval, then it can freely draw whenever it likes on the following line.</p>
 <h4 id="an-entire-line">An Entire Line</h4>
 <p>Our fonts are monochrome: each pixel is either 0 or 1, so we could read one bit at a time over a one-bit bus. However, as we&rsquo;re reading the sprite during the blanking interval there&rsquo;s no need to read a pixel at a time; it&rsquo;s more efficient to read a whole line of 8 or 16 pixels (for the Hiragana glyphs) at a time. By reading a whole sprite line in a single clock, we make very light use of the memory bus. We will also change the memory layout in the top module (covered later), so each glyph consists of 8 or 16 entries of 8 or 16 bits.</p>
@@ -398,8 +382,8 @@ You can easily create your own font version with different characters: check out
 </span></span><span style="display:flex;"><span>    spr_line[<span style="color:#ae81ff">6</span>] <span style="color:#f92672">&lt;=</span> data_in[<span style="color:#ae81ff">1</span>];
 </span></span><span style="display:flex;"><span>    spr_line[<span style="color:#ae81ff">7</span>] <span style="color:#f92672">&lt;=</span> data_in[<span style="color:#ae81ff">0</span>];
 </span></span></code></pre></div><p>All eight bits are read in one cycle. Using the for loop doesn&rsquo;t change the design, but makes writing it much more compact and less error prone. We&rsquo;ll make further use of for loops shortly, to handle multiple sprites.</p>
-<h3 id="new-sprite-module">New Sprite Module</h3>
-<p>Our new sprite module incorporating these changes <strong>[<a href="https://github.com/projf/projf-explore/blob/master/graphics/ad-astra/sprite.sv">sprite.sv</a>]</strong>:</p>
+<h3 id="sprite-module">Sprite Module</h3>
+<p>Our Ad Astra sprite module <strong>[<a href="https://github.com/projf/projf-explore/blob/main/graphics/ad-astra/sprite.sv">sprite.sv</a>]</strong>:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> sprite #(
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,         <span style="color:#75715e">// graphic width in pixels
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> HEIGHT<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,        <span style="color:#75715e">// graphic height in pixels
@@ -535,8 +519,8 @@ You can easily create your own font version with different characters: check out
 <p>Capital F has the code point <code>U+0046</code>. However, our Latin font file has 64 glyphs covering code points <code>U+0020 - U+005F</code>, so we need to subtract <code>0x20</code> (32 decimal) from the code point to load the correct glyph.</p>
 <p>The new top module combines the starfield design from earlier in this post, with a single sprite:</p>
 <ul>
-<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/ad-astra/xc7/top_space_f.sv">xc7/top_space_f.sv</a></strong></li>
-<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/ad-astra/ice40/top_space_f.sv">ice40/top_space_f.sv</a></strong></li>
+<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/main/graphics/ad-astra/xc7/top_space_f.sv">xc7/top_space_f.sv</a></strong></li>
+<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/main/graphics/ad-astra/ice40/top_space_f.sv">ice40/top_space_f.sv</a></strong></li>
 </ul>
 <p>Arty version shown below:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> top_space_f (
@@ -690,19 +674,19 @@ You can easily create your own font version with different characters: check out
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
 </span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
 </span></span></code></pre></div><h2 id="hello---こんにちは">Hello - こんにちは</h2>
-<p>Our &lsquo;F&rsquo; in space doesn&rsquo;t take advantage of the new functionality of the sprite module. Let&rsquo;s update our top module to say &ldquo;Hello&rdquo; using five sprites; I&rsquo;ve done this for English and Japanese:</p>
+<p>Our &lsquo;F&rsquo; in space doesn&rsquo;t take advantage of the full functionality of the sprite module. Let&rsquo;s update our top module to say &ldquo;Hello&rdquo; using five sprites; I&rsquo;ve done this for English and Japanese:</p>
 <ul>
-<li>Hello - Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/ad-astra/xc7/top_hello_en.sv">xc7/top_hello_en.sv</a></strong></li>
-<li>Hello - iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/ad-astra/ice40/top_hello_en.sv">ice40/top_hello_en.sv</a></strong></li>
-<li>こんにちは - Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/ad-astra/xc7/top_hello_jp.sv">xc7/top_hello_jp.sv</a></strong></li>
-<li>こんにちは - iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/ad-astra/ice40/top_hello_jp.sv">ice40/top_hello_jp.sv</a></strong></li>
+<li>Hello - Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/main/graphics/ad-astra/xc7/top_hello_en.sv">xc7/top_hello_en.sv</a></strong></li>
+<li>Hello - iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/main/graphics/ad-astra/ice40/top_hello_en.sv">ice40/top_hello_en.sv</a></strong></li>
+<li>こんにちは - Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/main/graphics/ad-astra/xc7/top_hello_jp.sv">xc7/top_hello_jp.sv</a></strong></li>
+<li>こんにちは - iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/main/graphics/ad-astra/ice40/top_hello_jp.sv">ice40/top_hello_jp.sv</a></strong></li>
 </ul>
 <p>Try creating your own five-character message. Check the fonts for which characters are available, or create your own font-variant to write in another language.</p>
 <p>These modules make extensive use of for loops to avoid duplication. To create multiple instances of a module we need to use <code>generate</code> rather than a normal <code>for</code> loop.</p>
 <p><em>NB. The iCE40 designs don&rsquo;t make full use of generate due to rendering issues. See issue <a href="https://github.com/projf/projf-explore/issues/31">#31</a>.</em></p>
 <p><img src="/img/posts/fpga-ad-astra/hello-jp.png" alt="こんにちは" title="こんにちは - Hello! Captured from my FPGA board."></p>
 <h2 id="controlling-the-message">Controlling the Message</h2>
-<p>To display a custom message we can store a message as code points: <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/ad-astra/res/greet.mem">greet.mem</a></strong>.</p>
+<p>To display a custom message we can store a message as code points: <strong><a href="https://github.com/projf/projf-explore/blob/main/graphics/ad-astra/res/greet.mem">greet.mem</a></strong>.</p>
 <p>A single two-line message looks like this.</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-plaintext" data-lang="plaintext"><span style="display:flex;"><span>//   FPGA
 </span></span><span style="display:flex;"><span>// AD ASTRA
@@ -774,8 +758,8 @@ You can easily create your own font version with different characters: check out
 </span></span></code></pre></div><h3 id="greetings-demo-v1">Greetings Demo v1</h3>
 <p>Using the greetings logic, I&rsquo;ve created a demo to greet a few of the open-source FPGA projects we love; apologies to everyone we missed:</p>
 <ul>
-<li>Greetings - Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/ad-astra/xc7/top_greet_v1.sv">xc7/top_greet_v1.sv</a></strong></li>
-<li>Greetings - iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/ad-astra/ice40/top_greet_v1.sv">ice40/top_greet_v1.sv</a></strong></li>
+<li>Greetings - Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/main/graphics/ad-astra/xc7/top_greet_v1.sv">xc7/top_greet_v1.sv</a></strong></li>
+<li>Greetings - iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/main/graphics/ad-astra/ice40/top_greet_v1.sv">ice40/top_greet_v1.sv</a></strong></li>
 </ul>
 <p>We cycle through the greetings using a frame counter; I&rsquo;ve chosen 80 frames (1.25 seconds). You can adjust this with the <code>MSG_CHG</code> parameter.</p>
 <h3 id="copperbars">Copperbars</h3>
@@ -810,20 +794,20 @@ You can easily create your own font version with different characters: check out
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
 </span></span></code></pre></div><p>Our final greeting design:</p>
 <ul>
-<li>Greetings - Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/ad-astra/xc7/top_greet.sv">xc7/top_greet.sv</a></strong></li>
-<li>Greetings - iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/master/graphics/ad-astra/ice40/top_greet.sv">ice40/top_greet.sv</a></strong></li>
+<li>Greetings - Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/main/graphics/ad-astra/xc7/top_greet.sv">xc7/top_greet.sv</a></strong></li>
+<li>Greetings - iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/main/graphics/ad-astra/ice40/top_greet.sv">ice40/top_greet.sv</a></strong></li>
 </ul>
 <p><img src="/img/posts/fpga-ad-astra/fpga-ad-astra.png" alt="FPGA Ad Astra" title="To the stars!"></p>
 <h2 id="explore">Explore</h2>
-<p>I hope you enjoyed this instalment of <em>Exploring FPGA Graphics</em>, but nothing beats creating your own designs. Here are a few suggestions to get you started:</p>
+<p>Try the following:</p>
 <ul>
-<li>Change starfield speed and direction with buttons on your FPGA board (see <a href="/posts/fpga-pong/">FPGA Pong</a>)</li>
-<li>Write your own greeting messages</li>
+<li>Write your own greetings message</li>
+<li>Change starfield speed and direction with buttons on your FPGA board</li>
 <li>Cycle the greetings colours over time</li>
 <li>Animate the text from different directions, so it slides in from all sides of the screen</li>
 </ul>
-<h2 id="next-time">Next Time</h2>
-<p>In the next part, we&rsquo;ll introduce bitmaps and learn about <a href="/posts/framebuffers/">framebuffers</a>. Check out the <a href="/sitemap/">site map</a> for more FPGA projects and tutorials.</p>
+<h2 id="whats-next">What&rsquo;s Next?</h2>
+<p>Check out other <a href="/demos">demos</a> and the <a href="/posts/fpga-graphics/">FPGA graphics tutorial series</a>.</p>
 <p><em>Get in touch: <a href="https://github.com/projf/projf-explore/issues">GitHub Issues</a>, <a href="https://1bitsquared.com/pages/chat">1BitSquared Discord</a>, <a href="https://mastodon.social/@WillFlux">@WillFlux</a> (Mastodon), <a href="https://twitter.com/WillFlux">@WillFlux</a> (Twitter)</em></p>
 
       
@@ -844,7 +828,20 @@ You can easily create your own font version with different characters: check out
 </section>
 
 
-<script src="https://badgers.projectf.io/script.js" data-site="EVCGKVDN" defer></script>
+<script>
+    (function(f, a, t, h, o, m){
+        a[h]=a[h]||function(){
+            (a[h].q=a[h].q||[]).push(arguments)
+        };
+        o=f.createElement('script'),
+        m=f.getElementsByTagName('script')[0];
+        o.async=1; o.src=t; o.id='fathom-script';
+        m.parentNode.insertBefore(o,m)
+    })(document, window, 'tracker.js', 'fathom');
+    fathom('trackPageview');
+</script>
+
+
 </body>
 </html>
 
