@@ -7,16 +7,12 @@
 <title>Life on Screen | Project F: FPGA Dev</title>
 
 <meta property='og:title' content='Life on Screen - Project F: FPGA Dev'>
-<meta property='og:description' content='In this demo we&rsquo;ll experiment with Conway&rsquo;s Game of Life. This post was last updated in July 2022.
-New version with improved framebuffer design coming autumn 2022.
+<meta property='og:description' content='In this FPGA demo we&rsquo;ll experiment with Game of Life, a cellular automaton created by John Conway in 1970. This post was last updated in August 2022.
 Get in touch: GitHub Issues, 1BitSquared Discord, @WillFlux (Mastodon), @WillFlux (Twitter)
-Sponsor My Work
-If you like what I do, consider sponsoring me on GitHub.
-I love FPGAs and want to help more people discover and use them in their projects.
-My hardware designs are open source, and my blog is advert free.'>
+Requirements For this demo you need an FPGA board with video output. I&rsquo;ll be working with the Digilent Arty, but it should be easy to adapt this design to other boards. It helps to be comfortable with programming your FPGA board and reasonably familiar with Verilog.'>
 <meta property='og:url' content='https://projectf.io/posts/life-on-screen/'>
 <meta property='og:site_name' content='Project F: FPGA Dev'>
-<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/life-on-screen/social-card.jpg'><meta property='article:published_time' content='2020-09-22T00:00:00Z'><meta property='article:modified_time' content='2022-07-25T00:00:00Z'><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
+<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/life-on-screen/social-card.jpg'><meta property='article:published_time' content='2020-09-22T00:00:00Z'><meta property='article:modified_time' content='2022-08-18T00:00:00Z'><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
 
 
 <link href="https://projectf.io/index.xml" rel="alternate" type="application/rss+xml" title="Project F: FPGA Dev">
@@ -129,32 +125,20 @@ My hardware designs are open source, and my blog is advert free.'>
     <h1 class="title">Life on Screen</h1>
     
     <div class="content">
-      <p>In this <a href="/demos">demo</a> we&rsquo;ll experiment with Conway&rsquo;s Game of Life. This post was last updated in July 2022.</p>
-<p><strong>New version with improved framebuffer design coming autumn 2022.</strong></p>
+      <p>In this FPGA <a href="/demos">demo</a> we&rsquo;ll experiment with Game of Life, a cellular automaton created by John Conway in 1970. This post was last updated in August 2022.</p>
 <p><em>Get in touch: <a href="https://github.com/projf/projf-explore/issues">GitHub Issues</a>, <a href="https://1bitsquared.com/pages/chat">1BitSquared Discord</a>, <a href="https://mastodon.social/@WillFlux">@WillFlux</a> (Mastodon), <a href="https://twitter.com/WillFlux">@WillFlux</a> (Twitter)</em></p>
-<blockquote>
-<p><strong>Sponsor My Work</strong><br>
-If you like what I do, consider <a href="https://github.com/sponsors/WillGreen">sponsoring me</a> on GitHub.<br>
-I love FPGAs and want to help more people discover and use them in their projects.<br>
-My hardware designs are open source, and my blog is advert free.</p>
-</blockquote>
+<p><img src="/img/posts/life-on-screen/banner.png" alt="" title=""></p>
 <h3 id="requirements">Requirements</h3>
-<p>For this design, you need an FPGA board with video output. We&rsquo;ll be working at 640x480, so pretty much any video output will do. It helps to be comfortable with programming your FPGA board and reasonably familiar with Verilog.</p>
-<p>We&rsquo;ll be demoing with these boards (FPGA type):</p>
-<ul>
-<li><strong><a href="https://docs.icebreaker-fpga.org/hardware/icebreaker/">iCEBreaker</a></strong> (Lattice iCE40) with <strong><a href="https://docs.icebreaker-fpga.org/hardware/pmod/dvi/">12-Bit DVI Pmod</a></strong></li>
-<li><strong><a href="https://reference.digilentinc.com/reference/programmable-logic/arty-a7/reference-manual">Digilent Arty A7-35T</a></strong> (Xilinx Artix-7) with <strong><a href="https://reference.digilentinc.com/reference/pmod/pmodvga/reference-manual">Pmod VGA</a></strong></li>
-</ul>
-<h3 id="source">Source</h3>
-<p>The SystemVerilog designs featured in this design are available from the <a href="https://github.com/projf/projf-explore/">projf-explore</a> git repo under the open-source MIT licence: build on them to your heart&rsquo;s content. The rest of the blog content is subject to standard copyright restrictions: don&rsquo;t republish it without permission.</p>
+<p>For this demo you need an FPGA board with video output. I&rsquo;ll be working with the <a href="https://reference.digilentinc.com/reference/programmable-logic/arty-a7/reference-manual">Digilent Arty</a>, but it should be easy to adapt this design to other boards. It helps to be comfortable with programming your FPGA board and reasonably familiar with Verilog.</p>
+<p>If you&rsquo;ve not played with FPGA graphics before, check out <a href="/posts/fpga-graphics/">Beginning FPGA Graphics</a>.</p>
+<h2 id="conways-life">Conway&rsquo;s Life</h2>
 <blockquote>
 <p>He is Archimedes, Mick Jagger, Salvador Dalí, and Richard Feynman, all rolled into one.<br>
 <em>The Guardian, <a href="https://www.theguardian.com/science/2015/jul/23/john-horton-conway-the-most-charismatic-mathematician-in-the-world">John Horton Conway: the world&rsquo;s most charismatic mathematician</a> (2015)</em></p>
 </blockquote>
-<h2 id="conways-life">Conway&rsquo;s Life</h2>
 <p>John Conway was a remarkable mathematician, active in many fields, who sadly died in 2020. Conway is best known to the public for recreational mathematics with Martin Gardner in Scientific American. I remember playing <a href="https://en.wikipedia.org/wiki/Sprouts_(game)">Sprouts</a> at school and trying to impress people by calculating the day of the week with the <a href="https://en.wikipedia.org/wiki/Doomsday_rule">Doomsday rule</a>. For now, I&rsquo;ll be limiting myself to Game of Life, but I highly recommend learning more of Conway: <a href="https://www.theguardian.com/science/2015/jul/23/john-horton-conway-the-most-charismatic-mathematician-in-the-world">The world&rsquo;s most charismatic mathematician</a> is an excellent place to start.</p>
 <p>Game of Life first appeared in the <em>Mathematical Games</em> column in the October 1970 issue of Scientific American. Anyone can access the article at <a href="https://www.ibiblio.org/lifepatterns/october1970.html">ibiblio.org</a>, or you can see a scan of the original at <a href="https://www.jstor.org/stable/24927642">JSTOR</a> (requires login via academic institution or library).</p>
-<h3 id="the-rules-of-life">The Rules of Life</h3>
+<h2 id="the-rules-of-life">The Rules of Life</h2>
 <p>The universe of the Game of Life is an infinite, two-dimensional, grid of cells. A cell is one of two states: dead or alive. Every cell interacts with its eight neighbours (those to the left, right, top, bottom, and the four diagonals).</p>
 <p>The following rules determine the fate of a cell in the next generation:</p>
 <ol>
@@ -170,8 +154,8 @@ b. Every cell with zero or one neighbours dies from isolation.</li>
 <p>The <strong>Beacon</strong> pattern is a bit more interesting: it oscillates between two states. Two dead cells in the centre of the pattern have three neighbours, so come to life. However, they then have four neighbours, so die the next generation due to overcrowding: this pattern repeats endlessly.</p>
 <p>However, things start to get <em>really</em> interesting with slightly more complex patters. The following photo shows the <strong>Gosper glider gun</strong> running on the Arty board. The gun repeatedly generates small patterns called gliders that step across the world.</p>
 <p><img src="/img/posts/life-on-screen/gosper-glider-gun.jpg" alt="Gosper Glider Gun" title="The Gosper glider gun repeatedly generates small gliders."></p>
-<p>It&rsquo;s even possible to construct logic gates using gliders, and ultimately a universal Turing machine. As this post is primarily about FPGA graphics, we&rsquo;re not going to dig further into the esoteric possibilities of Conway&rsquo;s Life, but check out Wikipedia&rsquo;s article on <a href="https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life">Conway&rsquo;s Game of Life</a>.</p>
-<h3 id="a-hard-life">A Hard Life</h3>
+<p>It&rsquo;s even possible to construct logic gates using gliders, and ultimately a universal Turing machine. For this little demo, we&rsquo;re not going to dig further into the esoteric possibilities of Conway&rsquo;s Life, but check out Wikipedia&rsquo;s article on <a href="https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life">Conway&rsquo;s Game of Life</a>.</p>
+<h2 id="a-hard-life">A Hard Life</h2>
 <p>Now we have a basic understanding of Life, we&rsquo;re going to create a hardware implementation.</p>
 <p>Let&rsquo;s start by rearranging the rules to simplify the design:</p>
 <ol>
@@ -189,7 +173,8 @@ b. otherwise, it&rsquo;s dead next generation</li>
 </ol>
 <p>Both approaches have their advantages and disadvantages, so we&rsquo;ll support both, but start with option 1.</p>
 <p>Since a cell&rsquo;s state depends on all those around it, we can&rsquo;t calculate the new state of each cell with one array. Instead, we have two array (or buffers): one contains the current generation; we use it to calculate the next generation in the second buffer. Every generation, we swap buffers and repeat the generation process.</p>
-<p>Create a life module with the following design - <strong>[<a href="https://github.com/projf/projf-explore/blob/main/graphics/life-on-screen/life.sv">life.sv</a>]</strong>:</p>
+<h3 id="life-module">Life Module</h3>
+<p>The rules of life are expressed in <strong>[<a href="https://github.com/projf/projf-explore/blob/main/demos/life-on-screen/life.sv">life.sv</a>]</strong>:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> life #(
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>,   <span style="color:#75715e">// signed coordinate width
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">6</span>,    <span style="color:#75715e">// world width in cells
@@ -402,18 +387,12 @@ b. otherwise, it&rsquo;s dead next generation</li>
 </span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span>
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
 </span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
-</span></span></code></pre></div><p><em>Explanation of life module will be added shortly.</em></p>
-<p>To exercise this module we have a test bench for Vivado: <strong><a href="https://github.com/projf/projf-explore/tree/main/graphics/life-on-screen/xc7/life_tb.sv">life_tb.sv</a></strong>. If you have a Xilinx Vivado installed, try using the test bench with the included test seed files. You can find instructions for running the simulation in the design <a href="https://github.com/projf/projf-explore/tree/main/life-on-screen">README</a>.</p>
+</span></span></code></pre></div><p>To exercise this module I&rsquo;ve created test bench for Vivado: <strong>[<a href="https://github.com/projf/projf-explore/tree/main/demos/life-on-screen/xc7/life_tb.sv">life_tb.sv</a>]</strong>.</p>
 <h3 id="top-life">Top Life</h3>
-<p>Now we have our life sim, we&rsquo;re ready to render it with the design from <a href="/posts/framebuffers/">Framebuffers</a>.</p>
-<ul>
-<li>Arty (XC7): <strong><a href="https://github.com/projf/projf-explore/blob/main/graphics/life-on-screen/xc7/top_life.sv">xc7/top_life.sv</a></strong></li>
-<li>iCEBreaker (iCE40): <strong><a href="https://github.com/projf/projf-explore/blob/main/graphics/life-on-screen/ice40/top_life.sv">ice40/top_life.sv</a></strong></li>
-</ul>
-<p>The Arty version is shown below:</p>
+<p>I&rsquo;ve created a top module for the Arty board to run the life instance - <strong>[<a href="https://github.com/projf/projf-explore/blob/main/demos/life-on-screen/xc7/top_life.sv">xc7/top_life.sv</a>]</strong>:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> top_life (
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_100m,     <span style="color:#75715e">// 100 MHz clock
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_rst,      <span style="color:#75715e">// reset button (active low)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> btn_rst_n,    <span style="color:#75715e">// reset button (active low)
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> vga_hsync,    <span style="color:#75715e">// horizontal sync
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> vga_vsync,    <span style="color:#75715e">// vertical sync
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vga_r,  <span style="color:#75715e">// 4-bit VGA red
@@ -426,21 +405,24 @@ b. otherwise, it&rsquo;s dead next generation</li>
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">// generate pixel clock
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> clk_pix;
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> clk_locked;
-</span></span><span style="display:flex;"><span>    clock_gen_480p clock_pix_inst (
-</span></span><span style="display:flex;"><span>       .clk(clk_100m),
-</span></span><span style="display:flex;"><span>       .rst(<span style="color:#f92672">!</span>btn_rst),  <span style="color:#75715e">// reset button is active low
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> clk_pix_locked;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> rst_pix;
+</span></span><span style="display:flex;"><span>    clock_480p clock_pix_inst (
+</span></span><span style="display:flex;"><span>       .clk_100m,
+</span></span><span style="display:flex;"><span>       .rst(<span style="color:#f92672">!</span>btn_rst_n),  <span style="color:#75715e">// reset button is active low
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>       .clk_pix,
-</span></span><span style="display:flex;"><span>       .clk_locked
+</span></span><span style="display:flex;"><span>       .clk_pix_5x(),  <span style="color:#75715e">// not used for VGA output
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>       .clk_pix_locked
 </span></span><span style="display:flex;"><span>    );
-</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) rst_pix <span style="color:#f92672">&lt;=</span> <span style="color:#f92672">!</span>clk_pix_locked;  <span style="color:#75715e">// wait for clock lock
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">// display sync signals and coordinates
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">16</span>;
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> hsync, vsync;
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> de, frame, line;
 </span></span><span style="display:flex;"><span>    display_480p #(.CORDW(CORDW)) display_inst (
 </span></span><span style="display:flex;"><span>        .clk_pix,
-</span></span><span style="display:flex;"><span>        .rst(<span style="color:#f92672">!</span>clk_locked),
+</span></span><span style="display:flex;"><span>        .rst_pix,
 </span></span><span style="display:flex;"><span>        .sx(),
 </span></span><span style="display:flex;"><span>        .sy(),
 </span></span><span style="display:flex;"><span>        .hsync,
@@ -548,10 +530,10 @@ b. otherwise, it&rsquo;s dead next generation</li>
 </span></span><span style="display:flex;"><span>        vga_b <span style="color:#f92672">&lt;=</span> fb_blue;
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
 </span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
-</span></span></code></pre></div><p>We use a 64x48 world, which is a tenth of the 640x480 screen dimensions. With the padding of dead cells, each world array has <code>66 x 50 = 3,300</code> cells, which comfortably fits into 4Kb (though iCEBreaker BRAM has a minimum width of two bits, so it uses two BRAMs per world buffer).</p>
+</span></span></code></pre></div><p>I&rsquo;ve used a 64x48 world, which is a tenth of the 640x480 screen dimensions. With the padding of dead cells, each world array has <code>66 x 50 = 3,300</code> cells, which comfortably fits into 4Kb.</p>
 <blockquote>
-<p><strong>Building the Designs</strong><br>
-In the <a href="https://github.com/projf/projf-explore/tree/main/graphics/life-on-screen">Life on Screen</a> section of the git repo, you&rsquo;ll find the design files, a makefile for iCEBreaker, a Vivado project for Arty, and instructions for building the designs for both boards.</p>
+<p><strong>Building the Demo</strong><br>
+In the <a href="https://github.com/projf/projf-explore/tree/main/demos/life-on-screen">Life on Screen</a> section of the git repo, you&rsquo;ll find the design files and build instructions.</p>
 </blockquote>
 <p>Once you&rsquo;ve programmed your board, you should see a simple test pattern of oscillators and a still life (capture from FPGA board shown below).</p>
 <p><img src="/img/posts/life-on-screen/simple-life-capture.png" alt="Simple Life" title="Simple Life captured from my FPGA board."></p>
@@ -562,19 +544,15 @@ In the <a href="https://github.com/projf/projf-explore/tree/main/graphics/life-o
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">localparam</span> GEN_FRAMES <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;  <span style="color:#75715e">// each generation lasts this many frames
 </span></span></span></code></pre></div><p>At 60 frames per second, a value of &lsquo;4&rsquo; results in 15 generations per second.</p>
 <p><img src="/img/posts/life-on-screen/gosper-glider-gun-capture.png" alt="Gosper Glider Gun" title="Gosper Glider Gun captured from my FPGA board."></p>
-<h2 id="wrap-around">Wrap Around</h2>
-<p>Let&rsquo;s wrap our world around at left and right, and at top and bottom; this is known as a <a href="https://en.wikipedia.org/wiki/Torus">toroidal</a> array. Contrast a toroidal array with a 2D map of Earth: the map wraps around at the east and west, but <em>not</em> at the north and south.</p>
-<p><em>design in progress</em></p>
-<h2 id="explore">Explore</h2>
-<p>Try the following:</p>
-<ul>
-<li>Experiment with your own Life seed. Start with empty seed: <code>res/seeds/empty_64x48.mem</code></li>
-<li>Use <code>changed</code> from the life module to colour cells when they&rsquo;re born or die</li>
-<li>Implement a Universal Turing Machine with Life: take a look at <a href="http://www.rendell-attic.org/gol/tm.htm">Paul Rendell&rsquo;s Attic</a></li>
-<li><a href="https://k155la3.blog/2020/10/09/conways-game-of-life-on-fpga/">Game of Life in Chisel</a> - simulate every cell simultaneously!</li>
-</ul>
+<blockquote>
+<p><strong>Sponsor My Work</strong><br>
+If you like what I do, consider <a href="https://github.com/sponsors/WillGreen">sponsoring me</a> on GitHub.<br>
+I love FPGAs and want to help more people discover and use them in their projects.<br>
+My hardware designs are open source, and my blog is advert free.</p>
+</blockquote>
 <h2 id="whats-next">What&rsquo;s Next?</h2>
 <p>Check out other <a href="/demos">demos</a> and the <a href="/posts/fpga-graphics/">FPGA graphics tutorial series</a>.</p>
+<p>Peter Hizalev has written a version of <a href="https://k155la3.blog/2020/10/09/conways-game-of-life-on-fpga/">Game of Life in Chisel</a> that simulate every cell simultaneously!</p>
 <p><em>Get in touch: <a href="https://github.com/projf/projf-explore/issues">GitHub Issues</a>, <a href="https://1bitsquared.com/pages/chat">1BitSquared Discord</a>, <a href="https://mastodon.social/@WillFlux">@WillFlux</a> (Mastodon), <a href="https://twitter.com/WillFlux">@WillFlux</a> (Twitter)</em></p>
 
       
