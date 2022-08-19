@@ -7,11 +7,11 @@
 <title>Lines and Triangles | Project F: FPGA Dev</title>
 
 <meta property='og:title' content='Lines and Triangles - Project F: FPGA Dev'>
-<meta property='og:description' content='Welcome back to Exploring FPGA Graphics. It&rsquo;s time to turn our attention to drawing. Most modern computer graphics come down to drawing triangles and colouring them in. So, it seems fitting to begin our drawing tour with triangles and the straight lines that form them. This post will implement Bresenham&rsquo;s line algorithm in Verilog, creating lines, triangles, and even a cube (our first sort-of-3D graphic).
+<meta property='og:description' content='Welcome back to Exploring FPGA Graphics. It&rsquo;s time to turn our attention to drawing. Most modern computer graphics come down to drawing triangles and colouring them in. So, it seems fitting to begin our drawing tour with triangles and the straight lines that form them. This post will implement Bresenham&rsquo;s line algorithm in Verilog and create lines, triangles, and even a cube (our first sort-of 3D).
 This post was completely revised in August 2022.'>
 <meta property='og:url' content='https://projectf.io/posts/lines-and-triangles/'>
 <meta property='og:site_name' content='Project F: FPGA Dev'>
-<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/lines-and-triangles/social-card.jpg'><meta property='article:published_time' content='2021-01-28T00:00:00Z'><meta property='article:modified_time' content='2022-08-18T00:00:00Z'><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
+<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/lines-and-triangles/social-card.jpg'><meta property='article:published_time' content='2021-01-28T00:00:00Z'><meta property='article:modified_time' content='2022-08-19T00:00:00Z'><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
 
 
 <link href="https://projectf.io/index.xml" rel="alternate" type="application/rss+xml" title="Project F: FPGA Dev">
@@ -120,7 +120,7 @@ This post was completely revised in August 2022.'>
     <h1 class="title">Lines and Triangles</h1>
     
     <div class="content">
-      <p>Welcome back to <em>Exploring FPGA Graphics</em>. It&rsquo;s time to turn our attention to drawing. Most modern computer graphics come down to drawing triangles and colouring them in. So, it seems fitting to begin our drawing tour with triangles and the straight lines that form them. This post will implement Bresenham&rsquo;s line algorithm in Verilog, creating lines, triangles, and even a cube (our first sort-of-3D graphic).</p>
+      <p>Welcome back to <em>Exploring FPGA Graphics</em>. It&rsquo;s time to turn our attention to drawing. Most modern computer graphics come down to drawing triangles and colouring them in. So, it seems fitting to begin our drawing tour with triangles and the straight lines that form them. This post will implement Bresenham&rsquo;s line algorithm in Verilog and create lines, triangles, and even a cube (our first sort-of 3D).</p>
 <p><strong>This post was completely revised in August 2022.</strong></p>
 <p>In this series, we learn about graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how screens work, play Pong, create starfields and sprites, paint Michelangelo&rsquo;s David, draw lines and triangles, and animate characters and shapes. New to the series? Start with <a href="/posts/fpga-graphics/">Beginning FPGA Graphics</a>.</p>
 <p><em>Get in touch: <a href="https://github.com/projf/projf-explore/issues">GitHub Issues</a>, <a href="https://1bitsquared.com/pages/chat">1BitSquared Discord</a>, <a href="https://mastodon.social/@WillFlux">@WillFlux</a> (Mastodon), <a href="https://twitter.com/WillFlux">@WillFlux</a> (Twitter)</em></p>
@@ -212,7 +212,7 @@ Many 3D systems, such as OpenGL, have the origin at the bottom-left, and the Y-c
 <p>We <em>could</em> have performed the calculation in one step:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span>addr <span style="color:#f92672">&lt;=</span> bmpw <span style="color:#f92672">*</span> (y <span style="color:#f92672">+</span> offy) <span style="color:#f92672">+</span> x <span style="color:#f92672">+</span> offx;
 </span></span></code></pre></div><p>But performance is much worse than the multi-step design. The address calculation becomes the performance bottleneck for our drawing designs.</p>
-<p>This is a good reminder of how hardware design differs from software design.</p>
+<p>This is a valuable reminder of how hardware design differs from software design.</p>
 <p>The one-step calculation generates a hardware design that performs two additions and multiplication in a <em>single clock cycle</em>. Other things being equal, the more complex a single step, the lower the maximum frequency.</p>
 <p>With software, the compiler generates a series of CPU instructions from your source code. Whether you write the calculation as one complex statement or multiple simpler statements has little to no impact on the code generated by the compiler.</p>
 <h2 id="from-point-to-line">From Point to Line</h2>
@@ -518,7 +518,7 @@ To avoid this, we can register the end coordinate and drawing direction:</p>
 <p>There&rsquo;s a test bench you can use to exercise the module with Vivado: <strong>[<a href="https://github.com/projf/projf-explore/blob/main/lib/graphics/xc7/draw_line_tb.sv">xc7/draw_line_tb.sv</a>]</strong>.</p>
 <p>We test several lines: steep and not steep, drawn upwards, downwards, left to right, and right to left, points, and the longest possible horizontal, vertical, and diagonal lines. A steep line is one in which the vertical change is larger than the horizontal.</p>
 <h2 id="render-module">Render Module</h2>
-<p>In previous posts, we created a separate top module for each demo. Now that our designs are getting a little more complex, breaking the drawing demo into its own module makes sense.</p>
+<p>In previous posts, we created a separate top module for every demo. Now that our designs are getting a little more complex, breaking each demo rendering into a module makes sense. That way, we can reuse the same top module for multiple demos.</p>
 <p>Our first rendering module is <strong>[<a href="https://github.com/projf/projf-explore/blob/main/graphics/lines-and-triangles/render_line.sv">render_line</a>]</strong>:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> render_line #(
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>,  <span style="color:#75715e">// signed coordinate width (bits)
@@ -832,8 +832,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/main/graphics/lines-
 </span></span><span style="display:flex;"><span>        sdl_b <span style="color:#f92672">&lt;=</span> {<span style="color:#ae81ff">2</span>{paint_b}};
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
 </span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
-</span></span></code></pre></div><p>In the next section, we&rsquo;ll look at new parts of the top module.
-Refer to <a href="/posts/framebuffers/">Framebuffers</a> for an explanation of the clocks, linebuffer, and colour lookup table.</p>
+</span></span></code></pre></div><p>The following section will examine the new module. Refer to <a href="/posts/framebuffers/">Framebuffers</a> if you&rsquo;d like an explanation of the clocks, linebuffer, and the colour lookup table.</p>
 <h3 id="draw-instance">Draw Instance</h3>
 <p>The actual drawing is accomplished by the <code>render_line</code> instance a little after line 100.
 This is where you can adjust the drawing scale and switch to other rendering modules (discussed shortly).</p>
@@ -985,7 +984,7 @@ This is where you can adjust the drawing scale and switch to other rendering mod
 <p>It looks like a cube, but it&rsquo;s an ersatz cube. Our cube has no real depth; it cannot move in 3D space, nor can we apply realistic lighting. We&rsquo;ll cover real 3D models in a future post, but for now, let&rsquo;s turn our attention to the most critical shape in all of computer graphics: the triangle.</p>
 <h2 id="the-triangle">The Triangle</h2>
 <p>As you gaze upon the beautiful 4K vista from a AAA game in the 2020s, know this: it&rsquo;s all triangles!</p>
-<p>A triangle consists of three lines, so we could issue three <code>draw_line</code> commands, but it&rsquo;s so valuable that it deserves its own module <strong>[<a href="https://github.com/projf/projf-explore/blob/main/lib/graphics/draw_triangle.sv">draw_triangle.sv</a>]</strong>:</p>
+<p>A triangle consists of three lines, so we could issue three requests to <code>draw_line</code>, but it&rsquo;s so valuable that it deserves its own module <strong>[<a href="https://github.com/projf/projf-explore/blob/main/lib/graphics/draw_triangle.sv">draw_triangle.sv</a>]</strong>:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> draw_triangle #(<span style="color:#66d9ef">parameter</span> CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>) (  <span style="color:#75715e">// signed coordinate width
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,             <span style="color:#75715e">// clock
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst,             <span style="color:#75715e">// reset
