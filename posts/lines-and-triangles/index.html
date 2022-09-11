@@ -7,11 +7,10 @@
 <title>Lines and Triangles | Project F: FPGA Dev</title>
 
 <meta property='og:title' content='Lines and Triangles - Project F: FPGA Dev'>
-<meta property='og:description' content='Welcome back to Exploring FPGA Graphics. It&rsquo;s time to turn our attention to drawing. Most modern computer graphics come down to drawing triangles and colouring them in. So, it seems fitting to begin our drawing tour with triangles and the straight lines that form them. This post will implement Bresenham&rsquo;s line algorithm in Verilog and create lines, triangles, and even a cube (our first sort-of 3D).
-This post was completely revised in August 2022.'>
+<meta property='og:description' content='Welcome back to Exploring FPGA Graphics. It&rsquo;s time to turn our attention to drawing. Most modern computer graphics come down to drawing triangles and colouring them in. So, it seems fitting to begin our drawing tour with triangles and the straight lines that form them. This post will implement Bresenham&rsquo;s line algorithm in Verilog and create lines, triangles, and even a cube (our first sort-of 3D). This post was last updated in September 2022.'>
 <meta property='og:url' content='https://projectf.io/posts/lines-and-triangles/'>
 <meta property='og:site_name' content='Project F: FPGA Dev'>
-<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/lines-and-triangles/social-card.jpg'><meta property='article:published_time' content='2021-01-28T00:00:00Z'><meta property='article:modified_time' content='2022-08-19T00:00:00Z'><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
+<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/lines-and-triangles/social-card.jpg'><meta property='article:published_time' content='2021-01-28T00:00:00Z'><meta property='article:modified_time' content='2022-09-11T00:00:00Z'><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
 
 
 <link href="https://projectf.io/index.xml" rel="alternate" type="application/rss+xml" title="Project F: FPGA Dev">
@@ -120,7 +119,7 @@ This post was completely revised in August 2022.'>
     <h1 class="title">Lines and Triangles</h1>
     
     <div class="content">
-      <p>Welcome back to <em>Exploring FPGA Graphics</em>. It&rsquo;s time to turn our attention to drawing. Most modern computer graphics come down to drawing triangles and colouring them in. So, it seems fitting to begin our drawing tour with triangles and the straight lines that form them. This post will implement Bresenham&rsquo;s line algorithm in Verilog and create lines, triangles, and even a cube (our first sort-of 3D).</p>
+      <p>Welcome back to <em>Exploring FPGA Graphics</em>. It&rsquo;s time to turn our attention to drawing. Most modern computer graphics come down to drawing triangles and colouring them in. So, it seems fitting to begin our drawing tour with triangles and the straight lines that form them. This post will implement Bresenham&rsquo;s line algorithm in Verilog and create lines, triangles, and even a cube (our first sort-of 3D). This post was last updated in September 2022.</p>
 <p><strong>This post was completely revised in August 2022.</strong></p>
 <p>In this series, we learn about graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how screens work, play Pong, create starfields and sprites, paint Michelangelo&rsquo;s David, draw lines and triangles, and animate characters and shapes. New to the series? Start with <a href="/posts/fpga-graphics/">Beginning FPGA Graphics</a>.</p>
 <p><em>Get in touch: <a href="https://github.com/projf/projf-explore/issues">GitHub Issues</a>, <a href="https://1bitsquared.com/pages/chat">1BitSquared Discord</a>, <a href="https://mastodon.social/@WillFlux">@WillFlux</a> (Mastodon), <a href="https://twitter.com/WillFlux">@WillFlux</a> (Twitter)</em></p>
@@ -144,7 +143,7 @@ I love FPGAs and want to help more people discover and use them in their project
 My hardware designs are open source, and my blog is advert free.</p>
 </blockquote>
 <h3 id="requirements">Requirements</h3>
-<p>You should be to run these designs to any recent FPGA board. I include complete designs for the <a href="https://docs.icebreaker-fpga.org/hardware/icebreaker/">iCEBreaker</a> with <a href="https://docs.icebreaker-fpga.org/hardware/pmod/dvi/">12-Bit DVI Pmod</a>, <a href="https://digilent.com/reference/programmable-logic/arty-a7/reference-manual">Digilent Arty A7-35T</a> with <a href="https://digilent.com/reference/pmod/pmodvga/reference-manual">Pmod VGA</a>, and <a href="/posts/verilog-sim-verilator-sdl/">Verilator Simulation with SDL</a>. See <a href="/posts/fpga-graphics/#requirements">requirements</a> from <em>Beginning FPGA Graphics</em> for more details.</p>
+<p>You should be to run these designs on any recent FPGA board. I include everything you need for the <a href="https://docs.icebreaker-fpga.org/hardware/icebreaker/">iCEBreaker</a> with <a href="https://docs.icebreaker-fpga.org/hardware/pmod/dvi/">12-Bit DVI Pmod</a>, <a href="https://digilent.com/reference/programmable-logic/arty-a7/reference-manual">Digilent Arty A7-35T</a> with <a href="https://digilent.com/reference/pmod/pmodvga/reference-manual">Pmod VGA</a>, and <a href="/posts/verilog-sim-verilator-sdl/">Verilator Simulation with SDL</a>. See <a href="/posts/fpga-graphics/#requirements">requirements</a> from <em>Beginning FPGA Graphics</em> for more details.</p>
 <p>This post builds on <a href="/posts/framebuffers/">Framebuffers</a>; I recommend reading that post first if you haven&rsquo;t already.</p>
 <h2 id="new-screen-resolution">New Screen Resolution</h2>
 <p>Choosing your graphics resolution and colour depth are critical decisions in any graphics design. We want a high resolution for this post, but we want to continue using BRAM for simplicity. Adopting a 16:9 aspect ratio makes scaling on modern displays simpler while reducing memory usage</p>
@@ -152,7 +151,7 @@ My hardware designs are open source, and my blog is advert free.</p>
 <ul>
 <li>320 x 180 has 57,600 pixels</li>
 <li>16 colours require four bits per pixel</li>
-<li>Fits in 256 Kb (32 KiB) buffer</li>
+<li>256 Kb (32 KiB) buffer required</li>
 <li>Scale up 2x for 640x480 with letterbox</li>
 <li>Scale up 4x for 1280x720 fullscreen</li>
 </ul>
@@ -160,11 +159,11 @@ My hardware designs are open source, and my blog is advert free.</p>
 <ul>
 <li>160 x 90 has 14,400 pixels</li>
 <li>4 colours require two bits per pixel</li>
-<li>Fits in 32 Kb (4 KiB) buffer</li>
+<li>32 Kb (4 KiB) buffer required</li>
 <li>Scale up 4x for 640x480 with letterbox</li>
 <li>Scale up 8x for 1280x720 fullscreen</li>
 </ul>
-<p>We use a lower resolution on iCEBreaker to continue using BRAM. SPRAM is large enough to handle 320x180 on the iCEBreaker but adds complexity we could do without right now.</p>
+<p>We use a lower resolution on iCEBreaker to continue storing the framebuffer in BRAM. <a href="/posts/spram-ice40-fpga/">iCE40UP SPRAM</a> is large enough to handle 320x180 but would be a distraction right now. If you&rsquo;re already familiar with SPRAM, feel free to use the 320x180 designs with iCEBreaker: the new render modules (discussed later) make this straightforward.</p>
 <h2 id="an-address-for-every-pixel">An Address for Every Pixel</h2>
 <p>A framebuffer is two-dimensional, with an X and Y coordinate for every pixel. Memory addresses are one-dimensional. We need to map a framebuffer coordinate to a memory address <strong>[<a href="https://github.com/projf/projf-explore/blob/main/lib/display/bitmap_addr.sv">bitmap_addr.sv</a>]</strong>:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> bitmap_addr #(
@@ -519,7 +518,17 @@ To avoid this, we can register the end coordinate and drawing direction:</p>
 <p>We test several lines: steep and not steep, drawn upwards, downwards, left to right, and right to left, points, and the longest possible horizontal, vertical, and diagonal lines. A steep line is one in which the vertical change is larger than the horizontal.</p>
 <h2 id="render-module">Render Module</h2>
 <p>In previous posts, we created a separate top module for every demo. Now that our designs are getting a little more complex, breaking each demo rendering into a module makes sense. That way, we can reuse the same top module for multiple demos.</p>
-<p>Our first rendering module is <strong>[<a href="https://github.com/projf/projf-explore/blob/main/graphics/lines-and-triangles/render_line.sv">render_line</a>]</strong>:</p>
+<p>To support a wide range of FPGAs, I&rsquo;ve created two sets of rendering modules:</p>
+<ul>
+<li>320x180 in 16 colours (256 kb per buffer) - used for Arty and Verilator</li>
+<li>160x90 in 4 colours (32 kb per buffer) - used for iCEBreaker</li>
+</ul>
+<p>Our first rendering module draws a single diagonal line:</p>
+<ul>
+<li><strong><a href="https://github.com/projf/projf-explore/blob/main/graphics/lines-and-triangles/160x90/render_line.sv">160x90/render_line.sv</a></strong></li>
+<li><strong><a href="https://github.com/projf/projf-explore/blob/main/graphics/lines-and-triangles/320x180/render_line.sv">320x180/render_line.sv</a></strong></li>
+</ul>
+<p>The 16-colour 320x180 version is shown below:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> render_line #(
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>,  <span style="color:#75715e">// signed coordinate width (bits)
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> CIDXW<span style="color:#f92672">=</span><span style="color:#ae81ff">4</span>,   <span style="color:#75715e">// colour index width (bits)
@@ -578,8 +587,7 @@ To avoid this, we can register the end coordinate and drawing direction:</p>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always_comb</span> done <span style="color:#f92672">=</span> (state <span style="color:#f92672">==</span> DONE);
 </span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
-</span></span></code></pre></div><p>There is a smaller version for iCEBreaker: <strong>[<a href="https://github.com/projf/projf-explore/blob/main/graphics/lines-and-triangles/render_line_sm.sv">render_line_sm</a>]</strong>.</p>
-<p>The render module takes a <code>SCALE</code> parameter with which you can scale up the drawing. For example, if you have a 640x360 framebuffer, set <code>SCALE=2</code> to fill the screen with the <code>render_line</code> design.</p>
+</span></span></code></pre></div><p>The render module takes a <code>SCALE</code> parameter with which you can scale up the drawing. For example, if you have a 640x360 framebuffer, set <code>SCALE=2</code> to fill the screen with the <code>320x180/render_line.sv</code> design.</p>
 <h2 id="demo-driver">Demo Driver</h2>
 <p>It&rsquo;s time to get drawing with actual hardware.</p>
 <p>Plugging our rendering module into the top design from <a href="/posts/framebuffers/">framebuffers</a>, we get our line demo:</p>
@@ -649,7 +657,8 @@ In the <a href="https://github.com/projf/projf-explore/tree/main/graphics/lines-
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">// pixel read and write addresses and colours
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [FB_ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_addr_write, fb_addr_read;
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> [FB_DATAW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] fb_colr_write, fb_colr_read;
-</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> fb_we;  <span style="color:#75715e">// framebuffer write enable
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">// framebuffer memory
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    bram_sdp #(
 </span></span><span style="display:flex;"><span>        .WIDTH(FB_DATAW),
@@ -658,7 +667,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/main/graphics/lines-
 </span></span><span style="display:flex;"><span>    ) bram_inst (
 </span></span><span style="display:flex;"><span>        .clk_write(clk_sys),
 </span></span><span style="display:flex;"><span>        .clk_read(clk_sys),
-</span></span><span style="display:flex;"><span>        .we(fb_we_sr[<span style="color:#ae81ff">0</span>]),
+</span></span><span style="display:flex;"><span>        .we(fb_we),
 </span></span><span style="display:flex;"><span>        .addr_write(fb_addr_write),
 </span></span><span style="display:flex;"><span>        .addr_read(fb_addr_read),
 </span></span><span style="display:flex;"><span>        .data_in(fb_colr_write),
@@ -684,16 +693,15 @@ In the <a href="https://github.com/projf/projf-explore/tree/main/graphics/lines-
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> draw_oe;  <span style="color:#75715e">// draw requested
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_sys) <span style="color:#66d9ef">begin</span>
 </span></span><span style="display:flex;"><span>        draw_oe <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// comment out to draw at full speed
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (frame_sys) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// once per frame
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#66d9ef">if</span> (cnt_frame_wait <span style="color:#f92672">!=</span> FRAME_WAIT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>                cnt_frame_wait <span style="color:#f92672">&lt;=</span> cnt_frame_wait <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> draw_oe <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// request drawing
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (cnt_frame_wait <span style="color:#f92672">!=</span> FRAME_WAIT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// wait for initial frames
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#66d9ef">if</span> (frame_sys) cnt_frame_wait <span style="color:#f92672">&lt;=</span> cnt_frame_wait <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (frame_sys) draw_oe <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// draw one pixel per frame
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">end</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">// render line/edge/cube/triangles
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> DRAW_SCALE <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// relative to framebuffer dimensions
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> drawing;  <span style="color:#75715e">// actively drawing
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> clip;  <span style="color:#75715e">// location is clipped
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] drx, dry;  <span style="color:#75715e">// draw coordinates
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    render_line #(  <span style="color:#75715e">// switch module name to change demo
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        .CORDW(CORDW),
@@ -724,7 +732,7 @@ In the <a href="https://github.com/projf/projf-explore/tree/main/graphics/lines-
 </span></span><span style="display:flex;"><span>        .offx(<span style="color:#ae81ff">0</span>),
 </span></span><span style="display:flex;"><span>        .offy(<span style="color:#ae81ff">0</span>),
 </span></span><span style="display:flex;"><span>        .addr(fb_addr_write),
-</span></span><span style="display:flex;"><span>        .clip()
+</span></span><span style="display:flex;"><span>        .clip
 </span></span><span style="display:flex;"><span>    );
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">// delay write enable to match address calculation
@@ -734,7 +742,8 @@ In the <a href="https://github.com/projf/projf-explore/tree/main/graphics/lines-
 </span></span><span style="display:flex;"><span>        fb_we_sr <span style="color:#f92672">&lt;=</span> {drawing, fb_we_sr[LAT_ADDR<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">1</span>]};
 </span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (rst_sys) fb_we_sr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always_comb</span> fb_we <span style="color:#f92672">=</span> fb_we_sr[<span style="color:#ae81ff">0</span>] <span style="color:#f92672">&amp;&amp;</span> <span style="color:#f92672">!</span>clip;  <span style="color:#75715e">// check for clipping
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">//
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// read framebuffer for display output via linebuffer
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">//
@@ -756,8 +765,8 @@ In the <a href="https://github.com/projf/projf-explore/tree/main/graphics/lines-
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">end</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">// enable linebuffer input
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> lb_en_in;  <span style="color:#75715e">// enable linebuffer input
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(FB_WIDTH)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_lbx;  <span style="color:#75715e">// horizontal pixel counter
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> lb_en_in;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> [$clog2(FB_WIDTH)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_lbx;  <span style="color:#75715e">// horizontal pixel counter
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> lb_en_in <span style="color:#f92672">=</span> (lb_line <span style="color:#f92672">&amp;&amp;</span> cnt_lb_line <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">&amp;&amp;</span> cnt_lbx <span style="color:#f92672">&lt;</span> FB_WIDTH);
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">// calculate framebuffer read address for linebuffer
@@ -863,13 +872,12 @@ This is where you can adjust the drawing scale and switch to other rendering mod
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> draw_oe;  <span style="color:#75715e">// draw requested
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_sys) <span style="color:#66d9ef">begin</span>
 </span></span><span style="display:flex;"><span>        draw_oe <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// comment out to draw at full speed
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (frame_sys) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// once per frame
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#66d9ef">if</span> (cnt_frame_wait <span style="color:#f92672">!=</span> FRAME_WAIT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>                cnt_frame_wait <span style="color:#f92672">&lt;=</span> cnt_frame_wait <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> draw_oe <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// request drawing
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
-</span></span></code></pre></div><p>The design waits for 200 frames (3.3 seconds) before drawing to give the monitor time to show the image. To draw at full speed after the delay, comment out <code>draw_oe &lt;= 0;</code>.</p>
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (cnt_frame_wait <span style="color:#f92672">!=</span> FRAME_WAIT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// wait for initial frames
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#66d9ef">if</span> (frame_sys) cnt_frame_wait <span style="color:#f92672">&lt;=</span> cnt_frame_wait <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (frame_sys) draw_oe <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// draw one pixel per frame
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">end</span>
+</span></span></code></pre></div><p>The design waits for 200 frames (3.3 seconds) to give the monitor time to show the image before starting to draw. On iCEBreaker, the demo waits for 300 frames (5 seconds) before starting to draw. You can adjust this delay or remove it altogether if you prefer.</p>
+<p>To draw at full speed after the delay, comment out <code>draw_oe &lt;= 0;</code>.</p>
 <h3 id="latency-correction">Latency Correction</h3>
 <p>When we discussed <a href="#an-address-for-every-pixel">address calculation</a> we noted the need for latency correction. We use a shift register to delay the write-enable signal to match the address calculation:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span>    <span style="color:#75715e">// delay write enable to match address calculation
@@ -879,10 +887,16 @@ This is where you can adjust the drawing scale and switch to other rendering mod
 </span></span><span style="display:flex;"><span>        fb_we_sr <span style="color:#f92672">&lt;=</span> {drawing, fb_we_sr[LAT_ADDR<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">1</span>]};
 </span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (rst_sys) fb_we_sr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
-</span></span></code></pre></div><h2 id="that-aint-no-cube">That Ain&rsquo;t No Cube</h2>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always_comb</span> fb_we <span style="color:#f92672">=</span> fb_we_sr[<span style="color:#ae81ff">0</span>] <span style="color:#f92672">&amp;&amp;</span> <span style="color:#f92672">!</span>clip;  <span style="color:#75715e">// check for clipping
+</span></span></span></code></pre></div><p>To avoid drawing artefacts, we disable <code>fb_we</code> if the position is outside the screen area (clipped).</p>
+<h2 id="that-aint-no-cube">That Ain&rsquo;t No Cube</h2>
 <p>If we can draw one line, we can draw many!</p>
 <p>Let&rsquo;s draw a cube as you&rsquo;ve probably doodled on paper; this requires nine lines.</p>
-<p>We don&rsquo;t need a new top module, just a new render module - <strong>[<a href="https://github.com/projf/projf-explore/blob/main/graphics/lines-and-triangles/render_cube.sv">render_cube.sv</a>]</strong>:</p>
+<ul>
+<li><strong><a href="https://github.com/projf/projf-explore/blob/main/graphics/lines-and-triangles/160x90/render_cube.sv">160x90/render_cube.sv</a></strong></li>
+<li><strong><a href="https://github.com/projf/projf-explore/blob/main/graphics/lines-and-triangles/320x180/render_cube.sv">320x180/render_cube.sv</a></strong></li>
+</ul>
+<p>The 16-colour 320x180 version is shown below:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> render_cube #(
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>,  <span style="color:#75715e">// signed coordinate width (bits)
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> CIDXW<span style="color:#f92672">=</span><span style="color:#ae81ff">4</span>,   <span style="color:#75715e">// colour index width (bits)
@@ -977,8 +991,7 @@ This is where you can adjust the drawing scale and switch to other rendering mod
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always_comb</span> done <span style="color:#f92672">=</span> (state <span style="color:#f92672">==</span> DONE);
 </span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
-</span></span></code></pre></div><p>There is a smaller version for iCEBreaker: <strong>[<a href="https://github.com/projf/projf-explore/blob/main/graphics/lines-and-triangles/render_cube_sm.sv">render_cube_sm.sv</a>]</strong>.</p>
-<h3 id="cube-demo">Cube Demo</h3>
+</span></span></code></pre></div><h3 id="cube-demo">Cube Demo</h3>
 <p>To see the cube demo, replace <code>render_*</code> with <code>render_cube</code> in your top module and rebuild.</p>
 <p><img src="/img/posts/lines-and-triangles/cube.jpg" alt="Ersatz Cube" title="Nine lines make a cube."></p>
 <p>It looks like a cube, but it&rsquo;s an ersatz cube. Our cube has no real depth; it cannot move in 3D space, nor can we apply realistic lighting. We&rsquo;ll cover real 3D models in a future post, but for now, let&rsquo;s turn our attention to the most critical shape in all of computer graphics: the triangle.</p>
@@ -1076,94 +1089,11 @@ This is where you can adjust the drawing scale and switch to other rendering mod
 </span></span></code></pre></div><p>There&rsquo;s a test bench you can use to exercise the module with Vivado: <strong>[<a href="https://github.com/projf/projf-explore/blob/main/lib/graphics/xc7/draw_triangle_tb.sv">xc7/draw_triangle_tb.sv</a>]</strong>.</p>
 <h3 id="the-magic-number">The Magic Number</h3>
 <p><img src="/img/posts/lines-and-triangles/lines-and-triangles-sim.png" alt="Triangles Sim" title="Three tasty triangles"></p>
-<p>Let&rsquo;s create a render module to draw three triangles - <strong>[<a href="https://github.com/projf/projf-explore/blob/main/graphics/lines-and-triangles/render_triangles.sv">render_triangles.sv</a>]</strong>:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> render_triangles #(
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>,  <span style="color:#75715e">// signed coordinate width (bits)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> CIDXW<span style="color:#f92672">=</span><span style="color:#ae81ff">4</span>,   <span style="color:#75715e">// colour index width (bits)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> SCALE<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>    <span style="color:#75715e">// drawing scale: 1=320x180, 2=640x360, 4=1280x720
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    ) (
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,    <span style="color:#75715e">// clock
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst,    <span style="color:#75715e">// reset
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> oe,     <span style="color:#75715e">// output enable
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> start,  <span style="color:#75715e">// start drawing
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x,  <span style="color:#75715e">// horizontal draw position
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] y,  <span style="color:#75715e">// vertical draw position
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [CIDXW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cidx,  <span style="color:#75715e">// pixel colour
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> drawing,  <span style="color:#75715e">// actively drawing
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> done      <span style="color:#75715e">// drawing is complete (high for one tick)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    );
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">localparam</span> SHAPE_CNT<span style="color:#f92672">=</span><span style="color:#ae81ff">3</span>;  <span style="color:#75715e">// number of shapes to draw
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(SHAPE_CNT)<span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] shape_id;  <span style="color:#75715e">// shape identifier
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vx0, vy0, vx1, vy1, vx2, vy2;  <span style="color:#75715e">// shape coords
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> draw_start, draw_done;  <span style="color:#75715e">// drawing signals
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// draw state machine
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">enum</span> {IDLE, INIT, DRAW, DONE} state;
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">case</span> (state)
-</span></span><span style="display:flex;"><span>            INIT: <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// register coordinates and colour
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                draw_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>                state <span style="color:#f92672">&lt;=</span> DRAW;
-</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">case</span> (shape_id)
-</span></span><span style="display:flex;"><span>                    <span style="color:#ae81ff">&#39;d0</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>                        vx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">60</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">20</span>;
-</span></span><span style="display:flex;"><span>                        vx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">280</span>; vy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">80</span>;
-</span></span><span style="display:flex;"><span>                        vx2 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">160</span>; vy2 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">164</span>;
-</span></span><span style="display:flex;"><span>                        cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">&#39;h3</span>;  <span style="color:#75715e">// colour index
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>                    <span style="color:#ae81ff">&#39;d1</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>                        vx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">70</span>; vy0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">160</span>;
-</span></span><span style="display:flex;"><span>                        vx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">220</span>; vy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">90</span>;
-</span></span><span style="display:flex;"><span>                        vx2 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">170</span>; vy2 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">10</span>;
-</span></span><span style="display:flex;"><span>                        cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">&#39;h2</span>;
-</span></span><span style="display:flex;"><span>                    <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>                    <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// shape_id=2
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                        vx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">22</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">36</span>;
-</span></span><span style="display:flex;"><span>                        vx1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">62</span>; vy1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">150</span>;
-</span></span><span style="display:flex;"><span>                        vx2 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">98</span>; vy2 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">96</span>;
-</span></span><span style="display:flex;"><span>                        cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">&#39;h1</span>;
-</span></span><span style="display:flex;"><span>                    <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">endcase</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>            DRAW: <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>                draw_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">if</span> (draw_done) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>                    <span style="color:#66d9ef">if</span> (shape_id <span style="color:#f92672">==</span> SHAPE_CNT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>                        state <span style="color:#f92672">&lt;=</span> DONE;
-</span></span><span style="display:flex;"><span>                    <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>                        shape_id <span style="color:#f92672">&lt;=</span> shape_id <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>                        state <span style="color:#f92672">&lt;=</span> INIT;
-</span></span><span style="display:flex;"><span>                    <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>            DONE: state <span style="color:#f92672">&lt;=</span> DONE;
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">if</span> (start) state <span style="color:#f92672">&lt;=</span> INIT;  <span style="color:#75715e">// IDLE
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#66d9ef">endcase</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (rst) state <span style="color:#f92672">&lt;=</span> IDLE;
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    draw_triangle #(.CORDW(CORDW)) draw_triangle_inst (
-</span></span><span style="display:flex;"><span>        .clk,
-</span></span><span style="display:flex;"><span>        .rst,
-</span></span><span style="display:flex;"><span>        .start(draw_start),
-</span></span><span style="display:flex;"><span>        .oe,
-</span></span><span style="display:flex;"><span>        .x0(vx0 <span style="color:#f92672">*</span> SCALE),
-</span></span><span style="display:flex;"><span>        .y0(vy0 <span style="color:#f92672">*</span> SCALE),
-</span></span><span style="display:flex;"><span>        .x1(vx1 <span style="color:#f92672">*</span> SCALE),
-</span></span><span style="display:flex;"><span>        .y1(vy1 <span style="color:#f92672">*</span> SCALE),
-</span></span><span style="display:flex;"><span>        .x2(vx2 <span style="color:#f92672">*</span> SCALE),
-</span></span><span style="display:flex;"><span>        .y2(vy2 <span style="color:#f92672">*</span> SCALE),
-</span></span><span style="display:flex;"><span>        .x,
-</span></span><span style="display:flex;"><span>        .y,
-</span></span><span style="display:flex;"><span>        .drawing,
-</span></span><span style="display:flex;"><span>        .busy(),
-</span></span><span style="display:flex;"><span>        .done(draw_done)
-</span></span><span style="display:flex;"><span>    );
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always_comb</span> done <span style="color:#f92672">=</span> (state <span style="color:#f92672">==</span> DONE);
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
-</span></span></code></pre></div><p>There is a smaller version for iCEBreaker: <strong>[<a href="https://github.com/projf/projf-explore/blob/main/graphics/lines-and-triangles/render_triangles_sm.sv">render_triangles_sm.sv</a>]</strong>.</p>
+<p>Let&rsquo;s create a render module to draw three triangles:</p>
+<ul>
+<li><strong><a href="https://github.com/projf/projf-explore/blob/main/graphics/lines-and-triangles/160x90/render_triangles.sv">160x90/render_triangles.sv</a></strong></li>
+<li><strong><a href="https://github.com/projf/projf-explore/blob/main/graphics/lines-and-triangles/320x180/render_triangles.sv">320x180/render_triangles.sv</a></strong></li>
+</ul>
 <p>Replace <code>render_*</code> with <code>render_triangles</code> in your top module and rebuild.</p>
 <p>We can draw millions of pixels per second, but drawing one per frame is fun to watch:</p>
 <p><img src="/img/posts/lines-and-triangles/drawing-triangles.gif" alt="Drawing Triangles" title="There are no secrets that time does not reveal."></p>
@@ -1176,7 +1106,7 @@ This is where you can adjust the drawing scale and switch to other rendering mod
 <li>Draw a landscape with <a href="https://www.youtube.com/watch?v=bjhkxFDvD78">one-point perspective</a> (YouTube example)</li>
 </ul>
 <h2 id="next-time">Next Time</h2>
-<p>Next time, we&rsquo;ll draw circles and fill shapes in <a href="/posts/fpga-shapes/">2D Shapes</a>. Check out the <a href="/sitemap/">site map</a> for more FPGA projects and tutorials.</p>
+<p>Next time, in <a href="/posts/fpga-shapes/">2D Shapes</a>, we’ll draw rectangles and circles as well as triangles, then learn to colour them in. Check out the <a href="/demos/">demo</a> and <a href="/tutorials/">tutorial</a> sections for more FPGA projects.</p>
 <p><em>Get in touch: <a href="https://github.com/projf/projf-explore/issues">GitHub Issues</a>, <a href="https://1bitsquared.com/pages/chat">1BitSquared Discord</a>, <a href="https://mastodon.social/@WillFlux">@WillFlux</a> (Mastodon), <a href="https://twitter.com/WillFlux">@WillFlux</a> (Twitter)</em></p>
 
       
