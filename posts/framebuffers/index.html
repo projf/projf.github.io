@@ -10,7 +10,7 @@
 <meta property='og:description' content='Welcome back to Exploring FPGA Graphics. In the previous part, we worked with sprites, but another approach is needed as graphics become more complex. Instead of drawing directly to the screen, we draw to a framebuffer, which is read out to the screen. This post provides an introduction to framebuffers and how to scale them up. We&rsquo;ll also learn how to fizzlefade graphics Wolfenstein 3D style. This post was last updated in September 2022.'>
 <meta property='og:url' content='https://projectf.io/posts/framebuffers/'>
 <meta property='og:site_name' content='Project F: FPGA Dev'>
-<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/framebuffers/social-card.png'><meta property='article:published_time' content='2020-10-30T00:00:00Z'><meta property='article:modified_time' content='2022-09-11T00:00:00Z'><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
+<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/framebuffers/social-card.png'><meta property='article:published_time' content='2020-10-30T00:00:00Z'><meta property='article:modified_time' content='2022-09-16T00:00:00Z'><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
 
 
 <link href="https://projectf.io/index.xml" rel="alternate" type="application/rss+xml" title="Project F: FPGA Dev">
@@ -449,7 +449,7 @@ We use combinational logic here to avoid latency correction on the display signa
 <p>Scaling our 160x120 framebuffer up to 640x480 renders each pixel 16 times. Scaling up repeats pixels, but we don&rsquo;t want to repeat memory access.</p>
 <p>Instead of sending pixels directly from the framebuffer to the screen, we load each line into a linebuffer. Each pixel is read into the linebuffer once per frame but displayed as many times as needed. The linebuffer memory is read many times for each pixel, but it&rsquo;s small and dedicated to the task.</p>
 <p>The linebuffer provides a second valuable service: using a dual-port BRAM, we can support two clocks: system and pixel. We read data into the linebuffer at the system clock but output for display at the pixel clock. Separate clocks improve performance and allow the system clock to remain constant when we change the display resolution. We discuss the clocks in more detail below.</p>
-<p><em>(diagram to follow)</em></p>
+<p><img src="/img/posts/framebuffers/framebuffer-arch.png" alt="Framebuffer Architecture" title="Two domains bridged two ways."></p>
 <h3 id="linebuffer-module">Linebuffer Module</h3>
 <p>The linebuffer module is based on a simple dual-port BRAM <strong>[<a href="https://github.com/projf/projf-explore/blob/main/lib/display/linebuffer_simple.sv">linebuffer_simple.sv</a>]</strong>:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> linebuffer_simple #(
