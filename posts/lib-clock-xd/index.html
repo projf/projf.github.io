@@ -7,12 +7,13 @@
 <title>Lib: clock/xd | Project F: FPGA Dev</title>
 
 <meta property='og:title' content='Lib: clock/xd - Project F: FPGA Dev'>
-<meta property='og:description' content='Sometimes you need to send a single pulse from one clock domain to another. This is a simple case of clock domain crossing or CDC. This post uses the xd module from the Project F Library to handle such situations simply and safely.
+<meta property='og:description' content='Sometimes you need to send a single pulse from one clock domain to another. This is a simple case of clock domain crossing or CDC. This post uses the xd module from the Project F Library to handle such situations simply and safely. This post was last updated in October 2022.
 Get in touch: GitHub Issues, 1BitSquared Discord, @WillFlux (Mastodon), @WillFlux (Twitter)
-NB. A revised version of xd without reset signals is currently being rolled out across Project F.'>
+Sponsor My Work
+If you like what I do, consider sponsoring me on GitHub.'>
 <meta property='og:url' content='https://projectf.io/posts/lib-clock-xd/'>
 <meta property='og:site_name' content='Project F: FPGA Dev'>
-<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/simple-fpga-cdc/social-card.png'><meta property='article:published_time' content='2022-06-15T00:00:00Z'><meta property='article:modified_time' content='2022-08-19T00:00:00Z'><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
+<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/simple-fpga-cdc/social-card.png'><meta property='article:published_time' content='2022-06-15T00:00:00Z'><meta property='article:modified_time' content='2022-10-27T00:00:00Z'><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
 
 
 <link href="https://projectf.io/index.xml" rel="alternate" type="application/rss+xml" title="Project F: FPGA Dev">
@@ -121,9 +122,8 @@ NB. A revised version of xd without reset signals is currently being rolled out 
     <h1 class="title">Lib: clock/xd</h1>
     
     <div class="content">
-      <p>Sometimes you need to send a single pulse from one clock domain to another. This is a simple case of <strong>clock domain crossing</strong> or <strong>CDC</strong>. This post uses the <strong>xd</strong> module from the <a href="/posts/verilog-library-announcement/">Project F Library</a> to handle such situations simply and safely.</p>
+      <p>Sometimes you need to send a single pulse from one clock domain to another. This is a simple case of <strong>clock domain crossing</strong> or <strong>CDC</strong>. This post uses the <strong>xd</strong> module from the <a href="/posts/verilog-library-announcement/">Project F Library</a> to handle such situations simply and safely. This post was last updated in October 2022.</p>
 <p><em>Get in touch: <a href="https://github.com/projf/projf-explore/issues">GitHub Issues</a>, <a href="https://1bitsquared.com/pages/chat">1BitSquared Discord</a>, <a href="https://mastodon.social/@WillFlux">@WillFlux</a> (Mastodon), <a href="https://twitter.com/WillFlux">@WillFlux</a> (Twitter)</em></p>
-<p><em>NB. A revised version of xd without reset signals is currently being rolled out across Project F. This post will be updated when this is complete.</em></p>
 <blockquote>
 <p><strong>Sponsor My Work</strong><br>
 If you like what I do, consider <a href="https://github.com/sponsors/WillGreen">sponsoring me</a> on GitHub.<br>
@@ -137,56 +137,43 @@ My hardware designs are open source, and my blog is advert free.</p>
 <h2 id="xd-module">XD Module</h2>
 <p>Project F Library module <strong>[<a href="https://github.com/projf/projf-explore/blob/main/lib/clock/xd.sv">clock/xd.sv</a>]</strong>:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> xd (
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_i,  <span style="color:#75715e">//  input clock: source domain
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_o,  <span style="color:#75715e">// output clock: destination domain
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst_i,  <span style="color:#75715e">//        reset: source domain
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst_o,  <span style="color:#75715e">//        reset: destination domain
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> i,      <span style="color:#75715e">//  input pulse: source domain
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> o       <span style="color:#75715e">// output pulse: destination domain
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_src,   <span style="color:#75715e">// source domain clock
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_dst,   <span style="color:#75715e">// destination domain clock
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> flag_src,  <span style="color:#75715e">// flag in source domain
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> flag_dst   <span style="color:#75715e">// flag in destination domain
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    );
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">// toggle reg when pulse received in source domain
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> toggle_i;
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_i) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>        toggle_i <span style="color:#f92672">&lt;=</span> toggle_i <span style="color:#f92672">^</span> i;
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (rst_i) toggle_i <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>;
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> toggle_src <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_src) toggle_src <span style="color:#f92672">&lt;=</span> toggle_src <span style="color:#f92672">^</span> flag_src;
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">// cross to destination domain via shift reg
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] shr_o;
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_o) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>        shr_o <span style="color:#f92672">&lt;=</span> {shr_o[<span style="color:#ae81ff">2</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>], toggle_i};
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (rst_o) shr_o <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;b0</span>;
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] shr_dst <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;b0</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_dst) shr_dst <span style="color:#f92672">&lt;=</span> {shr_dst[<span style="color:#ae81ff">2</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>], toggle_src};
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#75715e">// output pulse when transition occurs
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>        o <span style="color:#f92672">=</span> shr_o[<span style="color:#ae81ff">3</span>] <span style="color:#f92672">^</span> shr_o[<span style="color:#ae81ff">2</span>];
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> flag_dst <span style="color:#f92672">=</span> shr_dst[<span style="color:#ae81ff">3</span>] <span style="color:#f92672">^</span> shr_dst[<span style="color:#ae81ff">2</span>];
 </span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
-</span></span></code></pre></div><p><em>On reflection, I could have named the module ports better—something I&rsquo;ll fix in the next version.</em></p>
-<p>There&rsquo;s a Vivado test bench you can use to exercise the module with Vivado: <strong>[<a href="https://github.com/projf/projf-explore/blob/main/lib/clock/xc7/xd_tb.sv">clock/xc7/xd_tb.sv</a>]</strong>. Verilator test benches will be available later.</p>
-<p><em>Diagram will be added shortly.</em></p>
+</span></span></code></pre></div><p>There&rsquo;s a Vivado test bench you can use to exercise the module with Vivado: <strong>[<a href="https://github.com/projf/projf-explore/blob/main/lib/clock/xc7/xd_tb.sv">clock/xc7/xd_tb.sv</a>]</strong>. Verilator test benches will be available later.</p>
 <h2 id="example">Example</h2>
-<p>My designs often have separate pixel and system clocks. When a new frame starts, we must pass the event from the pixel to the system clock domain.</p>
-<p>Along with the signal you wish to bring into the new clock domain, you need the clock and reset signals for both domains.</p>
+<p>My designs often have separate pixel and system clocks. When a new frame starts, we must pass the event from the pixel to the system clock domain:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> frame;      <span style="color:#75715e">// start of new frame (pixel clock domain)
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> frame_sys;  <span style="color:#75715e">// start of new frame (system clock domain)
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    xd xd_frame (
-</span></span><span style="display:flex;"><span>        .clk_i(clk_pix),  <span style="color:#75715e">// source clock
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        .clk_o(clk_sys),  <span style="color:#75715e">// destination clock
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        .rst_i(rst_pix),  <span style="color:#75715e">// source reset
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        .rst_o(rst_sys),  <span style="color:#75715e">// destination reset
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        .i(frame),        <span style="color:#75715e">// source flag
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        .o(frame_sys)     <span style="color:#75715e">// destination flag
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    );
+</span></span><span style="display:flex;"><span>        .clk_src(clk_pix),
+</span></span><span style="display:flex;"><span>        .clk_dst(clk_sys),
+</span></span><span style="display:flex;"><span>        .flag_src(frame),
+</span></span><span style="display:flex;"><span>        .flag_dst(frame_sys)
+</span></span><span style="display:flex;"><span>    );
 </span></span></code></pre></div><p>You can see this module in action in many Project F designs, including <a href="/posts/framebuffers/">Framebuffers</a> and <a href="/posts/fpga-shapes/">2D Shapes</a>.</p>
 <h2 id="caution-advised">Caution Advised</h2>
 <p>Before you rush to add new clock domains to your designs, you need to be aware of a significant limitation: this approach only works for isolated pulses of one clock cycle. The <code>clock/xd</code> module is ideal for sending well-spaced events but can&rsquo;t be used to send arbitrary data from one clock domain to another: use dual-port BRAM or a proper FIFO instead.</p>
 <p>The following simulation shows what happens if you abuse the module:</p>
 <p><img src="/img/posts/simple-fpga-cdc/xd-sim.png" alt="xd module simulation" title="Where did my pulses go?"></p>
 <p>Note how the final two-cycle pulse becomes two separate pulses when sent from slow to fast but disappears altogether when sent from fast to slow. You have been warned!</p>
-<p>Check out the <a href="/sitemap/">site map</a> for more FPGA projects and tutorials.</p>
+<h2 id="whats-next">What&rsquo;s Next?</h2>
+<p>Project F is full of tasty FPGA content to help you with your hardware project.</p>
+<p>Check out our <a href="/howto/">how to guides</a>, <a href="/tutorials/">tutorials</a>, and <a href="/demos/">demos</a>.</p>
 
       
     </div>
