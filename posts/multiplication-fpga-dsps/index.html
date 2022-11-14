@@ -8,11 +8,13 @@
 
 <meta property='og:title' content='Multiplication with FPGA DSPs - Project F: FPGA Dev'>
 <meta property='og:description' content='Welcome back to my series covering mathematics and algorithms with FPGAs.
-I was initially going to look at real numbers in this part, but Project F is known for its practical, hands-on tutorials. So, I decided to dedicate a post to a topic usually ignored by introductory guides: multiplication with DSPs. We&rsquo;ll cover real numbers in the next post. This post was last updated in December 2021.
-New to the series?'>
+Project F is known for its practical, hands-on tutorials. So, I decided to dedicate a post to a topic usually ignored by introductory guides: multiplication with DSPs. This post was last updated in November 2022.
+New to the series? Start with Numbers in Verilog.
+Get in touch: GitHub Issues, 1BitSquared Discord, @WillFlux (Mastodon), @WillFlux (Twitter)
+Series Outline Numbers in Verilog - introduction to numbers in Verilog Verilog Vectors and Arrays (coming soon) Fixed-Point Numbers in Verilog - precision without complexity Multiplication with FPGA DSPs (this post) - efficient multiplication with DSPs More maths in 2023 Sponsor My Work'>
 <meta property='og:url' content='https://projectf.io/posts/multiplication-fpga-dsps/'>
 <meta property='og:site_name' content='Project F: FPGA Dev'>
-<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/multiplication-fpga-dsps/social-card.png'><meta property='article:published_time' content='2021-11-27T00:00:00Z'><meta property='article:modified_time' content='2021-12-21T00:00:00Z'><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
+<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/multiplication-fpga-dsps/social-card.png'><meta property='article:published_time' content='2021-11-27T00:00:00Z'><meta property='article:modified_time' content='2022-11-14T00:00:00Z'><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
 
 
 <link href="https://projectf.io/index.xml" rel="alternate" type="application/rss+xml" title="Project F: FPGA Dev">
@@ -122,9 +124,17 @@ New to the series?'>
     
     <div class="content">
       <p>Welcome back to my series covering mathematics and algorithms with FPGAs.</p>
-<p>I was initially going to look at real numbers in this part, but Project F is known for its practical, hands-on tutorials. So, I decided to dedicate a post to a topic usually ignored by introductory guides: multiplication with DSPs. We&rsquo;ll cover real numbers in the next post. This post was last updated in December 2021.</p>
+<p>Project F is known for its practical, hands-on tutorials. So, I decided to dedicate a post to a topic usually ignored by introductory guides: multiplication with DSPs. This post was last updated in November 2022.</p>
 <p>New to the series? Start with <a href="/posts/numbers-in-verilog/">Numbers in Verilog</a>.</p>
 <p><em>Get in touch: <a href="https://github.com/projf/projf-explore/issues">GitHub Issues</a>, <a href="https://1bitsquared.com/pages/chat">1BitSquared Discord</a>, <a href="https://mastodon.social/@WillFlux">@WillFlux</a> (Mastodon), <a href="https://twitter.com/WillFlux">@WillFlux</a> (Twitter)</em></p>
+<h3 id="series-outline">Series Outline</h3>
+<ul>
+<li><a href="/posts/numbers-in-verilog">Numbers in Verilog</a> - introduction to numbers in Verilog</li>
+<li>Verilog Vectors and Arrays (coming soon)</li>
+<li><a href="/posts/fixed-point-numbers-in-verilog/">Fixed-Point Numbers in Verilog</a> - precision without complexity</li>
+<li>Multiplication with FPGA DSPs (this post) - efficient multiplication with DSPs</li>
+<li><em>More maths in 2023</em></li>
+</ul>
 <blockquote>
 <p><strong>Sponsor My Work</strong><br>
 If you like what I do, consider <a href="https://github.com/sponsors/WillGreen">sponsoring me</a> on GitHub.<br>
@@ -138,6 +148,7 @@ My hardware designs are open source, and my blog is advert free.</p>
 <p>Let&rsquo;s take a quick look at the multiplication capabilities of a few FPGAs.</p>
 <p>The width of a DSP multiplier depends on the FPGA architecture:</p>
 <ul>
+<li>Altera Cyclone V: <code>27 x 27 bit</code></li>
 <li>Lattice iCE40UP (SB_MAC16): <code>16 x 16 bit</code></li>
 <li>Lattice ECP5 (sysDSP): <code>18 x 18 bit</code></li>
 <li>Xilinx 7 Series (DSP48E1): <code>25 × 18 bit</code></li>
@@ -146,6 +157,11 @@ My hardware designs are open source, and my blog is advert free.</p>
 <p>For example, an ECP5 multiplier takes two 18-bit inputs and generates a 36-bit product output.</p>
 <p>While the number of multipliers depends on the specific FPGA part:</p>
 <ul>
+<li>Altera Cyclone V:
+<ul>
+<li>5CSEBA6U23I7: <code>112 multipliers</code></li>
+</ul>
+</li>
 <li>Lattice iCE40UP
 <ul>
 <li>iCE40UP5K: <code>8 multipliers</code></li>
@@ -169,15 +185,16 @@ My hardware designs are open source, and my blog is advert free.</p>
 </ul>
 </li>
 </ul>
-<p>Larger FPGAs include many thousands of multipliers, but we&rsquo;ve confined ourselves to parts you might find on a hobbyist-friendly board (I live in hope of an affordable Ultrascale+ board in 2022).</p>
+<p>Larger FPGAs include many thousands of multipliers, but we&rsquo;ve confined ourselves to parts you might find on a hobbyist-friendly board (I live in hope of an affordable Ultrascale+ board in <s>2022</s> 2023).</p>
 <h3 id="dsp-block-references">DSP Block References</h3>
 <ul>
+<li><a href="https://www.intel.com/content/www/us/en/docs/programmable/683375/current/variable-precision-dsp-blocks-in-devices-04657.html">Variable Precision DSP Blocks in Cyclone V Devices</a></li>
 <li><a href="https://www.latticesemi.com/view_document?document_id=50669">Lattice DSP Function Usage Guide for iCE40 Devices</a></li>
 <li><a href="https://www.latticesemi.com/view_document?document_id=50469">Lattice ECP5 and ECP5-5G sysDSP Usage Guide</a></li>
 <li><a href="https://www.xilinx.com/support/documentation/user_guides/ug479_7Series_DSP48E1.pdf">Xilinx 7 Series DSP48E1 Slice</a></li>
 <li><a href="https://www.xilinx.com/support/documentation/user_guides/ug579-ultrascale-dsp.pdf">Xilinx Ultrascale+ DSP48E2 Slice</a></li>
 </ul>
-<p>Note: each ECP5 DSP block incorporates two multipliers.</p>
+<p>Note: each ECP5 DSP block incorporates two multipliers and each Cyclone V DSP block can handle one 27x27, two 18x18, or three 9x9 multiplications.</p>
 <h2 id="using-dsps">Using DSPs</h2>
 <p>There are two ways to incorporate DSPs into your FPGA designs:</p>
 <ul>
@@ -190,7 +207,6 @@ My hardware designs are open source, and my blog is advert free.</p>
 <p>For example, to synthesize a module called <code>top_pong.v</code>:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>yosys -p <span style="color:#e6db74">&#34;synth_ice40 -dsp -json top_pong.json&#34;</span> top_pong.v
 </span></span></code></pre></div><p>On ECP5, Yosys infers DSPs by default; you can disable them with <code>-nodsp</code>.</p>
-<p><em>Once I better understand Yosys iCE40UP DSP inference, I’ll add timing results for iCE40UP5K.</em></p>
 <h2 id="multiplication-examples">Multiplication Examples</h2>
 <p>To create simple, practical examples, I&rsquo;ve combined simple maths functions with graphics output. If you have an FPGA board with video output, you can view the results on screen, but even if you don&rsquo;t, you can still look at the designs and timings with your FPGA development tools. I also provide Verilator simulations of the designs.</p>
 <p>Our examples run mathematical functions for each pixel on the screen, generating a 0 or 1 as output. The function needs to keep pace with the display signal: calculating 25 million values per second for 640x480 or 74 million for 1280x720.</p>
@@ -697,7 +713,7 @@ The unhelpfully named <em>worst negative slack</em> (WNS) is how Vivado reports 
 </li>
 </ul>
 <h2 id="next-time">Next Time</h2>
-<p>Stay tuned for the next part of <em>Maths and Algorithms with FPGAs</em> in spring 2022. In part 3, we&rsquo;ll look at real numbers, including fixed point. Until then, why not check out our existing maths posts: <a href="/posts/division-in-verilog/">division</a>, <a href="/posts/square-root-in-verilog/">square root</a>, and <a href="/posts/fpga-sine-table/">sine &amp; cosine</a>.</p>
+<p>Stay tuned for the next part of <em>Maths and Algorithms with FPGAs</em>. Until then, why not check out our existing maths posts: <a href="/posts/division-in-verilog/">division</a>, <a href="/posts/square-root-in-verilog/">square root</a>, and <a href="/posts/fpga-sine-table/">sine &amp; cosine</a>.</p>
 <p><em>Get in touch: <a href="https://github.com/projf/projf-explore/issues">GitHub Issues</a>, <a href="https://1bitsquared.com/pages/chat">1BitSquared Discord</a>, <a href="https://mastodon.social/@WillFlux">@WillFlux</a> (Mastodon), <a href="https://twitter.com/WillFlux">@WillFlux</a> (Twitter)</em></p>
 
       

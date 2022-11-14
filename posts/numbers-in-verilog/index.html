@@ -7,11 +7,12 @@
 <title>Numbers in Verilog | Project F: FPGA Dev</title>
 
 <meta property='og:title' content='Numbers in Verilog - Project F: FPGA Dev'>
-<meta property='og:description' content='Welcome to my new series covering mathematics and algorithms with FPGAs. Whatever hardware you&rsquo;re designing, you&rsquo;re likely to be working with numbers. This series begins with the basics of Verilog numbers, covers simple mathematics, including division and CORDIC, before looking at more complex algorithms, such as data compression. This post was last updated in August 2022.
-In this first post, we examine how integers (whole numbers) are represented and dig into the challenges of signed numbers in Verilog.'>
+<meta property='og:description' content='Welcome to my ongoing series covering mathematics and algorithms with FPGAs. This series begins with the basics of Verilog numbers, then considers fixed-point, division and CORDIC before covering more complex algorithms, such as data compression. This post was last updated in November 2022.
+In this first post, we consider integers, dig into the challenges of signed numbers, and finish with a bit of arithmetic.
+Get in touch: GitHub Issues, 1BitSquared Discord, @WillFlux (Mastodon), @WillFlux (Twitter)'>
 <meta property='og:url' content='https://projectf.io/posts/numbers-in-verilog/'>
 <meta property='og:site_name' content='Project F: FPGA Dev'>
-<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/numbers-in-verilog/social-card.png'><meta property='article:published_time' content='2021-09-30T00:00:00Z'><meta property='article:modified_time' content='2022-08-18T00:00:00Z'><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
+<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/numbers-in-verilog/social-card.png'><meta property='article:published_time' content='2021-09-30T00:00:00Z'><meta property='article:modified_time' content='2022-11-14T00:00:00Z'><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
 
 
 <link href="https://projectf.io/index.xml" rel="alternate" type="application/rss+xml" title="Project F: FPGA Dev">
@@ -120,9 +121,17 @@ In this first post, we examine how integers (whole numbers) are represented and 
     <h1 class="title">Numbers in Verilog</h1>
     
     <div class="content">
-      <p>Welcome to my new series covering mathematics and algorithms with FPGAs. Whatever hardware you&rsquo;re designing, you&rsquo;re likely to be working with numbers. This series begins with the basics of Verilog numbers, covers simple mathematics, including division and CORDIC, before looking at more complex algorithms, such as data compression. This post was last updated in August 2022.</p>
-<p>In this first post, we examine how integers (whole numbers) are represented and dig into the challenges of signed numbers in Verilog.</p>
+      <p>Welcome to my ongoing series covering mathematics and algorithms with FPGAs. This series begins with the basics of Verilog numbers, then considers fixed-point, division and CORDIC before covering more complex algorithms, such as data compression. This post was last updated in November 2022.</p>
+<p>In this first post, we consider integers, dig into the challenges of signed numbers, and finish with a bit of arithmetic.</p>
 <p><em>Get in touch: <a href="https://github.com/projf/projf-explore/issues">GitHub Issues</a>, <a href="https://1bitsquared.com/pages/chat">1BitSquared Discord</a>, <a href="https://mastodon.social/@WillFlux">@WillFlux</a> (Mastodon), <a href="https://twitter.com/WillFlux">@WillFlux</a> (Twitter)</em></p>
+<h3 id="series-outline">Series Outline</h3>
+<ul>
+<li>Numbers in Verilog (this post) - introduction to numbers in Verilog</li>
+<li>Verilog Vectors and Arrays (coming soon)</li>
+<li><a href="/posts/fixed-point-numbers-in-verilog/">Fixed-Point Numbers in Verilog</a> - precision without complexity</li>
+<li><a href="/posts/multiplication-fpga-dsps">Multiplication with FPGA DSPs</a> - efficient multiplication with DSPs</li>
+<li><em>More maths in 2023</em></li>
+</ul>
 <blockquote>
 <p><strong>Sponsor My Work</strong><br>
 If you like what I do, consider <a href="https://github.com/sponsors/WillGreen">sponsoring me</a> on GitHub.<br>
@@ -130,8 +139,8 @@ I love FPGAs and want to help more people discover and use them in their project
 My hardware designs are open source, and my blog is advert free.</p>
 </blockquote>
 <h2 id="representing-numbers">Representing Numbers</h2>
-<p>We&rsquo;re so familair with different representations of numbers we hardly give them a second thought.</p>
-<p>The following are representations of forty-two:</p>
+<p>We&rsquo;re so familiar with different representations of numbers we hardly give them a second thought.</p>
+<p>Some representations of forty-two:</p>
 <ul>
 <li><code>101010</code> (binary)</li>
 <li><code>52</code> (octal)</li>
@@ -143,7 +152,7 @@ My hardware designs are open source, and my blog is advert free.</p>
 <li><code>zweiundvierzig</code> (German)</li>
 </ul>
 <p>Different representations express (almost) the same thing but work better (or worse) in different circumstances: hexadecimal is suitable for a memory address, while scientific notation compactly expresses vast and tiny numbers alike.</p>
-<p>As a hardware designer you face similar choices and trade-offs. How many bits do I need? Do I need signed numbers? Will BCD make my design simpler? Is fixed-point accurate enough?</p>
+<p>As a hardware designer, you face similar choices and trade-offs. How many bits do I need? Do I need signed numbers? Will BCD make my design simpler? Is fixed-point accurate enough?</p>
 <blockquote>
 <p><strong>Cistercian Numerals</strong><br>
 For something a bit less ordinary, try <a href="https://en.wikipedia.org/wiki/Cistercian_numerals">Cistercian numerals</a> (Wikipedia).</p>
@@ -159,7 +168,7 @@ For something a bit less ordinary, try <a href="https://en.wikipedia.org/wiki/Ci
 <p><code>32 + 8 + 2 = 42</code></p>
 <p>Forty-two requires at least six binary digits to represent in this way.</p>
 <h3 id="binary-coded-decimal">Binary Coded Decimal</h3>
-<p>But this is not the only possible representation: some systems use <strong>binary coded decimal</strong> (BCD). Packed<sup id="fnref:1"><a href="#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup> BCD uses a nibble (4-bit) value to represent each decimal digit.</p>
+<p>But there are other possible representations: some systems use <strong>binary coded decimal</strong> (BCD). Packed<sup id="fnref:1"><a href="#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup> BCD uses a nibble (4-bit) value to represent each decimal digit.</p>
 <p>To get the packed BCD representation, convert each decimal digit into a 4-bit binary value:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-plaintext" data-lang="plaintext"><span style="display:flex;"><span>Decimal          4    2
 </span></span><span style="display:flex;"><span>BCD           0100 0010
@@ -178,7 +187,7 @@ For something a bit less ordinary, try <a href="https://en.wikipedia.org/wiki/Ci
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">wire</span>  x;  <span style="color:#75715e">// 1 bit wire
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">reg</span>   y;  <span style="color:#75715e">// also 1 bit
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> z;  <span style="color:#75715e">// me too!
-</span></span></span></code></pre></div><p>A scalar can only hold 0 or 1 (but see <em>Four State Data Types</em>, below).</p>
+</span></span></span></code></pre></div><p>A scalar can only hold 0 or 1 (but see <em>Four State Data Types</em> below).</p>
 <p>We need a <strong>vector</strong> to hold values other than 0 and 1.</p>
 <p>A vector is declared like this: <code>type [upper:lower] name;</code></p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">wire</span>   [<span style="color:#ae81ff">5</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] a;  <span style="color:#75715e">// 6-bit wire
@@ -191,8 +200,8 @@ For something a bit less ordinary, try <a href="https://en.wikipedia.org/wiki/Ci
 <li>Logic <strong>c</strong> handles 0-4095 inclusive (2<sup>12</sup> is 4096).</li>
 </ul>
 <p>You need to ensure your vector is large enough to handle the full range of values your design requires. Synthesis tools are good at discarding unused bits, so it&rsquo;s better to err on the side of too large rather than too small.</p>
-<p>Deciding on the appropriate vector width for an algorithm requires an understanding of that algorithm. For example, I&rsquo;ve worked with an ellipse drawing algorithm that required 48-bit internal vectors when using 16-bits coordinates.</p>
-<p>It&rsquo;s easy to miss the width off a signal and create a scalar by mistake:</p>
+<p>Deciding on the appropriate vector width for an algorithm requires an understanding of that algorithm. For example, I&rsquo;ve worked with an ellipse drawing algorithm that required 48-bit internal vectors when using 16-bit coordinates.</p>
+<p>It&rsquo;s easy to miss the width from a signal declaration and create a scalar by mistake:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">wire</span> [<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x;  <span style="color:#75715e">// 12 bit (vector)
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">wire</span> x1;        <span style="color:#75715e">// 1 bit (scalar)
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
@@ -200,78 +209,9 @@ For something a bit less ordinary, try <a href="https://en.wikipedia.org/wiki/Ci
 </span></span></span></code></pre></div><p>Alas, many tools provide no warning on width mismatches. To catch issues with bit widths, I strongly recommend you <a href="/posts/verilog-lint-with-verilator/">lint your designs with Verilator</a>.</p>
 <blockquote>
 <p><strong>Four State Data Types</strong><br>
-The logic, reg, and wire data types can take one of four values: <code>0, 1, X, Z</code>, where <code>X</code> is unknown, and <code>Z</code> is high impedance. For the purposes of this introduction to numbers, we&rsquo;re going to ignore <code>X</code> and <code>Z</code>.</p>
+The logic, reg, and wire data types can take one of four values: <code>0, 1, X, Z</code>, where <code>X</code> is unknown, and <code>Z</code> is high impedance. For this introduction to numbers, we&rsquo;re going to ignore <code>X</code> and <code>Z</code>.</p>
 </blockquote>
-<h3 id="slicing-vectors">Slicing Vectors</h3>
-<p>You can select an individual vector bit with its index; for example:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">wire</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] n;  <span style="color:#75715e">// 4-bit wire vector
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">wire</span> p, q;     <span style="color:#75715e">// wire scalars
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>    p <span style="color:#f92672">=</span> n[<span style="color:#ae81ff">0</span>];
-</span></span><span style="display:flex;"><span>    q <span style="color:#f92672">=</span> n[<span style="color:#ae81ff">3</span>];
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">end</span>
-</span></span></code></pre></div><p>You select a subset by specifying the start and end bits:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">wire</span> [<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] a;       <span style="color:#75715e">// 12-bit wire vector
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">wire</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x, y, z;  <span style="color:#75715e">// 4-bit wire vectors
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>    x <span style="color:#f92672">=</span> a[<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">8</span>];
-</span></span><span style="display:flex;"><span>    y <span style="color:#f92672">=</span> a[<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">4</span>];
-</span></span><span style="display:flex;"><span>    z <span style="color:#f92672">=</span> a[<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>];
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">end</span>
-</span></span></code></pre></div><p>You can also use the concat operator <code>{}</code> to select bits from vectors. The following example is equivilent to the one above:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">wire</span> [<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] a;       <span style="color:#75715e">// 12-bit wire vector
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">wire</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x, y, z;  <span style="color:#75715e">// 4-bit wire vectors
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>    {x,y,z} <span style="color:#f92672">=</span> a;
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">end</span>
-</span></span></code></pre></div><p>Rather than specify an end bit, you can specify a width with <code>-</code> and <code>+</code>.</p>
-<p>These three assignments all select the same four bits:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">wire</span> [<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] a;       <span style="color:#75715e">// 12-bit wire vector
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">wire</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x, y, z;  <span style="color:#75715e">// 4-bit wire vectors
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>    x <span style="color:#f92672">=</span> a[<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">8</span>];   <span style="color:#75715e">// 11:8
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    y <span style="color:#f92672">=</span> a[<span style="color:#ae81ff">11</span><span style="color:#f92672">-:</span><span style="color:#ae81ff">4</span>];  <span style="color:#75715e">// also 11:8
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    z <span style="color:#f92672">=</span> a[<span style="color:#ae81ff">8</span><span style="color:#f92672">+:</span><span style="color:#ae81ff">4</span>];   <span style="color:#75715e">// also 11:8
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">end</span>
-</span></span></code></pre></div><p><em>ProTip: The start bit can be a variable, but not the width.</em></p>
-<h3 id="configurable-widths">Configurable Widths</h3>
-<p>Avoid hard-coding bit widths; it limits your design flexibility.</p>
-<p>Parameters provide a simple way to configure bit widths:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">parameter</span> ADDRW<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>;  <span style="color:#75715e">// address width: 16 bits for 2^16 memory locations
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">logic</span> [ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] addr_read;
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">logic</span> [ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] addr_write;
-</span></span></code></pre></div><p>The width of a vector often depends on another parameter, so calculating it yourself isn&rsquo;t ideal.</p>
-<p>Imagine you&rsquo;re creating a game engine where the number of sprites is configurable:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">parameter</span> SPR_CNT<span style="color:#f92672">=</span><span style="color:#ae81ff">10</span>;   <span style="color:#75715e">// maximum number of sprites on screen
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sprite_id;  <span style="color:#75715e">// 4 bits is correct for a count of 10, but if SPR_CNT changes?
-</span></span></span></code></pre></div><p>If we hardcode the width, changing the sprite count will break the design.</p>
-<p>Verilog 2005 introduced <code>$clog2</code> to handle this.</p>
-<h3 id="calculating-widths">Calculating Widths</h3>
-<p>The <code>$clog2</code> function returns the ceiling of the logarithm to base 2.</p>
-<p>For example, <code>$clog2(10) = 4</code> because 2<sup>3</sup> &lt; 10 ≤ 2<sup>4</sup>.</p>
-<p>If you need to handle N things (such as sprites or memory locations), then <code>$clog2(N)</code> will tell you how wide your vector needs to be:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">parameter</span> SPR_CNT<span style="color:#f92672">=</span><span style="color:#ae81ff">10</span>;  <span style="color:#75715e">// maximum number of sprites on screen
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">parameter</span> SPR_BITW<span style="color:#f92672">=</span>$clog2(SPR_CNT);  <span style="color:#75715e">// sprite ID bit width
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">logic</span> [SPR_BITW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sprite_id;  <span style="color:#75715e">// sprite identifier
-</span></span></span></code></pre></div><p><code>$clog2</code> is handy, but you need to be careful.</p>
-<p>If you&rsquo;re specifying a maximum value (rather than a count), it doesn&rsquo;t do what you want:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">parameter</span> MAX_VOLTAGE<span style="color:#f92672">=</span><span style="color:#ae81ff">256</span>;  <span style="color:#75715e">// maximum voltage
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">parameter</span> VOLTW<span style="color:#f92672">=</span>$clog2(MAX_VOLTAGE);  <span style="color:#75715e">// voltage bit width (INCORRECT!)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">logic</span> [VOLTW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] volatage;  <span style="color:#75715e">// we can&#39;t handle 256!
-</span></span></span></code></pre></div><p><code>$clog2</code> returns &lsquo;8&rsquo;, giving a voltage range of 0-255 inclusive. 256 is out of range.</p>
-<p>If you&rsquo;re specifying a maximum value, you need to add one to the value passed to <code>$clog2</code>:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">parameter</span> MAX_VOLTAGE<span style="color:#f92672">=</span><span style="color:#ae81ff">256</span>;  <span style="color:#75715e">// maximum voltage
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">parameter</span> VOLTW<span style="color:#f92672">=</span>$clog2(MAX_VOLTAGE<span style="color:#f92672">+</span><span style="color:#ae81ff">1</span>);  <span style="color:#75715e">// voltage bit width (add one for max)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">logic</span> [VOLTW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] volatage;  <span style="color:#75715e">// we can now handle 256 volts :)
-</span></span></span></code></pre></div><p>This problem is often hidden because it doesn&rsquo;t occur if your parameter isn&rsquo;t a power of 2. For example, if you specify &lsquo;240&rsquo; as your <code>MAX_VOLTAGE</code>, you won&rsquo;t see any issues. Later, you increase <code>MAX_VOLTAGE</code> to &lsquo;256&rsquo;, and the design has a subtle bug.</p>
+<p>We cover vectors in detail in the next part of the series: <em>Verilog Vectors and Arrays</em> (coming soon).</p>
 <h2 id="literals">Literals</h2>
 <p>Verilog gives you several options for representing literal numbers. You can use binary, decimal, octal, or hexadecimal literals and specify their width in bits.</p>
 <p>I think this is easiest to understand with some examples:</p>
@@ -286,7 +226,7 @@ The logic, reg, and wire data types can take one of four values: <code>0, 1, X, 
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#ae81ff">12</span><span style="color:#ae81ff">&#39;d1024</span>            <span style="color:#75715e">// decimal literal
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#ae81ff">12&#39;h400</span>             <span style="color:#75715e">// hex literal
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#ae81ff">12</span><span style="color:#ae81ff">&#39;o2000</span>            <span style="color:#75715e">// octal literal
-</span></span></span></code></pre></div><p>It&rsquo;s good practice to include the width and base for any literal, but they are optional.</p>
+</span></span></span></code></pre></div><p>It&rsquo;s good practice to include the width and base for a literal, but they are optional.</p>
 <ul>
 <li>If the width is omitted, it defaults to 32-bits</li>
 <li>If the base is omitted, it defaults to decimal (base 10)</li>
@@ -297,36 +237,37 @@ The logic, reg, and wire data types can take one of four values: <code>0, 1, X, 
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#ae81ff">&#39;d9</span>     <span style="color:#75715e">// unsigned decimal literal
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#ae81ff">9</span>       <span style="color:#75715e">// signed decimal literal
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#ae81ff">1024</span>    <span style="color:#75715e">// signed decimal literal
-</span></span></span></code></pre></div><p>NB. If you omit the base, the literal is signed! This isn&rsquo;t a problem most of the time, but it can lead to subtle bugs. We&rsquo;ll cover signed numbers in the next section.</p>
+</span></span></span></code></pre></div><p>NB. If you omit the base, the literal is signed! This isn&rsquo;t often a problem but can lead to subtle bugs. We&rsquo;ll cover signed numbers in the next section.</p>
 <h3 id="literal-tricks">Literal Tricks</h3>
 <p>In SystemVerilog, you can set all the bits of a vector to &lsquo;1&rsquo;:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#75715e">// x and y have the same value:
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">reg</span> [<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x <span style="color:#f92672">=</span> <span style="color:#ae81ff">&#39;1</span>;
 </span></span><span style="display:flex;"><span><span style="color:#66d9ef">reg</span> [<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] y <span style="color:#f92672">=</span> <span style="color:#ae81ff">12</span><span style="color:#ae81ff">&#39;b1111</span>_1111_1111;
-</span></span></code></pre></div><p>You can also use the concat operator <code>{}</code> to set specific patterns:</p>
+</span></span></code></pre></div><p>You can also use the concat operator <code>{}</code> to set specific patterns in Verilog and SystemVerilog:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">localparam</span> CORDW <span style="color:#f92672">=</span> <span style="color:#ae81ff">12</span>;  <span style="color:#75715e">// coordinate width in bits
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
 </span></span><span style="display:flex;"><span><span style="color:#66d9ef">reg</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x <span style="color:#f92672">=</span> {CORDW{<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b1</span>}};  <span style="color:#75715e">// x = 1111_1111_1111
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
 </span></span><span style="display:flex;"><span><span style="color:#66d9ef">reg</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] y <span style="color:#f92672">=</span> { {<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b1</span>}, {CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>{<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>}} };  <span style="color:#75715e">// y = 1000_0000_0000
-</span></span></span></code></pre></div><p>Concat allows us to set an appropriate value, however wide the vectors are.</p>
+</span></span></span></code></pre></div><p>You can nest concat operators, as in the final example above.</p>
+<p>Concat allows us to set an appropriate value regardless of the vector width.</p>
 <h2 id="signed-numbers">Signed Numbers</h2>
-<p>If your application requires negative values, you need to handle signed numbers. The standard approach is <strong>two&rsquo;s complement</strong>, as with most software development.</p>
+<p>If your design requires negative values, you need to handle signed numbers. The standard approach is <strong>two&rsquo;s complement</strong>, as with almost all CPUs and software.</p>
 <h3 id="the-twos-complement">The Two&rsquo;s Complement</h3>
 <p>With two&rsquo;s complement, addition, subtraction, and multiplication all work as they do with positive binary numbers. But what is the two&rsquo;s complement? The positive and negative two&rsquo;s complement representations of an N-bit number add up to 2<sup>N</sup>.</p>
 <p>For example, with four-bit values: 7 is <code>0111</code> and -7 is <code>1001</code>, because <code>0111 + 1001 = 10000</code> (2<sup>4</sup>).</p>
-<p>The usual way to switch the sign of a two&rsquo;s complement number is to invert the bits and add one:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-plaintext" data-lang="plaintext"><span style="display:flex;"><span>Start:  0111    (decimal +7)
-</span></span><span style="display:flex;"><span>Invert: 1000
-</span></span><span style="display:flex;"><span>Add 1:  0001
-</span></span><span style="display:flex;"><span>Result: 1001    (decimal -7)
+<p>You can switch the sign of a two&rsquo;s complement number by inverting the bits and adding one:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-plaintext" data-lang="plaintext"><span style="display:flex;"><span>Start:      0111    (decimal +7)
+</span></span><span style="display:flex;"><span>Invert:     1000
+</span></span><span style="display:flex;"><span>Add 1:      0001
+</span></span><span style="display:flex;"><span>Result:     1001    (decimal -7)
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Start:  1001    (decimal -7)
-</span></span><span style="display:flex;"><span>Invert: 0110
-</span></span><span style="display:flex;"><span>Add 1:  0001
-</span></span><span style="display:flex;"><span>Result: 0111    (decimal +7)
-</span></span></code></pre></div><p>You rarely need to determine the two&rsquo;s complement yourself; Verilog can handle it for you.</p>
-<p>Let&rsquo;s look at a few simple additions to confirm things work as expected:</p>
+</span></span><span style="display:flex;"><span>Start:      1001    (decimal -7)
+</span></span><span style="display:flex;"><span>Invert:     0110
+</span></span><span style="display:flex;"><span>Add 1:      0001
+</span></span><span style="display:flex;"><span>Result:     0111    (decimal +7)
+</span></span></code></pre></div><p>You rarely need to determine the two&rsquo;s complement; Verilog can handle it for you.</p>
+<p>Let&rsquo;s look at a few additions to confirm things work as expected:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-plaintext" data-lang="plaintext"><span style="display:flex;"><span>  0110      +6
 </span></span><span style="display:flex;"><span>+ 1101      -3
 </span></span><span style="display:flex;"><span>= 0011      +3
@@ -338,29 +279,66 @@ The logic, reg, and wire data types can take one of four values: <code>0, 1, X, 
 </span></span><span style="display:flex;"><span>  1001      -7
 </span></span><span style="display:flex;"><span>+ 0111      +7
 </span></span><span style="display:flex;"><span>= 0000       0
-</span></span></code></pre></div><p>The most significant bit of a signed vector is always <code>1</code> for a negative number, so it&rsquo;s easy to determine if a value is negative: we get the main benefit of a sign bit without the downsides.</p>
-<p>To learn more, check out the Wikipedia article on <a href="https://en.wikipedia.org/wiki/Two's_complement">two&rsquo;s complement</a>.</p>
-<h3 id="signing-your-signals">Signing Your Signals</h3>
-<p>Telling Verilog that your vector is signed is easy:</p>
+</span></span></code></pre></div><p>To learn more, check out the Wikipedia article on <a href="https://en.wikipedia.org/wiki/Two's_complement">two&rsquo;s complement</a>.</p>
+<h3 id="range">Range</h3>
+<p>The range of a two&rsquo;s complement vector of width <strong>n</strong> is:</p>
+<p><strong>-2<sup>(n-1)</sup> to +2<sup>(n-1)</sup>-1</strong></p>
+<p>For example, an 8-bit signed vector has the range:</p>
+<p><strong>-2<sup>7</sup> to +2<sup>7</sup>-1</strong> = <strong>-128 to +127</strong></p>
+<p>You can&rsquo;t represent +128 with an 8-bit signed vector.</p>
+<p>If we try to take the two&rsquo;s complement of -128:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-plaintext" data-lang="plaintext"><span style="display:flex;"><span>Start:      1000_0000   (decimal -128)
+</span></span><span style="display:flex;"><span>Invert:     0111_1111
+</span></span><span style="display:flex;"><span>Add 1:      0000_0001
+</span></span><span style="display:flex;"><span>Result:     1000_0000   (decimal -128)
+</span></span></code></pre></div><h3 id="signing-your-signals">Signing Your Signals</h3>
+<p>Declaring a vector as signed is easy:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">reg</span>        [<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] u;  <span style="color:#75715e">// unsigned (0..255)
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">reg</span> <span style="color:#66d9ef">signed</span> [<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] s;  <span style="color:#75715e">// signed   (-128..127)
-</span></span></span></code></pre></div><p>For literals, you can add the <code>s</code> prefix to the base:</p>
+</span></span></span></code></pre></div><p>For literals, you add the <code>s</code> prefix to the base:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">reg</span> <span style="color:#66d9ef">signed</span> [<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x <span style="color:#f92672">=</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">8</span>&#39;sd55;  <span style="color:#75715e">// x position: -55 (signed)
 </span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">reg</span> <span style="color:#66d9ef">signed</span> [<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] y <span style="color:#f92672">=</span>  <span style="color:#ae81ff">8</span>&#39;sd32;  <span style="color:#75715e">// y position: +32 (signed)
-</span></span></span></code></pre></div><h3 id="beware-signed-logic">Beware Signed Logic!</h3>
-<p>Verilog has a nasty habit of treating something as unsigned unless all variables in an expression are signed. But you can use the <code>$signed</code> operator to force a variable to be signed if required.</p>
-<p>So, if you take one thing away from this post:</p>
-<p><strong>Never mix and match signed and unsigned variables!</strong></p>
-<p>The following testbench shows what can happen when you mix signed and unsigned variables:</p>
+</span></span></span></code></pre></div><h3 id="test-negative">Test Negative</h3>
+<p>It&rsquo;s also straightforward to check the sign of a number with two&rsquo;s complement:</p>
+<ul>
+<li>For positive numbers (and zero), the most significant bit is <code>0</code></li>
+<li>For negative numbers, the most significant bit is <code>1</code></li>
+</ul>
+<p>You can check the most significant bit directly:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">reg</span> <span style="color:#66d9ef">signed</span> [<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] s;  <span style="color:#75715e">// 8 bit signed vector
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (s[<span style="color:#ae81ff">7</span>]) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// ?! intent unclear
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#75715e">// s is negative
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// s is positive or zero
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">end</span>
+</span></span></code></pre></div><p>However, comparison operators are clearer:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">reg</span> <span style="color:#66d9ef">signed</span> [<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] s;  <span style="color:#75715e">// 8 bit signed vector
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (s <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// s is negative
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// s is positive or zero
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">end</span>
+</span></span></code></pre></div><h3 id="danger-sign">Danger Sign</h3>
+<p>Verilog has a nasty habit of treating everything as unsigned unless all variables in an expression are signed. To add insult to injury, most tools won&rsquo;t warn you if signed values are being ignored.</p>
+<p>If you take one thing away from this post:</p>
+<p><strong>Never mix signed and unsigned variables in one expression!</strong></p>
+<p>This testbench shows how easy it is to get into trouble:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> signed_tb ();
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x, y;
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x1, y1;
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] offset;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x;  <span style="color:#75715e">// &#39;x&#39; is unsigned
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] y;  <span style="color:#75715e">// &#39;y&#39; is signed
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x1, y1;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] move;
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>        x1 <span style="color:#f92672">=</span> x <span style="color:#f92672">+</span> offset;  <span style="color:#75715e">// AVOID! This probably won&#39;t work as expected!
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        y1 <span style="color:#f92672">=</span> $signed(y) <span style="color:#f92672">+</span> offset;  <span style="color:#75715e">// ensure y is treated as signed
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>        x1 <span style="color:#f92672">=</span> x <span style="color:#f92672">+</span> move;  <span style="color:#75715e">// !? DANGER: &#39;x&#39; is unsigned but &#39;move&#39; is signed
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        y1 <span style="color:#f92672">=</span> y <span style="color:#f92672">+</span> move;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">initial</span> <span style="color:#66d9ef">begin</span>
 </span></span><span style="display:flex;"><span>        #<span style="color:#ae81ff">10</span>
@@ -372,75 +350,100 @@ The logic, reg, and wire data types can take one of four values: <code>0, 1, X, 
 </span></span><span style="display:flex;"><span>        $display(<span style="color:#e6db74">&#34;y : %b  %d&#34;</span>, y, y);
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>        #<span style="color:#ae81ff">10</span>
-</span></span><span style="display:flex;"><span>        $display(<span style="color:#e6db74">&#34;With offset +4:&#34;</span>);
-</span></span><span style="display:flex;"><span>        offset <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>&#39;sd4;
-</span></span><span style="display:flex;"><span>        #<span style="color:#ae81ff">10</span>
-</span></span><span style="display:flex;"><span>        $display(<span style="color:#e6db74">&#34;x1: %b  %d&#34;</span>, x1, x1);
+</span></span><span style="display:flex;"><span>        $display(<span style="color:#e6db74">&#34;Move +4:&#34;</span>);
+</span></span><span style="display:flex;"><span>        move <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>&#39;sd4;  <span style="color:#75715e">// signed positive value
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        #<span style="color:#ae81ff">10</span>
+</span></span><span style="display:flex;"><span>        $display(<span style="color:#e6db74">&#34;x1: %b  %d  *LOOKS OK*&#34;</span>, x1, x1);
 </span></span><span style="display:flex;"><span>        $display(<span style="color:#e6db74">&#34;y1: %b  %d&#34;</span>, y1, y1);
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span>        #<span style="color:#ae81ff">10</span>
-</span></span><span style="display:flex;"><span>        $display(<span style="color:#e6db74">&#34;With offset -4:&#34;</span>);
-</span></span><span style="display:flex;"><span>        offset <span style="color:#f92672">=</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">4</span>&#39;sd4;
-</span></span><span style="display:flex;"><span>        #<span style="color:#ae81ff">10</span>
+</span></span><span style="display:flex;"><span>        $display(<span style="color:#e6db74">&#34;Move -4:&#34;</span>);
+</span></span><span style="display:flex;"><span>        move <span style="color:#f92672">=</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">4</span>&#39;sd4;  <span style="color:#75715e">// signed negative value
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        #<span style="color:#ae81ff">10</span>
 </span></span><span style="display:flex;"><span>        $display(<span style="color:#e6db74">&#34;x1: %b  %d  *SURPRISE*&#34;</span>, x1, x1);
 </span></span><span style="display:flex;"><span>        $display(<span style="color:#e6db74">&#34;y1: %b  %d&#34;</span>, y1, y1);
 </span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
 </span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
-</span></span></code></pre></div><p>Running this test bench gives the following output in Vivado:</p>
+</span></span></code></pre></div><p>Running this test bench gives the following output:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-plaintext" data-lang="plaintext"><span style="display:flex;"><span>Coordinates (7,7):
-</span></span><span style="display:flex;"><span>x : 00000111    7
-</span></span><span style="display:flex;"><span>y : 00000111    7
-</span></span><span style="display:flex;"><span>With offset +4:
-</span></span><span style="display:flex;"><span>x1: 00001011    11
+</span></span><span style="display:flex;"><span>x : 00000111     7
+</span></span><span style="display:flex;"><span>y : 00000111     7
+</span></span><span style="display:flex;"><span>Move +4:
+</span></span><span style="display:flex;"><span>x1: 00001011    11  *LOOKS OK*
 </span></span><span style="display:flex;"><span>y1: 00001011    11
-</span></span><span style="display:flex;"><span>With offset -4:
+</span></span><span style="display:flex;"><span>Move -4:
 </span></span><span style="display:flex;"><span>x1: 00010011    19  *SURPRISE*
 </span></span><span style="display:flex;"><span>y1: 00000011     3
-</span></span></code></pre></div><h2 id="big-endian-little-endian">Big-Endian, Little-Endian</h2>
-<p>Earlier, we said a vector was declared like this: <code>type [upper:lower] name;</code></p>
-<p>A more general definition is: <code>type [msb_index:lsb_index] name;</code><br>
-Where <em>msb_index</em> is the most significant bit index and <em>lsb_index</em> is the least.</p>
-<p>The usual way of declaring vectors has the least significant bit at the lowest index. These are <strong>little-endian</strong> (LE) vectors:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">wire</span>   [<span style="color:#ae81ff">5</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] a;  <span style="color:#75715e">// 6-bit wire (little-endian)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">reg</span>   [<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] b;  <span style="color:#75715e">// 12-bit reg (little-endian)
-</span></span></span></code></pre></div><p>Alternatively, we can declare vectors like this:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">wire</span>   [<span style="color:#ae81ff">0</span><span style="color:#f92672">:</span><span style="color:#ae81ff">5</span>] a;  <span style="color:#75715e">// 6-bit wire (big-endian)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">reg</span>   [<span style="color:#ae81ff">0</span><span style="color:#f92672">:</span><span style="color:#ae81ff">11</span>] b;  <span style="color:#75715e">// 12-bit reg (big-endian)
-</span></span></span></code></pre></div><p>These vectors have the most significant bit at the lowest index; they&rsquo;re <strong>big-endian</strong> (BE) vectors.</p>
-<p>Either will work, but the convention is to use little-endian unless you need to interface with big-endian hardware. For example, I<sup>2</sup>C uses big-endian bit order.</p>
-<h3 id="switching-ends">Switching Ends</h3>
-<p>Say you&rsquo;ve got a bit-endian byte from I<sup>2</sup>C and want to convert it to little-endian. Alas, you can&rsquo;t mix big and little-endian vectors, so the following won&rsquo;t work (in most tools):</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">wire</span> [<span style="color:#ae81ff">0</span><span style="color:#f92672">:</span><span style="color:#ae81ff">7</span>] i2c_byte;  <span style="color:#75715e">// 8-bit wire (big-endian)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">reg</span>  [<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] le_byte;   <span style="color:#75715e">// 8-bit reg (little-endian)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) le_byte <span style="color:#f92672">&lt;=</span> i2c_byte;  <span style="color:#75715e">// Won&#39;t work :(
-</span></span></span></code></pre></div><p>Instead you need to reverse the bits explicitly. All bits are swapped in parallel:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>    le_byte[<span style="color:#ae81ff">0</span>] <span style="color:#f92672">&lt;=</span> i2c_byte[<span style="color:#ae81ff">7</span>];
-</span></span><span style="display:flex;"><span>    le_byte[<span style="color:#ae81ff">1</span>] <span style="color:#f92672">&lt;=</span> i2c_byte[<span style="color:#ae81ff">6</span>];
-</span></span><span style="display:flex;"><span>    le_byte[<span style="color:#ae81ff">2</span>] <span style="color:#f92672">&lt;=</span> i2c_byte[<span style="color:#ae81ff">5</span>];
-</span></span><span style="display:flex;"><span>    le_byte[<span style="color:#ae81ff">3</span>] <span style="color:#f92672">&lt;=</span> i2c_byte[<span style="color:#ae81ff">4</span>];
-</span></span><span style="display:flex;"><span>    le_byte[<span style="color:#ae81ff">4</span>] <span style="color:#f92672">&lt;=</span> i2c_byte[<span style="color:#ae81ff">3</span>];
-</span></span><span style="display:flex;"><span>    le_byte[<span style="color:#ae81ff">5</span>] <span style="color:#f92672">&lt;=</span> i2c_byte[<span style="color:#ae81ff">2</span>];
-</span></span><span style="display:flex;"><span>    le_byte[<span style="color:#ae81ff">6</span>] <span style="color:#f92672">&lt;=</span> i2c_byte[<span style="color:#ae81ff">1</span>];
-</span></span><span style="display:flex;"><span>    le_byte[<span style="color:#ae81ff">7</span>] <span style="color:#f92672">&lt;=</span> i2c_byte[<span style="color:#ae81ff">0</span>];
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">end</span>
-</span></span></code></pre></div><p>Updating each individual bit is tedious, but a <code>for</code> loop can handle this for us:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> (i<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>; i<span style="color:#f92672">&lt;</span><span style="color:#ae81ff">8</span>; i<span style="color:#f92672">=</span>i<span style="color:#f92672">+</span><span style="color:#ae81ff">1</span>) le_byte[i] <span style="color:#f92672">&lt;=</span> i2c_byte[<span style="color:#ae81ff">7</span><span style="color:#f92672">-</span>i];
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">end</span>
-</span></span></code></pre></div><p>Verilog <code>for</code> is NOT like a software loop: this <code>for</code> loop is unrolled into parallel bit swaps.</p>
-<h3 id="byte-endian">Byte Endian</h3>
-<p>So far, we&rsquo;ve been talking about endianness at the bit level, but it most commonly occurs in the context of bytes. If you have a 32-bit word, do you store the least significant byte at the lowest address (little-endian) or the most significant byte at the lowest address (big-endian)?</p>
-<p>RISC-V, x86, and ARM are little-endian, while Internet protocols (TCP/IP) and Motorola 68K are big-endian. This isn&rsquo;t particularly relevant to what we&rsquo;re looking at, so I won&rsquo;t go into this further. If you&rsquo;re interested in learning more, check out <a href="https://en.wikipedia.org/wiki/Endianness">Endianness</a> on Wikipedia.</p>
+</span></span></code></pre></div><p>Despite declaring <code>x1</code> as signed, the result is wrong when <code>move</code> is negative. Whether or not the left-hand side (<code>x1</code>) is signed is irrelevant if the right-hand side has an unsigned variable (<code>x</code>).</p>
 <h2 id="reckoning-with-arithmetic">Reckoning with Arithmetic</h2>
-<p>We&rsquo;ve talked a lot about the representation of numbers, but we&rsquo;ve not done any maths.</p>
-<p>Modern FPGAs include logic to handle addition and subtraction: there&rsquo;s no need to roll your own. If you want to create an adder from scratch, there are plenty of university slide decks online. Unless you&rsquo;re working with massive vectors, you&rsquo;re unlikely to encounter problems with addition or subtraction. The usual advice to register your values between calculation steps applies, especially to subtraction on simpler FPGAs.</p>
-<p>Multiplication is more complex, but FPGAs can handle it with dedicated DSP blocks. We&rsquo;ll be covering multiplication in the next part of this series: <a href="/posts/multiplication-fpga-dsps">Multiplication with FPGA DSPs</a>.</p>
-<p>What about division? I&rsquo;ve got some bad news for you: Verilog won&rsquo;t do this for you. We&rsquo;ll look into division in detail in a later post, but for now, you can use the <a href="/posts/division-in-verilog/">division</a> design from the Project F cookbook.</p>
+<p>We&rsquo;ve talked a lot about the representation of numbers, but we&rsquo;ve yet to do much maths. Let&rsquo;s finish this post by having a quick look at the elementary arithmetic operations: addition, subtraction, multiplication, and division.</p>
+<h3 id="addition">Addition</h3>
+<p>Modern FPGAs include dedicated logic, such as <a href="https://www.fpga4fun.com/Counters4.html">carry chains</a>, to handle addition efficiently: there&rsquo;s no need to roll your own design. However, there are plenty of university slide decks online if you want to create an adder from scratch.</p>
+<p>Before we skip over addition altogether, we take a little look at overflow.</p>
+<h4 id="overflow">Overflow</h4>
+<p>Consider the following:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">wire</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x, y, z;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">always_comb</span> z <span style="color:#f92672">=</span> x <span style="color:#f92672">+</span> y;
+</span></span></code></pre></div><p>The signals <code>x</code> <code>y</code> <code>z</code> are unsigned and 4 bits wide, so they have a range of 0 to 15 inclusive.</p>
+<p>If we set <code>x = 2</code> and <code>y = 9</code> then <code>(x + y) = 11</code> or <strong>1011<sub>2</sub></strong> in binary.</p>
+<p><code>z</code> is wide enough to hold <strong>1011<sub>2</sub></strong>: <code>z = 11</code> as expected.</p>
+<p>If we set <code>x = 11</code> and <code>y = 7</code> then <code>(x + y) = 18</code> or <strong>10010<sub>2</sub></strong> in binary.</p>
+<p><code>z</code> isn&rsquo;t wide enough to hold <strong>10010<sub>2</sub></strong>: the result is truncated to <strong>0010<sub>2</sub></strong> and <code>z = 2</code>.</p>
+<p>This is how addition usually works on CPUs, and it&rsquo;s usually not a problem.</p>
+<p>Use a carry signal if your design does need to handle overflow:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">wire</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x, y, z;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">wire</span> c;  <span style="color:#75715e">// carry bit
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">always_comb</span> {c, z} <span style="color:#f92672">=</span> x <span style="color:#f92672">+</span> y;
+</span></span></code></pre></div><p><code>c</code> stores the fifth bit, so when overflow occurs, <code>c = 1</code>.</p>
+<p>You could use the carry bit to set an overflow flag when designing a CPU.
+Another potential use is with <strong>saturation arithmetic</strong>: we keep <code>z</code> at its maximum value when overflow occurs:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">wire</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x, y, z;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">wire</span> c;  <span style="color:#75715e">// carry bit
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>    {c, z} <span style="color:#f92672">=</span> x <span style="color:#f92672">+</span> y;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (c) z <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;b1111</span>;  <span style="color:#75715e">// 15: the maximum value z can hold
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">end</span>
+</span></span></code></pre></div><p>With this saturation design, if <code>x = 11</code> and <code>y = 7</code> then <code>z = 15</code>.</p>
+<p>Learn more from <a href="https://en.wikipedia.org/wiki/Saturation_arithmetic">saturation arithmetic</a> on Wikipedia.</p>
+<h3 id="subtraction">Subtraction</h3>
+<p>Subtraction is almost the same as addition: subtracting <code>y</code> is equivilent to adding <code>-y</code>. It&rsquo;s easy to find <code>-y</code>, as we saw earlier when discussing <a href="#the-twos-complement">two&rsquo;s complement</a>.</p>
+<p>Consider the following:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">wire</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x, y, z;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">always_comb</span> z <span style="color:#f92672">=</span> x <span style="color:#f92672">-</span> y;
+</span></span></code></pre></div><p>If we set <code>x = 11</code> and <code>y = 7</code>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-plaintext" data-lang="plaintext"><span style="display:flex;"><span>Find -y:
+</span></span><span style="display:flex;"><span>    Start:  0111    (decimal +7)
+</span></span><span style="display:flex;"><span>    Invert: 1000
+</span></span><span style="display:flex;"><span>    Add 1:  0001
+</span></span><span style="display:flex;"><span>    Result: 1001    (decimal -7)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Add x and -y:
+</span></span><span style="display:flex;"><span>      1011    +11  (x)
+</span></span><span style="display:flex;"><span>    + 1001    - 7  (y)
+</span></span><span style="display:flex;"><span>    = 0100    + 4  (z)
+</span></span></code></pre></div><p>Your synthesis tool will handle this, but remember that subtraction is a little more complex than addition. Prefer incrementing over decrementing and store the results of subtractions in registers before using them in subsequent calculations, especially on low-power FPGAs such as the iCE40UP.</p>
+<h3 id="multiplication">Multiplication</h3>
+<p>Multiplication is more complex than addition or subtraction, but modern FPGAs can handle it with dedicated DSP blocks.
+Small vectors don&rsquo;t require too much thought, but the resulting output has potentially twice as many bits as the inputs:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">wire</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">wire</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] y;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">wire</span> [<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] z;  <span style="color:#75715e">// product (twice as wide)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">always_comb</span> z <span style="color:#f92672">=</span> x <span style="color:#f92672">*</span> y;
+</span></span></code></pre></div><p>If we set <code>x = 11</code> and <code>y = 7</code>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-plaintext" data-lang="plaintext"><span style="display:flex;"><span>Multiply x and y:
+</span></span><span style="display:flex;"><span>          1011  +11  (x)
+</span></span><span style="display:flex;"><span>    x     0111  + 7  (y)
+</span></span><span style="display:flex;"><span>    = 01001101  +77  (z)
+</span></span></code></pre></div><p>I&rsquo;ve written a dedicated post on <a href="/posts/multiplication-fpga-dsps">Multiplication with FPGA DSPs</a> that looks at the use of registers and pipelining to improve multiplication performance and minimise logic use.</p>
+<h3 id="division">Division</h3>
+<p>What about division? I&rsquo;ve bad news: Verilog won&rsquo;t synthesise this for you. In a later post, we&rsquo;ll look into division in detail, but for now, you can use the <a href="/posts/division-in-verilog/">division</a> design from the Project F cookbook.</p>
 <h2 id="next-time">Next Time</h2>
-<p>In the second part of this series, we look at <a href="/posts/multiplication-fpga-dsps">Multiplication with FPGA DSPs</a>.</p>
-<p>You can also check out our other maths posts: <a href="/posts/division-in-verilog/">division</a>, <a href="/posts/square-root-in-verilog/">square root</a>, and <a href="/posts/fpga-sine-table/">sine &amp; cosine</a>.</p>
+<p>In the second part of this series, we look at <em>Verilog Vectors and Arrays</em> (coming November 2022). Until then, check out our other maths posts: <a href="/posts/division-in-verilog/">division</a>, <a href="/posts/square-root-in-verilog/">square root</a>, and <a href="/posts/fpga-sine-table/">sine &amp; cosine</a>.</p>
 <p><em>Get in touch: <a href="https://github.com/projf/projf-explore/issues">GitHub Issues</a>, <a href="https://1bitsquared.com/pages/chat">1BitSquared Discord</a>, <a href="https://mastodon.social/@WillFlux">@WillFlux</a> (Mastodon), <a href="https://twitter.com/WillFlux">@WillFlux</a> (Twitter)</em></p>
 <div class="footnotes" role="doc-endnotes">
 <hr>
