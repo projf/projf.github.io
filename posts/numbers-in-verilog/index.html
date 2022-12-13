@@ -7,13 +7,12 @@
 <title>Numbers in Verilog | Project F: FPGA Dev</title>
 
 <meta property='og:title' content='Numbers in Verilog - Project F: FPGA Dev'>
-<meta property='og:description' content='Welcome to my ongoing series covering mathematics and algorithms with FPGAs. This series begins with the basics of Verilog numbers, then considers fixed-point, division, square roots and CORDIC before covering more complex algorithms, such as data compression.
+<meta property='og:description' content='Welcome to my ongoing series covering mathematics and algorithms with FPGAs. This series begins with the basics of Verilog numbers, then considers fixed-point, division, square roots and CORDIC before covering more complex algorithms, such as data compression. This post was last updated in December 2022.
 In this first post, we consider integers, dig into the challenges of signed numbers and expressions, and then finish with a bit of arithmetic.
-This post was completely revised in November 2022.
-Get in touch: GitHub Issues, 1BitSquared Discord, @WillFlux (Mastodon), @WillFlux (Twitter)'>
+This post was completely revised in November 2022.'>
 <meta property='og:url' content='https://projectf.io/posts/numbers-in-verilog/'>
 <meta property='og:site_name' content='Project F: FPGA Dev'>
-<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/numbers-in-verilog/social-card.png'><meta property='article:published_time' content='2021-09-30T00:00:00Z'><meta property='article:modified_time' content='2022-11-22T00:00:00Z'><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
+<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/numbers-in-verilog/social-card.png'><meta property='article:published_time' content='2021-09-30T00:00:00Z'><meta property='article:modified_time' content='2022-12-13T00:00:00Z'><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
 
 
 <link href="https://projectf.io/index.xml" rel="alternate" type="application/rss+xml" title="Project F: FPGA Dev">
@@ -85,8 +84,6 @@ Get in touch: GitHub Issues, 1BitSquared Discord, @WillFlux (Mastodon), @WillFlu
       
       <div class="nav-left"><a class="nav-item" href="/about">
           <h2 class="title is-5">About</h2>
-        </a><a class="nav-item" href="/boards">
-          <h2 class="title is-5">Boards</h2>
         </a><a class="nav-item" href="/demos">
           <h2 class="title is-5">Demos</h2>
         </a><a class="nav-item" href="/howto">
@@ -122,16 +119,16 @@ Get in touch: GitHub Issues, 1BitSquared Discord, @WillFlux (Mastodon), @WillFlu
     <h1 class="title">Numbers in Verilog</h1>
     
     <div class="content">
-      <p>Welcome to my ongoing series covering mathematics and algorithms with FPGAs. This series begins with the basics of Verilog numbers, then considers fixed-point, division, square roots and CORDIC before covering more complex algorithms, such as data compression.</p>
+      <p>Welcome to my ongoing series covering mathematics and algorithms with FPGAs. This series begins with the basics of Verilog numbers, then considers fixed-point, division, square roots and CORDIC before covering more complex algorithms, such as data compression. This post was last updated in December 2022.</p>
 <p>In this first post, we consider integers, dig into the challenges of signed numbers and expressions, and then finish with a bit of arithmetic.</p>
 <p><strong>This post was completely revised in November 2022.</strong></p>
 <p><em>Get in touch: <a href="https://github.com/projf/projf-explore/issues">GitHub Issues</a>, <a href="https://1bitsquared.com/pages/chat">1BitSquared Discord</a>, <a href="https://mastodon.social/@WillFlux">@WillFlux</a> (Mastodon), <a href="https://twitter.com/WillFlux">@WillFlux</a> (Twitter)</em></p>
 <h3 id="series-outline">Series Outline</h3>
 <ul>
 <li>Numbers in Verilog (this post) - introduction to numbers in Verilog</li>
-<li>Verilog Vectors and Arrays (coming soon)</li>
-<li><a href="/posts/fixed-point-numbers-in-verilog/">Fixed-Point Numbers in Verilog</a> - precision without complexity</li>
-<li><a href="/posts/multiplication-fpga-dsps">Multiplication with FPGA DSPs</a> - efficient multiplication with DSPs</li>
+<li><a href="/posts/verilog-vectors-arrays">Vectors and Arrays</a> - working with Verilog vectors and arrays</li>
+<li><a href="/posts/multiplication-fpga-dsps">Multiplication with DSPs</a> - efficient FPGA multiplication</li>
+<li><a href="/posts/fixed-point-numbers-in-verilog/">Fixed-Point Numbers</a> - precision without complexity</li>
 <li><em>More maths in 2023</em></li>
 </ul>
 <blockquote>
@@ -365,7 +362,7 @@ The logic, reg, and wire data types can take one of four values: <code>0, 1, X, 
 <p><strong>Verilog uses the width of the widest operand when evaluating an expression.</strong></p>
 <p>It doesn&rsquo;t matter what the operators are; all Verilog cares about is the width of the operands.</p>
 <p>Narrower operands are widened until they&rsquo;re the same width as the widest. For unsigned operands, Verilog simply fills the new bits with zero, but with signed operands, it uses <strong>sign extension</strong>.</p>
-<p>Sign extension copies the most significant bit (MSB) to fill the width. Remember, for a signed number, the MSB is <code>1</code> for negative numbers and zero otherwise.</p>
+<p>Sign extension copies the most significant bit (MSB) to fill the width. Remember, for a signed number, the MSB is <code>1</code> for negative numbers and <code>0</code> otherwise.</p>
 <p>This doesn&rsquo;t sound too bad until you learn that in Verilog:</p>
 <p><strong>If all the operands are signed, the result is signed. Otherwise, it&rsquo;s unsigned.</strong></p>
 <p>Verilog doesn&rsquo;t consider it an error to mix signed and unsigned operands; it treats them all as unsigned. This leads to painful surprises that can be hard to debug.</p>
@@ -420,13 +417,13 @@ The logic, reg, and wire data types can take one of four values: <code>0, 1, X, 
 </span></span></code></pre></div><p>Looking at the binary, we can understand where 19 comes from.</p>
 <p>When we set <code>m = -4</code> it has binary value <code>1100</code>.</p>
 <p>When Verilog evaluates the expression <code>y = u + m</code>:</p>
-<ul>
+<ol>
 <li><code>m</code> is 4 bits wide, but <code>u</code> and <code>y</code> are 8 bits</li>
 <li><code>m</code> must be widened to 8 bits to match the widest operands</li>
 <li><code>u</code> is unsigned, so <code>m</code> is also considered unsigned</li>
 <li>Being unsigned, <code>m</code> is widened to 8 bits with zeros: <code>00001100</code> (12 in decimal)</li>
 <li><code>00001100 + 00000111 = 00010011</code> (12+7=19 in decimal)</li>
-</ul>
+</ol>
 <p>If you take one thing away from this post:</p>
 <p><strong>Never mix signed and unsigned variables in one expression!</strong></p>
 <h2 id="truncated">Truncated</h2>
@@ -510,7 +507,7 @@ Small vectors don&rsquo;t require too much thought, but the resulting output has
 <h3 id="division">Division</h3>
 <p>What about division? I&rsquo;ve bad news: Verilog won&rsquo;t synthesise this for you. In a later post, we&rsquo;ll look into division in detail, but for now, you can use the <a href="/posts/division-in-verilog/">division</a> design from the Project F cookbook.</p>
 <h2 id="next-time">Next Time</h2>
-<p>In the second part of this series, we look at <em>Verilog Vectors and Arrays</em> (due late November 2022). Until then, check out our other maths posts: <a href="/posts/division-in-verilog/">division</a>, <a href="/posts/square-root-in-verilog/">square root</a>, and <a href="/posts/fpga-sine-table/">sine &amp; cosine</a>.</p>
+<p>In the second part, we look at <a href="/posts/verilog-vectors-arrays">Vectors and Arrays</a> or jump ahead to <a href="/posts/fixed-point-numbers-in-verilog/">Fixed-Point Numbers</a>.</p>
 <p><em>Get in touch: <a href="https://github.com/projf/projf-explore/issues">GitHub Issues</a>, <a href="https://1bitsquared.com/pages/chat">1BitSquared Discord</a>, <a href="https://mastodon.social/@WillFlux">@WillFlux</a> (Mastodon), <a href="https://twitter.com/WillFlux">@WillFlux</a> (Twitter)</em></p>
 <div class="footnotes" role="doc-endnotes">
 <hr>
