@@ -7,10 +7,10 @@
 <title>Lines and Triangles | Project F: FPGA Dev</title>
 
 <meta property='og:title' content='Lines and Triangles - Project F: FPGA Dev'>
-<meta property='og:description' content='Welcome back to Exploring FPGA Graphics. It&rsquo;s time to turn our attention to drawing. Most modern computer graphics come down to drawing triangles and colouring them in. So, it seems fitting to begin our drawing tour with triangles and the straight lines that form them. This post will implement Bresenham&rsquo;s line algorithm in Verilog and create lines, triangles, and even a cube (our first sort-of 3D). This post was last updated in November 2022.'>
+<meta property='og:description' content='Welcome back to Exploring FPGA Graphics. It&rsquo;s time to turn our attention to drawing. Most modern computer graphics come down to drawing triangles and colouring them in. So, it seems fitting to begin our drawing tour with triangles and the straight lines that form them. This post will implement Bresenham&rsquo;s line algorithm in Verilog and create lines, triangles, and even a cube (our first sort-of 3D). This post was last updated in January 2023.'>
 <meta property='og:url' content='https://projectf.io/posts/lines-and-triangles/'>
 <meta property='og:site_name' content='Project F: FPGA Dev'>
-<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/lines-and-triangles/social-card.jpg'><meta property='article:published_time' content='2021-01-28T00:00:00Z'><meta property='article:modified_time' content='2022-11-04T00:00:00Z'><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
+<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/lines-and-triangles/social-card.jpg'><meta property='article:published_time' content='2021-01-28T00:00:00Z'><meta property='article:modified_time' content='2023-01-04T00:00:00Z'><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
 
 
 <link href="https://projectf.io/index.xml" rel="alternate" type="application/rss+xml" title="Project F: FPGA Dev">
@@ -123,7 +123,7 @@
     <h1 class="title">Lines and Triangles</h1>
     
     <div class="content">
-      <p>Welcome back to <em>Exploring FPGA Graphics</em>. It&rsquo;s time to turn our attention to drawing. Most modern computer graphics come down to drawing triangles and colouring them in. So, it seems fitting to begin our drawing tour with triangles and the straight lines that form them. This post will implement Bresenham&rsquo;s line algorithm in Verilog and create lines, triangles, and even a cube (our first sort-of 3D). This post was last updated in November 2022.</p>
+      <p>Welcome back to <em>Exploring FPGA Graphics</em>. It&rsquo;s time to turn our attention to drawing. Most modern computer graphics come down to drawing triangles and colouring them in. So, it seems fitting to begin our drawing tour with triangles and the straight lines that form them. This post will implement Bresenham&rsquo;s line algorithm in Verilog and create lines, triangles, and even a cube (our first sort-of 3D). This post was last updated in January 2023.</p>
 <p><strong>This post was completely revised in August 2022.</strong></p>
 <p>In this series, we learn about graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how screens work, play Pong, create starfields and sprites, paint Michelangelo&rsquo;s David, draw lines and triangles, and animate characters and shapes. New to the series? Start with <a href="/posts/fpga-graphics/">Beginning FPGA Graphics</a>.</p>
 <p><em>Get in touch: <a href="https://mastodon.social/@WillFlux">@WillFlux</a> (Mastodon), <a href="https://github.com/WillGreen">@WillGreen</a> (GitHub), or find me on <a href="https://discord.gg/cf869yDbXf">1BitSquared Discord</a>.</em></p>
@@ -150,12 +150,12 @@ My hardware designs are open source, and my blog is advert free.</p>
 <p>You should be to run these designs on any recent FPGA board. I include everything you need for the <a href="https://docs.icebreaker-fpga.org/hardware/icebreaker/">iCEBreaker</a> with <a href="https://docs.icebreaker-fpga.org/hardware/pmod/dvi/">12-Bit DVI Pmod</a>, <a href="https://digilent.com/reference/programmable-logic/arty-a7/reference-manual">Digilent Arty A7-35T</a> with <a href="https://digilent.com/reference/pmod/pmodvga/reference-manual">Pmod VGA</a>, and <a href="/posts/verilog-sim-verilator-sdl/">Verilator Simulation with SDL</a>. See <a href="/posts/fpga-graphics/#requirements">requirements</a> from <em>Beginning FPGA Graphics</em> for more details.</p>
 <p>This post builds on <a href="/posts/framebuffers/">Framebuffers</a>; I recommend reading that post first if you haven&rsquo;t already.</p>
 <h2 id="new-screen-resolution">New Screen Resolution</h2>
-<p>Choosing your graphics resolution and colour depth are critical decisions in any graphics design. We want a high resolution for this post, but we want to continue using BRAM for simplicity. Adopting a 16:9 aspect ratio makes scaling on modern displays simpler while reducing memory usage</p>
+<p>Choosing your graphics resolution and colour depth are critical decisions in any graphics design. We want a high resolution for this post, but we want to continue using on-FPGA ram for simplicity. Adopting a 16:9 aspect ratio makes scaling on modern displays simpler while keeping memory usage manageable (320x180 &lt; 2<sup>16</sup>).</p>
 <h3 id="320-x-180-in-16-colours">320 x 180 in 16 colours</h3>
 <ul>
 <li>320 x 180 has 57,600 pixels</li>
 <li>16 colours require four bits per pixel</li>
-<li>256 Kb (32 KiB) buffer required</li>
+<li>256 kb (32 kilobytes) buffer required</li>
 <li>Scale up 2x for 640x480 with letterbox</li>
 <li>Scale up 4x for 1280x720 fullscreen</li>
 </ul>
@@ -163,11 +163,11 @@ My hardware designs are open source, and my blog is advert free.</p>
 <ul>
 <li>160 x 90 has 14,400 pixels</li>
 <li>4 colours require two bits per pixel</li>
-<li>32 Kb (4 KiB) buffer required</li>
+<li>32 Kb (4 kilobytes) buffer required</li>
 <li>Scale up 4x for 640x480 with letterbox</li>
 <li>Scale up 8x for 1280x720 fullscreen</li>
 </ul>
-<p>We use a lower resolution on iCEBreaker to continue storing the framebuffer in BRAM. <a href="/posts/spram-ice40-fpga/">iCE40UP SPRAM</a> is large enough to handle 320x180 but would be a distraction right now. If you&rsquo;re already familiar with SPRAM, feel free to use the 320x180 designs with iCEBreaker: the new render modules (discussed later) make this straightforward.</p>
+<p>We use a lower resolution on iCEBreaker to continue storing the framebuffer in BRAM. <a href="/posts/spram-ice40-fpga/">iCE40UP SPRAM</a> is large enough to handle 320x180 but I haven&rsquo;t added support yet [<a href="https://github.com/projf/projf-explore/issues/133">issue #133</a>]. If you&rsquo;re already familiar with SPRAM, feel free to use the 320x180 designs with iCEBreaker: the new render modules (discussed later) make this straightforward.</p>
 <h2 id="an-address-for-every-pixel">An Address for Every Pixel</h2>
 <p>A framebuffer is two-dimensional, with an X and Y coordinate for every pixel. Memory addresses are one-dimensional. We need to map a framebuffer coordinate to a memory address <strong>[<a href="https://github.com/projf/projf-explore/blob/main/lib/display/bitmap_addr.sv">bitmap_addr.sv</a>]</strong>:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> bitmap_addr #(
