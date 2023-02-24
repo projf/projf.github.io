@@ -1,325 +1,146 @@
-<!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml"  lang="en-gb">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
-<title>FPGA Sine Lookup Table | Project F: FPGA Dev</title>
-
-<meta property='og:title' content='FPGA Sine Lookup Table - Project F: FPGA Dev'>
-<meta property='og:description' content='In this how to, we&rsquo;re going to look at a straightforward method for generating sine and cosine using a lookup table. There are more precise methods, but this one is fast and simple and will suffice for many applications. This post was last updated in October 2022.
+<!doctype html><html class="not-ready text-sm lg:text-base" style=--bg:#fff lang=en-gb><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><title>FPGA Sine Lookup Table - Project F</title><meta name=theme-color><meta name=description content="In this how to, we&rsquo;re going to look at a straightforward method for generating sine and cosine using a lookup table. There are more precise methods, but this one is fast and simple and will suffice for many applications.
 New to Verilog maths? Check out my introduction to Numbers in Verilog.
-Get in touch with @WillFlux or join me on GitHub Discussions and 1BitSquared Discord.'>
-<meta property='og:url' content='https://projectf.io/posts/fpga-sine-table/'>
-<meta property='og:site_name' content='Project F: FPGA Dev'>
-<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/fpga-sine-table/social-card.png'><meta property='article:published_time' content='2021-05-27T00:00:00Z'><meta property='article:modified_time' content='2022-10-25T00:00:00Z'><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
-
-
-<link href="https://projectf.io/index.xml" rel="alternate" type="application/rss+xml" title="Project F: FPGA Dev">
-
-<link rel="stylesheet" href="/css/style.css"><link rel='stylesheet' href='https://projectf.io/css/custom.css'>
-
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-<link rel="manifest" href="/site.webmanifest">
-<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
-<link rel="canonical" href="https://projectf.io/posts/fpga-sine-table/">
-<meta name="msapplication-TileColor" content="#da532c">
-<meta name="theme-color" content="#ffffff">
-</head>
-<body>
-
-<section class="section">
-  <div class="container">
-    <nav id="nav-main" class="nav">
-      <div id="nav-name" class="nav-left">
-        <a id="nav-anchor" class="nav-item" href="https://projectf.io">
-          <h1 id="nav-heading" class="title is-4">Project F: FPGA Dev</h1>
-        </a>
-      </div>
-      <div class="nav-right">
-        <nav id="nav-items" class="nav-item level is-mobile"><a class="level-item" aria-label="github" href='https://github.com/projf/projf-explore'
-            target='_blank' rel='me noopener'>
-            <span class="icon">
-              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
-    
-    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
-    
-  </svg>
-</i>
-            </span>
-          </a><a class="level-item" aria-label="mastodon" href='https://mastodon.social/@WillFlux'
-            target='_blank' rel='me noopener'>
-            <span class="icon">
-              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
-    
-    <path d="M 11.966876,0.80329086 C 9.1123466,0.82665791 6.3664935,1.1367094 4.7662978,1.8737549 c 0,0 -3.1736685,1.4237835 -3.1736685,6.2815982 0,1.1123884 -0.021554,2.4424309 0.013571,3.8529439 0.1152443,4.750677 0.8683725,9.432704 5.2479219,10.595273 2.0193066,0.53604 3.7531218,0.648348 5.1494078,0.571373 2.532141,-0.140797 3.953603,-0.906282 3.953603,-0.906282 l -0.08353,-1.842608 c 0,0 -1.809527,0.572181 -3.841713,0.50245 -2.013417,-0.06922 -4.138986,-0.217713 -4.4646269,-2.696937 -0.030082,-0.217772 -0.045075,-0.450712 -0.045075,-0.695267 0,0 1.9765387,0.484554 4.4813709,0.599656 1.531629,0.07049 2.9679,-0.08996 4.426746,-0.264563 2.797636,-0.335045 5.233581,-2.063856 5.539741,-3.643517 0.482392,-2.488386 0.442651,-6.0725219 0.442651,-6.0725219 0,-4.8578147 -3.173492,-6.2815982 -3.173492,-6.2815982 C 17.639136,1.1367094 14.891579,0.82669685 12.03704,0.80329086 Z"/>
-  <path d="M 6.4286668,14.016701 V 9.1034254 c 0,-1.0041614 0.2549569,-1.8022059 0.7670342,-2.3925638 0.5280486,-0.590366 1.2196579,-0.8929946 2.0781049,-0.8929946 0.9931961,0 1.7452181,0.3828583 2.2425191,1.1486808 L 11.999859,7.7793695 12,11.451148 11.999859,7.7793695 12.483392,6.9665478 C 12.980596,6.2007253 13.732618,5.817867 14.72592,5.817867 c 0.858341,0 1.549951,0.3026286 2.078097,0.8929946 0.511971,0.5903579 0.766887,1.3884024 0.766887,2.3925638 v 4.9132756" />
-    
-  </svg>
-</i>
-            </span>
-          </a><a class="level-item" aria-label="youtube" href='https://youtube.com/@projf'
-            target='_blank' rel='me noopener'>
-            <span class="icon">
-              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
-    
-    <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/>
-    <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/>
-    
-  </svg>
-</i>
-            </span>
-          </a><a class="level-item" aria-label="rss" href='/index.xml'
-            target='_blank' rel='me noopener'>
-            <span class="icon">
-              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
-    
-    <path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle>
-    
-  </svg>
-</i>
-            </span>
-          </a></nav>
-      </div>
-    </nav>
-
-    <nav class="nav">
-      
-      <div class="nav-left"><a class="nav-item" href="/about">
-          <h2 class="title is-5">About</h2>
-        </a><a class="nav-item" href="/demos">
-          <h2 class="title is-5">Demos</h2>
-        </a><a class="nav-item" href="/howto">
-          <h2 class="title is-5">How To</h2>
-        </a><a class="nav-item" href="/tags/news">
-          <h2 class="title is-5">News</h2>
-        </a><a class="nav-item" href="/tutorials">
-          <h2 class="title is-5">Tutorials</h2>
-        </a><a class="nav-item" href="/verilog-lib">
-          <h2 class="title is-5">Verilog Lib</h2>
-        </a></div>
-      
-
-      
-    </nav>
-
-  </div>
-  <script src="/js/navicon-shift.js"></script>
-</section>
-
-<section class="section">
-  <div class="container">
-    <div class="subtitle tags is-6 is-pulled-right">
-      
-      
-<a class="subtitle is-6" href="/tags/maths/">#maths</a>
-
-
-
-
-      
-    </div>
-    <h2 class="subtitle is-6">27 May 2021</h2>
-    <h1 class="title">FPGA Sine Lookup Table</h1>
-    
-    <div class="content">
-      <p>In this <a href="/howto">how to</a>, we&rsquo;re going to look at a straightforward method for generating sine and cosine using a lookup table. There are more precise methods, but this one is fast and simple and will suffice for many applications. This post was last updated in October 2022.</p>
-<p>New to Verilog maths? Check out my introduction to <a href="/posts/numbers-in-verilog">Numbers in Verilog</a>.</p>
-<p><em>Get in touch with <a href="https://mastodon.social/@WillFlux">@WillFlux</a> or join me on <a href="https://github.com/projf/projf-explore/discussions">GitHub Discussions</a> and <a href="https://discord.gg/cf869yDbXf">1BitSquared Discord</a>.</em></p>
-<blockquote>
-<p><strong>Sponsor My Work</strong><br>
-If you like what I do, consider <a href="https://github.com/sponsors/WillGreen">sponsoring me</a> on GitHub.<br>
-I love FPGAs and want to help more people discover and use them in their projects.<br>
-My hardware designs are open source, and my blog is advert free.</p>
-</blockquote>
-<h3 id="source">Source</h3>
-<p>The SystemVerilog designs featured in this post are available from the <a href="https://github.com/projf/projf-explore/tree/main/lib/maths">Project F Library</a> under the open-source MIT licence: build on them to your heart&rsquo;s content. The rest of the blog content is subject to standard copyright restrictions: don&rsquo;t republish it without permission.</p>
-<h2 id="dont-calculate-lookup">Don&rsquo;t Calculate, Lookup!</h2>
-<p>A lookup table can produce a result directly without complex calculation for both sine and cosine.</p>
-<p><img src="/img/posts/fpga-sine-table/sine-cosine.png" alt="Sine &amp; Cosine"></p>
-<p><em>Graph image by <a href="https://commons.wikimedia.org/wiki/File:Sine_cosine_one_period.svg">Geek3</a> in the public domain.</em></p>
-<h3 id="sine-quadrants">Sine Quadrants</h3>
-<p>Sine has a simple symmetry to it (see diagram above), so our table only needs to cover a quarter of a circle: 0 to 90 degrees. Our Verilog will handle a complete circle using simple adjustment for each of the four quadrants.</p>
-<p>The following diagram shows the quadrants and how angles are measured anti-clockwise from the three o&rsquo;clock position on the circle.</p>
-<p><img src="/img/posts/fpga-sine-table/sine-quadrants.jpg" alt="Sine Quadrants"></p>
-<p>Wikipedia has a summary of <a href="https://en.wikipedia.org/wiki/Sine#Properties_relating_to_the_quadrants">properties relating to the quadrants</a>.</p>
-<h2 id="generate-table">Generate Table</h2>
-<p>The Project F maths library includes a 64 entry sine table you can use: <strong>[<a href="https://github.com/projf/projf-explore/blob/main/lib/maths/res/sine_table_64x8.mem">sine_table_64x8.mem</a>]</strong>.</p>
-<p>If you&rsquo;re happy to use this table, you can skip ahead to <a href="/posts/fpga-sine-table/#sine-table-module">Sine Table Module</a>.</p>
-<p>Alternatively, I&rsquo;ve created a short Python script that can generate tables to your specification <strong>[<a href="https://github.com/projf/fpgatools/tree/master/sine2fmem">sine2fmem</a>]</strong>:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e">#!/usr/bin/env python3</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#f92672">from</span> math <span style="color:#f92672">import</span> ceil, sin, pi
-</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> sys
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#75715e"># math.sin works in radians: 0-90° == π/2 radians</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> (len(sys<span style="color:#f92672">.</span>argv) <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">1</span>):
-</span></span><span style="display:flex;"><span>    rows <span style="color:#f92672">=</span> int(sys<span style="color:#f92672">.</span>argv[<span style="color:#ae81ff">1</span>])
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">else</span>:
-</span></span><span style="display:flex;"><span>    rows <span style="color:#f92672">=</span> <span style="color:#ae81ff">256</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> (len(sys<span style="color:#f92672">.</span>argv) <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">2</span>):
-</span></span><span style="display:flex;"><span>    width <span style="color:#f92672">=</span> int(sys<span style="color:#f92672">.</span>argv[<span style="color:#ae81ff">2</span>])
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">else</span>:
-</span></span><span style="display:flex;"><span>    width <span style="color:#f92672">=</span> <span style="color:#ae81ff">16</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>print(<span style="color:#e6db74">&#34;// Generated by sine2fmem.py from Project F&#34;</span>)
-</span></span><span style="display:flex;"><span>print(<span style="color:#e6db74">&#34;// Learn more at https://github.com/projf/fpgatools&#34;</span>)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>fmt_width <span style="color:#f92672">=</span> str(ceil(width<span style="color:#f92672">/</span><span style="color:#ae81ff">4</span>))  <span style="color:#75715e"># four bits per hex digit</span>
-</span></span><span style="display:flex;"><span>fmt_string <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;{:0&#34;</span> <span style="color:#f92672">+</span> fmt_width <span style="color:#f92672">+</span> <span style="color:#e6db74">&#34;X}  // </span><span style="color:#e6db74">{:03}</span><span style="color:#e6db74">: sin(</span><span style="color:#e6db74">{:.4f}</span><span style="color:#e6db74">) = </span><span style="color:#e6db74">{:.4f}</span><span style="color:#e6db74">&#34;</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">for</span> i <span style="color:#f92672">in</span> range(rows):
-</span></span><span style="display:flex;"><span>    val <span style="color:#f92672">=</span> (pi<span style="color:#f92672">/</span>(<span style="color:#ae81ff">2</span><span style="color:#f92672">*</span>rows)) <span style="color:#f92672">*</span> i
-</span></span><span style="display:flex;"><span>    res <span style="color:#f92672">=</span> sin(val)
-</span></span><span style="display:flex;"><span>    res_scaled <span style="color:#f92672">=</span> round((<span style="color:#ae81ff">2</span><span style="color:#f92672">**</span>width) <span style="color:#f92672">*</span> res)
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> res_scaled <span style="color:#f92672">==</span> <span style="color:#ae81ff">2</span><span style="color:#f92672">**</span>width:  <span style="color:#75715e"># maximum value uses too many bits</span>
-</span></span><span style="display:flex;"><span>        res_scaled <span style="color:#f92672">-=</span> <span style="color:#ae81ff">1</span>;        <span style="color:#75715e"># accompanying Verilog module handles this</span>
-</span></span><span style="display:flex;"><span>    print(fmt_string<span style="color:#f92672">.</span>format(res_scaled, i, val, res))
-</span></span></code></pre></div><p>You specify the number <code>rows</code> in your table and their <code>width</code> in bits. I strongly recommend using a power of two for the rows, so the values wrap naturally.</p>
-<p>The <a href="https://github.com/projf/fpgatools/tree/master/sine2fmem">sine2fmem README</a> has more details on the workings of the script, including examples.</p>
-<h2 id="sine-table-module">Sine Table Module</h2>
-<p>I&rsquo;ve created a simple Verilog module that looks up the correct value, adjusting for the quadrant of the circle it falls in <strong>[<a href="https://github.com/projf/projf-explore/blob/main/lib/maths/sine_table.sv">sine_table.sv</a>]</strong>:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> sine_table #(
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> ROM_DEPTH<span style="color:#f92672">=</span><span style="color:#ae81ff">64</span>,  <span style="color:#75715e">// number of entries in sine ROM for 0° to 90°
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> ROM_WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,   <span style="color:#75715e">// width of sine ROM data in bits
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> ROM_FILE<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;&#34;</span>,   <span style="color:#75715e">// sine table file to populate ROM
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> ADDRW<span style="color:#f92672">=</span>$clog2(<span style="color:#ae81ff">4</span><span style="color:#f92672">*</span>ROM_DEPTH)  <span style="color:#75715e">// full circle is 0° to 360°
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    ) (
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] id,  <span style="color:#75715e">// table ID to lookup
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [<span style="color:#ae81ff">2</span><span style="color:#f92672">*</span>ROM_WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] data  <span style="color:#75715e">// answer (fixed-point)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    );
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// sine table ROM: 0°-90°
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(ROM_DEPTH)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] tab_id;
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> [ROM_WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] tab_data;
-</span></span><span style="display:flex;"><span>    rom_async #(
-</span></span><span style="display:flex;"><span>        .WIDTH(ROM_WIDTH),
-</span></span><span style="display:flex;"><span>        .DEPTH(ROM_DEPTH),
-</span></span><span style="display:flex;"><span>        .INIT_F(ROM_FILE)
-</span></span><span style="display:flex;"><span>    ) sine_rom (
-</span></span><span style="display:flex;"><span>        .addr(tab_id),
-</span></span><span style="display:flex;"><span>        .data(tab_data)
-</span></span><span style="display:flex;"><span>    );
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] quad;  <span style="color:#75715e">// quadrant we&#39;re in: I, II, III, IV
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>        quad <span style="color:#f92672">=</span> id[ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span>ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">2</span>];
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">case</span> (quad)
-</span></span><span style="display:flex;"><span>            <span style="color:#ae81ff">2</span><span style="color:#ae81ff">&#39;b00</span><span style="color:#f92672">:</span> tab_id <span style="color:#f92672">=</span> id[ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>];                <span style="color:#75715e">//  I:    0° to  90°
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#ae81ff">2</span><span style="color:#ae81ff">&#39;b01</span><span style="color:#f92672">:</span> tab_id <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span><span style="color:#f92672">*</span>ROM_DEPTH <span style="color:#f92672">-</span> id[ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>];  <span style="color:#75715e">// II:   90° to 180°
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#ae81ff">2</span><span style="color:#ae81ff">&#39;b10</span><span style="color:#f92672">:</span> tab_id <span style="color:#f92672">=</span> id[ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] <span style="color:#f92672">-</span> <span style="color:#ae81ff">2</span><span style="color:#f92672">*</span>ROM_DEPTH;  <span style="color:#75715e">// III: 180° to 270°
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#ae81ff">2</span><span style="color:#ae81ff">&#39;b11</span><span style="color:#f92672">:</span> tab_id <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span><span style="color:#f92672">*</span>ROM_DEPTH <span style="color:#f92672">-</span> id[ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>];  <span style="color:#75715e">// IV:  270° to 360°
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#66d9ef">endcase</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (id <span style="color:#f92672">==</span> ROM_DEPTH) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// sin(90°) = +1.0
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            data <span style="color:#f92672">=</span> {{ROM_WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>{<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>}}, <span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b1</span>, {ROM_WIDTH{<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>}}};
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (id <span style="color:#f92672">==</span> <span style="color:#ae81ff">3</span><span style="color:#f92672">*</span>ROM_DEPTH) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// sin(270°) = -1.0
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            data <span style="color:#f92672">=</span> {{ROM_WIDTH{<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b1</span>}}, {ROM_WIDTH{<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>}}};
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> (quad[<span style="color:#ae81ff">1</span>] <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// positive in quadrant I and II
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                data <span style="color:#f92672">=</span> {{ROM_WIDTH{<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>}}, tab_data};
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>                data <span style="color:#f92672">=</span> {<span style="color:#ae81ff">2</span><span style="color:#f92672">*</span>ROM_WIDTH{<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>}} <span style="color:#f92672">-</span> {{ROM_WIDTH{<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>}}, tab_data};
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
+Get in touch with @WillFlux or join me on GitHub Discussions and 1BitSquared Discord.
+Sponsor My Work
+If you like what I do, consider sponsoring me on GitHub."><meta name=author content="Will Green"><link rel="preload stylesheet" as=style href=https://projectf.io/main.min.css><script defer src=https://projectf.io/highlight.min.js onload=hljs.initHighlightingOnLoad()></script>
+<link rel=preload as=image href=https://projectf.io/theme.png><link rel=preload as=image href=https://projectf.io/github.svg><link rel=preload as=image href=https://projectf.io/mastodon.svg><link rel=preload as=image href=https://projectf.io/rss.svg><link rel=icon href=https://projectf.io/favicon.ico><link rel=apple-touch-icon href=https://projectf.io/apple-touch-icon.png><meta name=generator content="Hugo 0.110.0"><script src=https://badgers.projectf.io/script.js data-site=EVCGKVDN defer></script><meta property="og:title" content="FPGA Sine Lookup Table"><meta property="og:description" content="In this how to, we&rsquo;re going to look at a straightforward method for generating sine and cosine using a lookup table. There are more precise methods, but this one is fast and simple and will suffice for many applications.
+New to Verilog maths? Check out my introduction to Numbers in Verilog.
+Get in touch with @WillFlux or join me on GitHub Discussions and 1BitSquared Discord.
+Sponsor My Work
+If you like what I do, consider sponsoring me on GitHub."><meta property="og:type" content="article"><meta property="og:url" content="https://projectf.io/posts/fpga-sine-table/"><meta property="article:section" content="posts"><meta property="article:published_time" content="2021-05-27T00:00:00+00:00"><meta property="article:modified_time" content="2022-10-25T00:00:00+00:00"><meta itemprop=name content="FPGA Sine Lookup Table"><meta itemprop=description content="In this how to, we&rsquo;re going to look at a straightforward method for generating sine and cosine using a lookup table. There are more precise methods, but this one is fast and simple and will suffice for many applications.
+New to Verilog maths? Check out my introduction to Numbers in Verilog.
+Get in touch with @WillFlux or join me on GitHub Discussions and 1BitSquared Discord.
+Sponsor My Work
+If you like what I do, consider sponsoring me on GitHub."><meta itemprop=datePublished content="2021-05-27T00:00:00+00:00"><meta itemprop=dateModified content="2022-10-25T00:00:00+00:00"><meta itemprop=wordCount content="1278"><meta itemprop=keywords content="maths,"><meta name=twitter:card content="summary"><meta name=twitter:title content="FPGA Sine Lookup Table"><meta name=twitter:description content="In this how to, we&rsquo;re going to look at a straightforward method for generating sine and cosine using a lookup table. There are more precise methods, but this one is fast and simple and will suffice for many applications.
+New to Verilog maths? Check out my introduction to Numbers in Verilog.
+Get in touch with @WillFlux or join me on GitHub Discussions and 1BitSquared Discord.
+Sponsor My Work
+If you like what I do, consider sponsoring me on GitHub."></head><body class="text-black duration-200 ease-out dark:text-white"><header class="mx-auto flex h-[5rem] max-w-3xl px-8 lg:justify-center"><div class="relative z-50 mr-auto flex items-center"><a class="-translate-x-[1px] -translate-y-0.5 text-3xl font-bold" href=https://projectf.io/>Project F</a>
+<a class="btn-dark ml-6 h-6 w-6 shrink-0 cursor-pointer [background:url(./theme.png)_left_center/_auto_theme('spacing.6')_no-repeat] [transition:_background-position_0.4s_steps(5)] dark:[background-position:right]"></a></div><a class="btn-menu relative z-50 -mr-8 flex h-[5rem] w-[5rem] shrink-0 cursor-pointer flex-col items-center justify-center gap-2.5 lg:hidden"></a>
+<script>const htmlClass=document.documentElement.classList;setTimeout(()=>{htmlClass.remove("not-ready")},10);const btnMenu=document.querySelector(".btn-menu");btnMenu.addEventListener("click",()=>{htmlClass.toggle("open")});const metaTheme=document.querySelector('meta[name="theme-color"]'),lightBg=`"#fff"`.replace(/"/g,""),setDark=e=>{metaTheme.setAttribute("content",e?"#000":lightBg),htmlClass[e?"add":"remove"]("dark"),localStorage.setItem("dark",e)},darkScheme=window.matchMedia("(prefers-color-scheme: dark)");if(htmlClass.contains("dark"))setDark(!0);else{const e=localStorage.getItem("dark");setDark(e?e==="true":darkScheme.matches)}darkScheme.addEventListener("change",e=>{setDark(e.matches)});const btnDark=document.querySelector(".btn-dark");btnDark.addEventListener("click",()=>{setDark(localStorage.getItem("dark")!=="true")})</script><div class="nav-wrapper fixed inset-x-0 top-full z-40 flex h-full select-none flex-col justify-center pb-16 duration-200 dark:bg-black lg:static lg:h-auto lg:flex-row lg:!bg-transparent lg:pb-0 lg:transition-none"><nav class="lg:ml-12 lg:flex lg:flex-row lg:items-center lg:space-x-6"><a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/about/>About</a>
+<a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/demos/>Demos</a>
+<a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/verilog-lib/>Lib</a>
+<a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/tools/>Tools</a>
+<a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/tutorials/>Tutorials</a></nav><nav class="mt-12 flex justify-center space-x-10 dark:invert lg:mt-0 lg:ml-12 lg:items-center lg:space-x-6"><a class="h-8 w-8 [background:var(--url)_center_center/cover_no-repeat] lg:h-6 lg:w-6" style=--url:url(./github.svg) href=https://github.com/projf target=_blank rel=me></a>
+<a class="h-8 w-8 [background:var(--url)_center_center/cover_no-repeat] lg:h-6 lg:w-6" style=--url:url(./mastodon.svg) href=https://mastodon.social/@WillFlux target=_blank rel=me></a>
+<a class="h-8 w-8 [background:var(--url)_center_center/cover_no-repeat] lg:h-6 lg:w-6" style=--url:url(./rss.svg) href=https://projectf.io/index.xml target=_blank></a></nav></div></header><main class="prose prose-neutral relative mx-auto min-h-[calc(100%-10rem)] max-w-3xl px-8 pt-20 pb-1 dark:prose-invert"><article><header class=mb-1><h1 class="!my-0 pb-2.5">FPGA Sine Lookup Table</h1><div class="text-sm opacity-60">Published
+<time>27 May 2021</time>
+<span class=mx-1>&#183;</span>
+<span>Updated
+<time>25 Oct 2022</time></span></div></header><section><p>In this <a href=/tutorials/#how-to>how to</a>, we&rsquo;re going to look at a straightforward method for generating sine and cosine using a lookup table. There are more precise methods, but this one is fast and simple and will suffice for many applications.</p><p>New to Verilog maths? Check out my introduction to <a href=/posts/numbers-in-verilog>Numbers in Verilog</a>.</p><p><em>Get in touch with <a href=https://mastodon.social/@WillFlux>@WillFlux</a> or join me on <a href=https://github.com/projf/projf-explore/discussions>GitHub Discussions</a> and <a href=https://discord.gg/cf869yDbXf>1BitSquared Discord</a>.</em></p><blockquote><p><strong>Sponsor My Work</strong><br>If you like what I do, consider <a href=https://github.com/sponsors/WillGreen>sponsoring me</a> on GitHub.<br>I love FPGAs and want to help more people discover and use them in their projects.<br>My hardware designs are open source, and my blog is advert free.</p></blockquote><h3 id=source>Source</h3><p>The SystemVerilog designs featured in this post are available from the <a href=https://github.com/projf/projf-explore/tree/main/lib/maths>Project F Library</a> under the open-source MIT licence: build on them to your heart&rsquo;s content. The rest of the blog content is subject to standard copyright restrictions: don&rsquo;t republish it without permission.</p><h2 id=dont-calculate-lookup>Don&rsquo;t Calculate, Lookup!</h2><p>A lookup table can produce a result directly without complex calculation for both sine and cosine.</p><p><img src=/img/posts/fpga-sine-table/sine-cosine.png alt="Sine & Cosine"></p><p><em>Graph image by <a href=https://commons.wikimedia.org/wiki/File:Sine_cosine_one_period.svg>Geek3</a> in the public domain.</em></p><h3 id=sine-quadrants>Sine Quadrants</h3><p>Sine has a simple symmetry to it (see diagram above), so our table only needs to cover a quarter of a circle: 0 to 90 degrees. Our Verilog will handle a complete circle using simple adjustment for each of the four quadrants.</p><p>The following diagram shows the quadrants and how angles are measured anti-clockwise from the three o&rsquo;clock position on the circle.</p><p><img src=/img/posts/fpga-sine-table/sine-quadrants.jpg alt="Sine Quadrants"></p><p>Wikipedia has a summary of <a href=https://en.wikipedia.org/wiki/Sine#Properties_relating_to_the_quadrants>properties relating to the quadrants</a>.</p><h2 id=generate-table>Generate Table</h2><p>The Project F maths library includes a 64 entry sine table you can use: <strong>[<a href=https://github.com/projf/projf-explore/blob/main/lib/maths/res/sine_table_64x8.mem>sine_table_64x8.mem</a>]</strong>.</p><p>If you&rsquo;re happy to use this table, you can skip ahead to <a href=/posts/fpga-sine-table/#sine-table-module>Sine Table Module</a>.</p><p>Alternatively, I&rsquo;ve created a short Python script that can generate tables to your specification <strong>[<a href=https://github.com/projf/fpgatools/tree/master/sine2fmem>sine2fmem</a>]</strong>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#75715e>#!/usr/bin/env python3</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#f92672>from</span> math <span style=color:#f92672>import</span> ceil, sin, pi
+</span></span><span style=display:flex><span><span style=color:#f92672>import</span> sys
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># math.sin works in radians: 0-90° == π/2 radians</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>if</span> (len(sys<span style=color:#f92672>.</span>argv) <span style=color:#f92672>&gt;</span> <span style=color:#ae81ff>1</span>):
+</span></span><span style=display:flex><span>    rows <span style=color:#f92672>=</span> int(sys<span style=color:#f92672>.</span>argv[<span style=color:#ae81ff>1</span>])
+</span></span><span style=display:flex><span><span style=color:#66d9ef>else</span>:
+</span></span><span style=display:flex><span>    rows <span style=color:#f92672>=</span> <span style=color:#ae81ff>256</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>if</span> (len(sys<span style=color:#f92672>.</span>argv) <span style=color:#f92672>&gt;</span> <span style=color:#ae81ff>2</span>):
+</span></span><span style=display:flex><span>    width <span style=color:#f92672>=</span> int(sys<span style=color:#f92672>.</span>argv[<span style=color:#ae81ff>2</span>])
+</span></span><span style=display:flex><span><span style=color:#66d9ef>else</span>:
+</span></span><span style=display:flex><span>    width <span style=color:#f92672>=</span> <span style=color:#ae81ff>16</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>print(<span style=color:#e6db74>&#34;// Generated by sine2fmem.py from Project F&#34;</span>)
+</span></span><span style=display:flex><span>print(<span style=color:#e6db74>&#34;// Learn more at https://github.com/projf/fpgatools&#34;</span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>fmt_width <span style=color:#f92672>=</span> str(ceil(width<span style=color:#f92672>/</span><span style=color:#ae81ff>4</span>))  <span style=color:#75715e># four bits per hex digit</span>
+</span></span><span style=display:flex><span>fmt_string <span style=color:#f92672>=</span> <span style=color:#e6db74>&#34;{:0&#34;</span> <span style=color:#f92672>+</span> fmt_width <span style=color:#f92672>+</span> <span style=color:#e6db74>&#34;X}  // </span><span style=color:#e6db74>{:03}</span><span style=color:#e6db74>: sin(</span><span style=color:#e6db74>{:.4f}</span><span style=color:#e6db74>) = </span><span style=color:#e6db74>{:.4f}</span><span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>for</span> i <span style=color:#f92672>in</span> range(rows):
+</span></span><span style=display:flex><span>    val <span style=color:#f92672>=</span> (pi<span style=color:#f92672>/</span>(<span style=color:#ae81ff>2</span><span style=color:#f92672>*</span>rows)) <span style=color:#f92672>*</span> i
+</span></span><span style=display:flex><span>    res <span style=color:#f92672>=</span> sin(val)
+</span></span><span style=display:flex><span>    res_scaled <span style=color:#f92672>=</span> round((<span style=color:#ae81ff>2</span><span style=color:#f92672>**</span>width) <span style=color:#f92672>*</span> res)
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>if</span> res_scaled <span style=color:#f92672>==</span> <span style=color:#ae81ff>2</span><span style=color:#f92672>**</span>width:  <span style=color:#75715e># maximum value uses too many bits</span>
+</span></span><span style=display:flex><span>        res_scaled <span style=color:#f92672>-=</span> <span style=color:#ae81ff>1</span>;        <span style=color:#75715e># accompanying Verilog module handles this</span>
+</span></span><span style=display:flex><span>    print(fmt_string<span style=color:#f92672>.</span>format(res_scaled, i, val, res))
+</span></span></code></pre></div><p>You specify the number <code>rows</code> in your table and their <code>width</code> in bits. I strongly recommend using a power of two for the rows, so the values wrap naturally.</p><p>The <a href=https://github.com/projf/fpgatools/tree/master/sine2fmem>sine2fmem README</a> has more details on the workings of the script, including examples.</p><h2 id=sine-table-module>Sine Table Module</h2><p>I&rsquo;ve created a simple Verilog module that looks up the correct value, adjusting for the quadrant of the circle it falls in <strong>[<a href=https://github.com/projf/projf-explore/blob/main/lib/maths/sine_table.sv>sine_table.sv</a>]</strong>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span><span style=color:#66d9ef>module</span> sine_table #(
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>parameter</span> ROM_DEPTH<span style=color:#f92672>=</span><span style=color:#ae81ff>64</span>,  <span style=color:#75715e>// number of entries in sine ROM for 0° to 90°
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>parameter</span> ROM_WIDTH<span style=color:#f92672>=</span><span style=color:#ae81ff>8</span>,   <span style=color:#75715e>// width of sine ROM data in bits
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>parameter</span> ROM_FILE<span style=color:#f92672>=</span><span style=color:#e6db74>&#34;&#34;</span>,   <span style=color:#75715e>// sine table file to populate ROM
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>parameter</span> ADDRW<span style=color:#f92672>=</span>$clog2(<span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>ROM_DEPTH)  <span style=color:#75715e>// full circle is 0° to 360°
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    ) (
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>input</span>  <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> [ADDRW<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] id,  <span style=color:#75715e>// table ID to lookup
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>      <span style=color:#66d9ef>logic</span> <span style=color:#66d9ef>signed</span> [<span style=color:#ae81ff>2</span><span style=color:#f92672>*</span>ROM_WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] data  <span style=color:#75715e>// answer (fixed-point)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    );
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e>// sine table ROM: 0°-90°
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> [$clog2(ROM_DEPTH)<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] tab_id;
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>logic</span> [ROM_WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] tab_data;
+</span></span><span style=display:flex><span>    rom_async #(
+</span></span><span style=display:flex><span>        .WIDTH(ROM_WIDTH),
+</span></span><span style=display:flex><span>        .DEPTH(ROM_DEPTH),
+</span></span><span style=display:flex><span>        .INIT_F(ROM_FILE)
+</span></span><span style=display:flex><span>    ) sine_rom (
+</span></span><span style=display:flex><span>        .addr(tab_id),
+</span></span><span style=display:flex><span>        .data(tab_data)
+</span></span><span style=display:flex><span>    );
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>logic</span> [<span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] quad;  <span style=color:#75715e>// quadrant we&#39;re in: I, II, III, IV
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>always_comb</span> <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>        quad <span style=color:#f92672>=</span> id[ADDRW<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span>ADDRW<span style=color:#f92672>-</span><span style=color:#ae81ff>2</span>];
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>case</span> (quad)
+</span></span><span style=display:flex><span>            <span style=color:#ae81ff>2</span><span style=color:#ae81ff>&#39;b00</span><span style=color:#f92672>:</span> tab_id <span style=color:#f92672>=</span> id[ADDRW<span style=color:#f92672>-</span><span style=color:#ae81ff>3</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>];                <span style=color:#75715e>//  I:    0° to  90°
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>            <span style=color:#ae81ff>2</span><span style=color:#ae81ff>&#39;b01</span><span style=color:#f92672>:</span> tab_id <span style=color:#f92672>=</span> <span style=color:#ae81ff>2</span><span style=color:#f92672>*</span>ROM_DEPTH <span style=color:#f92672>-</span> id[ADDRW<span style=color:#f92672>-</span><span style=color:#ae81ff>3</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>];  <span style=color:#75715e>// II:   90° to 180°
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>            <span style=color:#ae81ff>2</span><span style=color:#ae81ff>&#39;b10</span><span style=color:#f92672>:</span> tab_id <span style=color:#f92672>=</span> id[ADDRW<span style=color:#f92672>-</span><span style=color:#ae81ff>3</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] <span style=color:#f92672>-</span> <span style=color:#ae81ff>2</span><span style=color:#f92672>*</span>ROM_DEPTH;  <span style=color:#75715e>// III: 180° to 270°
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>            <span style=color:#ae81ff>2</span><span style=color:#ae81ff>&#39;b11</span><span style=color:#f92672>:</span> tab_id <span style=color:#f92672>=</span> <span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>ROM_DEPTH <span style=color:#f92672>-</span> id[ADDRW<span style=color:#f92672>-</span><span style=color:#ae81ff>3</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>];  <span style=color:#75715e>// IV:  270° to 360°
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>        <span style=color:#66d9ef>endcase</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>always_comb</span> <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> (id <span style=color:#f92672>==</span> ROM_DEPTH) <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// sin(90°) = +1.0
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>            data <span style=color:#f92672>=</span> {{ROM_WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span>{<span style=color:#ae81ff>1</span><span style=color:#ae81ff>&#39;b0</span>}}, <span style=color:#ae81ff>1</span><span style=color:#ae81ff>&#39;b1</span>, {ROM_WIDTH{<span style=color:#ae81ff>1</span><span style=color:#ae81ff>&#39;b0</span>}}};
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>end</span> <span style=color:#66d9ef>else</span> <span style=color:#66d9ef>if</span> (id <span style=color:#f92672>==</span> <span style=color:#ae81ff>3</span><span style=color:#f92672>*</span>ROM_DEPTH) <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// sin(270°) = -1.0
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>            data <span style=color:#f92672>=</span> {{ROM_WIDTH{<span style=color:#ae81ff>1</span><span style=color:#ae81ff>&#39;b1</span>}}, {ROM_WIDTH{<span style=color:#ae81ff>1</span><span style=color:#ae81ff>&#39;b0</span>}}};
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>end</span> <span style=color:#66d9ef>else</span> <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>if</span> (quad[<span style=color:#ae81ff>1</span>] <span style=color:#f92672>==</span> <span style=color:#ae81ff>0</span>) <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// positive in quadrant I and II
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                data <span style=color:#f92672>=</span> {{ROM_WIDTH{<span style=color:#ae81ff>1</span><span style=color:#ae81ff>&#39;b0</span>}}, tab_data};
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>end</span> <span style=color:#66d9ef>else</span> <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>                data <span style=color:#f92672>=</span> {<span style=color:#ae81ff>2</span><span style=color:#f92672>*</span>ROM_WIDTH{<span style=color:#ae81ff>1</span><span style=color:#ae81ff>&#39;b0</span>}} <span style=color:#f92672>-</span> {{ROM_WIDTH{<span style=color:#ae81ff>1</span><span style=color:#ae81ff>&#39;b0</span>}}, tab_data};
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>endmodule</span>
 </span></span></code></pre></div><p><em>NB. This module outputs combinational logic, so you may want to register the results depending on your design and FPGA.
-I may change this in future versions if it proves to be too much of a timing headache.</em></p>
-<h3 id="test-bench">Test Bench</h3>
-<p>There is a Vivado test bench available in the library: <strong>[<a href="https://github.com/projf/projf-explore/blob/main/lib/maths/xc7/sine_table_tb.sv">sine_table_tb.sv</a>]</strong>. A Verilator test example will be added later.</p>
-<h3 id="module-usage">Module Usage</h3>
-<p>The output is <em>signed</em> fixed-point, with twice the width of the ROM data. For example, if you have an 8-bit table, you&rsquo;ll get a 16-bit signed result with eight integer and eight fractional bits (Q8.8). If you&rsquo;re new to fixed point, check out <a href="/posts/fixed-point-numbers-in-verilog/">Fixed Point Numbers in Verilog</a>.</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span>    <span style="color:#66d9ef">localparam</span> ROM_DEPTH<span style="color:#f92672">=</span><span style="color:#ae81ff">64</span>;    <span style="color:#75715e">// number of entries in sine ROM for 0° to 90°
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> ROM_WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>;     <span style="color:#75715e">// width of sine ROM data
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> ROM_FILE<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;sine_table_64x8.mem&#34;</span>;  <span style="color:#75715e">// file to populate ROM
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> ADDRW<span style="color:#f92672">=</span>$clog2(<span style="color:#ae81ff">4</span><span style="color:#f92672">*</span>ROM_DEPTH);  <span style="color:#75715e">// full circle is 0° to 360°
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> [ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] id;  <span style="color:#75715e">// table ID to lookup
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [<span style="color:#ae81ff">2</span><span style="color:#f92672">*</span>ROM_WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] data; <span style="color:#75715e">// answer
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    sine_table #(
-</span></span><span style="display:flex;"><span>        .ROM_DEPTH(ROM_DEPTH),
-</span></span><span style="display:flex;"><span>        .ROM_WIDTH(ROM_WIDTH),
-</span></span><span style="display:flex;"><span>        .ROM_FILE(ROM_FILE)
-</span></span><span style="display:flex;"><span>    ) sine_table_inst (
-</span></span><span style="display:flex;"><span>        .id,
-</span></span><span style="display:flex;"><span>        .data
-</span></span><span style="display:flex;"><span>    );
-</span></span></code></pre></div><p>Practical usage is straightforward; let&rsquo;s look at some examples.</p>
-<h4 id="sine-30">Sine 30°</h4>
-<p>First, you find the <code>id</code> that equates to 30 degrees.</p>
-<p>Our ROM has 64 entries covering 90°, so we want 30 x 64/90 = <code>21.333</code>, which rounds to <code>21</code>.</p>
-<p>For <code>id=21</code> the module returns: <code>00000000.01111110 == 0.492188</code></p>
-<p>As you may know, <code>sin(30) = 0.5</code> exactly. Out value isn&rsquo;t quite right, but we can&rsquo;t represent 30 degrees exactly using a power of two. You can increase your accuracy by using a larger table at the cost of more logic. However, for exact values, you&rsquo;re probably better of calculating them in logic, a topic we plan to cover at a later date.</p>
-<h4 id="sine--45">Sine -45°</h4>
-<p>How about -45°, which is equivalent to 315° (360-45)?</p>
-<p>315 x 64/90 = <code>224</code>, an exact value!</p>
-<p>For <code>id=224</code> the module returns: <code>11111111.01001011 == -0.707031</code></p>
-<p>My HP 35s calculator gives a value of <code>-0.707107</code>. In this case, our accuracy is limited by using only 8-bits for the fractional part of the answer: the smallest value we can represent is <code>1/256 = ~0.004</code>, so we can&rsquo;t expect more than two decimal places of accuracy.</p>
-<h4 id="cosine-30">Cosine 30°</h4>
-<p>Cosine is offset from sine by 90°. Calculating cosine is as simple as subtracting the angle from 90° before determining the id.</p>
-<p>For example, to calculate the cosine of 30°:</p>
-<p>Subtract the angle from 90: <code>90-30 = 60</code>, then convert to id: 60 x 64/90 = <code>42.666</code>, which rounds to 43.</p>
-<p>For <code>id=43</code> the module returns: <code>00000000.11011111 == 0.871094</code></p>
-<p>My HP 35s calculator gives a value of <code>0.8660254</code>.</p>
-<h3 id="practical-examples">Practical Examples</h3>
-<p>You can see this module in action in my <a href="/posts/sinescroll/">Sine Scroller</a> demo.</p>
-<p><img src="/img/posts/sinescroll/fpga-demo.png" alt="FPGA Demo" title=""></p>
-<h3 id="rom-implementation">ROM Implementation</h3>
-<p>The sine table module loads the sine table data into an asynchronous ROM <strong>[<a href="https://github.com/projf/projf-explore/blob/main/lib/memory/rom_async.sv">rom_async.sv</a>]</strong>:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> rom_async #(
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> DEPTH<span style="color:#f92672">=</span><span style="color:#ae81ff">256</span>,
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> INIT_F<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;&#34;</span>,
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">localparam</span> ADDRW<span style="color:#f92672">=</span>$clog2(DEPTH)
-</span></span><span style="display:flex;"><span>    ) (
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] addr,
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] data
-</span></span><span style="display:flex;"><span>    );
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] memory [DEPTH];
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">initial</span> <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (INIT_F <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>            $display(<span style="color:#e6db74">&#34;Creating rom_async from init file &#39;%s&#39;.&#34;</span>, INIT_F);
-</span></span><span style="display:flex;"><span>            $readmemh(INIT_F, memory);
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always_comb</span> data <span style="color:#f92672">=</span> memory[addr];
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
-</span></span></code></pre></div><p>Small tables work well with <code>rom_async</code>. For more substantial lookup tables, block ram (BRAM) is a better choice. To use BRAM, substitute <a href="https://github.com/projf/projf-explore/blob/main/lib/memory/rom_sync.sv">rom_sync</a> into the design and add a clock signal. Beware of the additional cycle of latency when using BRAM.</p>
-<p>That wraps up this recipe, but you might like to check out the <a href="/howto">how to</a> section for more tasty logic goodness.</p>
-<p><em>Get in touch with <a href="https://mastodon.social/@WillFlux">@WillFlux</a> or join me on <a href="https://github.com/projf/projf-explore/discussions">GitHub Discussions</a> and <a href="https://discord.gg/cf869yDbXf">1BitSquared Discord</a>.</em></p>
-
-      
-    </div>
-    
-  </div>
-</section>
-
-    <script src="/js/copycode.js"></script>
-
-
-
-<section class="section">
-  <div class="container has-text-centered">
-    <p>©2023 Will Green, Project F</p>
-    
-  </div>
-</section>
-
-
-<script src="https://badgers.projectf.io/script.js" data-site="EVCGKVDN" defer></script>
-
-
-
-</body>
-</html>
-
+I may change this in future versions if it proves to be too much of a timing headache.</em></p><h3 id=test-bench>Test Bench</h3><p>There is a Vivado test bench available in the library: <strong>[<a href=https://github.com/projf/projf-explore/blob/main/lib/maths/xc7/sine_table_tb.sv>sine_table_tb.sv</a>]</strong>. A Verilator test example will be added later.</p><h3 id=module-usage>Module Usage</h3><p>The output is <em>signed</em> fixed-point, with twice the width of the ROM data. For example, if you have an 8-bit table, you&rsquo;ll get a 16-bit signed result with eight integer and eight fractional bits (Q8.8). If you&rsquo;re new to fixed point, check out <a href=/posts/fixed-point-numbers-in-verilog/>Fixed Point Numbers in Verilog</a>.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span>    <span style=color:#66d9ef>localparam</span> ROM_DEPTH<span style=color:#f92672>=</span><span style=color:#ae81ff>64</span>;    <span style=color:#75715e>// number of entries in sine ROM for 0° to 90°
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>localparam</span> ROM_WIDTH<span style=color:#f92672>=</span><span style=color:#ae81ff>8</span>;     <span style=color:#75715e>// width of sine ROM data
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>localparam</span> ROM_FILE<span style=color:#f92672>=</span><span style=color:#e6db74>&#34;sine_table_64x8.mem&#34;</span>;  <span style=color:#75715e>// file to populate ROM
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>localparam</span> ADDRW<span style=color:#f92672>=</span>$clog2(<span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>ROM_DEPTH);  <span style=color:#75715e>// full circle is 0° to 360°
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>logic</span> [ADDRW<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] id;  <span style=color:#75715e>// table ID to lookup
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> <span style=color:#66d9ef>signed</span> [<span style=color:#ae81ff>2</span><span style=color:#f92672>*</span>ROM_WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] data; <span style=color:#75715e>// answer
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    sine_table #(
+</span></span><span style=display:flex><span>        .ROM_DEPTH(ROM_DEPTH),
+</span></span><span style=display:flex><span>        .ROM_WIDTH(ROM_WIDTH),
+</span></span><span style=display:flex><span>        .ROM_FILE(ROM_FILE)
+</span></span><span style=display:flex><span>    ) sine_table_inst (
+</span></span><span style=display:flex><span>        .id,
+</span></span><span style=display:flex><span>        .data
+</span></span><span style=display:flex><span>    );
+</span></span></code></pre></div><p>Practical usage is straightforward; let&rsquo;s look at some examples.</p><h4 id=sine-30>Sine 30°</h4><p>First, you find the <code>id</code> that equates to 30 degrees.</p><p>Our ROM has 64 entries covering 90°, so we want 30 x 64/90 = <code>21.333</code>, which rounds to <code>21</code>.</p><p>For <code>id=21</code> the module returns: <code>00000000.01111110 == 0.492188</code></p><p>As you may know, <code>sin(30) = 0.5</code> exactly. Out value isn&rsquo;t quite right, but we can&rsquo;t represent 30 degrees exactly using a power of two. You can increase your accuracy by using a larger table at the cost of more logic. However, for exact values, you&rsquo;re probably better of calculating them in logic, a topic we plan to cover at a later date.</p><h4 id=sine--45>Sine -45°</h4><p>How about -45°, which is equivalent to 315° (360-45)?</p><p>315 x 64/90 = <code>224</code>, an exact value!</p><p>For <code>id=224</code> the module returns: <code>11111111.01001011 == -0.707031</code></p><p>My HP 35s calculator gives a value of <code>-0.707107</code>. In this case, our accuracy is limited by using only 8-bits for the fractional part of the answer: the smallest value we can represent is <code>1/256 = ~0.004</code>, so we can&rsquo;t expect more than two decimal places of accuracy.</p><h4 id=cosine-30>Cosine 30°</h4><p>Cosine is offset from sine by 90°. Calculating cosine is as simple as subtracting the angle from 90° before determining the id.</p><p>For example, to calculate the cosine of 30°:</p><p>Subtract the angle from 90: <code>90-30 = 60</code>, then convert to id: 60 x 64/90 = <code>42.666</code>, which rounds to 43.</p><p>For <code>id=43</code> the module returns: <code>00000000.11011111 == 0.871094</code></p><p>My HP 35s calculator gives a value of <code>0.8660254</code>.</p><h3 id=practical-examples>Practical Examples</h3><p>You can see this module in action in my <a href=/posts/sinescroll/>Sine Scroller</a> demo.</p><p><img src=/img/posts/sinescroll/fpga-demo.png alt="FPGA Demo" title></p><h3 id=rom-implementation>ROM Implementation</h3><p>The sine table module loads the sine table data into an asynchronous ROM <strong>[<a href=https://github.com/projf/projf-explore/blob/main/lib/memory/rom_async.sv>rom_async.sv</a>]</strong>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span><span style=color:#66d9ef>module</span> rom_async #(
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>parameter</span> WIDTH<span style=color:#f92672>=</span><span style=color:#ae81ff>8</span>,
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>parameter</span> DEPTH<span style=color:#f92672>=</span><span style=color:#ae81ff>256</span>,
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>parameter</span> INIT_F<span style=color:#f92672>=</span><span style=color:#e6db74>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>localparam</span> ADDRW<span style=color:#f92672>=</span>$clog2(DEPTH)
+</span></span><span style=display:flex><span>    ) (
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>input</span> <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> [ADDRW<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] addr,
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>output</span>     <span style=color:#66d9ef>logic</span> [WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] data
+</span></span><span style=display:flex><span>    );
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>logic</span> [WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] memory [DEPTH];
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>initial</span> <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> (INIT_F <span style=color:#f92672>!=</span> <span style=color:#ae81ff>0</span>) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>            $display(<span style=color:#e6db74>&#34;Creating rom_async from init file &#39;%s&#39;.&#34;</span>, INIT_F);
+</span></span><span style=display:flex><span>            $readmemh(INIT_F, memory);
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>always_comb</span> data <span style=color:#f92672>=</span> memory[addr];
+</span></span><span style=display:flex><span><span style=color:#66d9ef>endmodule</span>
+</span></span></code></pre></div><p>Small tables work well with <code>rom_async</code>. For more substantial lookup tables, block ram (BRAM) is a better choice. To use BRAM, substitute <a href=https://github.com/projf/projf-explore/blob/main/lib/memory/rom_sync.sv>rom_sync</a> into the design and add a clock signal. Beware of the additional cycle of latency when using BRAM.</p><p>That wraps up this recipe, but you might like to check out the <a href=/tutorials/#how-to>how to</a> section for more tasty logic goodness.</p><p><em>Get in touch with <a href=https://mastodon.social/@WillFlux>@WillFlux</a> or join me on <a href=https://github.com/projf/projf-explore/discussions>GitHub Discussions</a> and <a href=https://discord.gg/cf869yDbXf>1BitSquared Discord</a>.</em></p></section><footer class="mt-12 flex flex-wrap"><a class="mr-1.5 mb-1.5 rounded-lg bg-black/[3%] px-5 py-2 no-underline dark:bg-white/[8%]" href=https://projectf.io/tags/maths>maths</a></footer><nav class="mt-24 flex rounded-lg bg-black/[3%] text-lg dark:bg-white/[8%]"><a class="flex w-1/2 items-center rounded-l-md p-6 pr-3 no-underline hover:bg-black/[2%]" href=https://projectf.io/posts/news-2021-05/><span class=mr-1.5>←</span><span>News: May 2021</span></a>
+<a class="ml-auto flex w-1/2 items-center justify-end rounded-r-md p-6 pl-3 no-underline hover:bg-black/[2%]" href=https://projectf.io/posts/hello-arty-3/><span>Hello Arty - Part 3</span><span class=ml-1.5>→</span></a></nav></article></main><footer class="opaco mx-auto flex h-[5rem] max-w-3xl items-center px-8 text-[0.9em] opacity-60"><div class=mr-auto><a class=link href=https://projectf.io>Project F</a>
+&copy; 2023 Will Green.</div></footer></body></html>

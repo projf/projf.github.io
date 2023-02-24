@@ -1,495 +1,293 @@
-<!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml"  lang="en-gb">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
-<title>Square Root in Verilog | Project F: FPGA Dev</title>
-
-<meta property='og:title' content='Square Root in Verilog - Project F: FPGA Dev'>
-<meta property='og:description' content='The square root is useful in many circumstances, including statistics, graphics, and signal processing. In this how to, we&rsquo;re going to look at a straightforward digit-by-digit square root algorithm for integer and fixed-point numbers. There are lower-latency methods, but this one is simple, using only subtraction and bit shifts. This post was last updated in June 2021.
+<!doctype html><html class="not-ready text-sm lg:text-base" style=--bg:#fff lang=en-gb><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><title>Square Root in Verilog - Project F</title><meta name=theme-color><meta name=description content="The square root is useful in many circumstances, including statistics, graphics, and signal processing. In this how to, we&rsquo;re going to look at a straightforward digit-by-digit square root algorithm for integer and fixed-point numbers. There are lower-latency methods, but this one is simple, using only subtraction and bit shifts.
 New to Verilog maths? Check out my introduction to Numbers in Verilog.
-Get in touch with @WillFlux or join me on GitHub Discussions and 1BitSquared Discord.'>
-<meta property='og:url' content='https://projectf.io/posts/square-root-in-verilog/'>
-<meta property='og:site_name' content='Project F: FPGA Dev'>
-<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/square-root-in-verilog/social-card.png'><meta property='article:published_time' content='2020-12-22T00:00:00Z'><meta property='article:modified_time' content='2021-06-27T00:00:00Z'><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
-
-
-<link href="https://projectf.io/index.xml" rel="alternate" type="application/rss+xml" title="Project F: FPGA Dev">
-
-<link rel="stylesheet" href="/css/style.css"><link rel='stylesheet' href='https://projectf.io/css/custom.css'>
-
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-<link rel="manifest" href="/site.webmanifest">
-<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
-<link rel="canonical" href="https://projectf.io/posts/square-root-in-verilog/">
-<meta name="msapplication-TileColor" content="#da532c">
-<meta name="theme-color" content="#ffffff">
-</head>
-<body>
-
-<section class="section">
-  <div class="container">
-    <nav id="nav-main" class="nav">
-      <div id="nav-name" class="nav-left">
-        <a id="nav-anchor" class="nav-item" href="https://projectf.io">
-          <h1 id="nav-heading" class="title is-4">Project F: FPGA Dev</h1>
-        </a>
-      </div>
-      <div class="nav-right">
-        <nav id="nav-items" class="nav-item level is-mobile"><a class="level-item" aria-label="github" href='https://github.com/projf/projf-explore'
-            target='_blank' rel='me noopener'>
-            <span class="icon">
-              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
-    
-    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
-    
-  </svg>
-</i>
-            </span>
-          </a><a class="level-item" aria-label="mastodon" href='https://mastodon.social/@WillFlux'
-            target='_blank' rel='me noopener'>
-            <span class="icon">
-              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
-    
-    <path d="M 11.966876,0.80329086 C 9.1123466,0.82665791 6.3664935,1.1367094 4.7662978,1.8737549 c 0,0 -3.1736685,1.4237835 -3.1736685,6.2815982 0,1.1123884 -0.021554,2.4424309 0.013571,3.8529439 0.1152443,4.750677 0.8683725,9.432704 5.2479219,10.595273 2.0193066,0.53604 3.7531218,0.648348 5.1494078,0.571373 2.532141,-0.140797 3.953603,-0.906282 3.953603,-0.906282 l -0.08353,-1.842608 c 0,0 -1.809527,0.572181 -3.841713,0.50245 -2.013417,-0.06922 -4.138986,-0.217713 -4.4646269,-2.696937 -0.030082,-0.217772 -0.045075,-0.450712 -0.045075,-0.695267 0,0 1.9765387,0.484554 4.4813709,0.599656 1.531629,0.07049 2.9679,-0.08996 4.426746,-0.264563 2.797636,-0.335045 5.233581,-2.063856 5.539741,-3.643517 0.482392,-2.488386 0.442651,-6.0725219 0.442651,-6.0725219 0,-4.8578147 -3.173492,-6.2815982 -3.173492,-6.2815982 C 17.639136,1.1367094 14.891579,0.82669685 12.03704,0.80329086 Z"/>
-  <path d="M 6.4286668,14.016701 V 9.1034254 c 0,-1.0041614 0.2549569,-1.8022059 0.7670342,-2.3925638 0.5280486,-0.590366 1.2196579,-0.8929946 2.0781049,-0.8929946 0.9931961,0 1.7452181,0.3828583 2.2425191,1.1486808 L 11.999859,7.7793695 12,11.451148 11.999859,7.7793695 12.483392,6.9665478 C 12.980596,6.2007253 13.732618,5.817867 14.72592,5.817867 c 0.858341,0 1.549951,0.3026286 2.078097,0.8929946 0.511971,0.5903579 0.766887,1.3884024 0.766887,2.3925638 v 4.9132756" />
-    
-  </svg>
-</i>
-            </span>
-          </a><a class="level-item" aria-label="youtube" href='https://youtube.com/@projf'
-            target='_blank' rel='me noopener'>
-            <span class="icon">
-              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
-    
-    <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/>
-    <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/>
-    
-  </svg>
-</i>
-            </span>
-          </a><a class="level-item" aria-label="rss" href='/index.xml'
-            target='_blank' rel='me noopener'>
-            <span class="icon">
-              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
-    
-    <path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle>
-    
-  </svg>
-</i>
-            </span>
-          </a></nav>
-      </div>
-    </nav>
-
-    <nav class="nav">
-      
-      <div class="nav-left"><a class="nav-item" href="/about">
-          <h2 class="title is-5">About</h2>
-        </a><a class="nav-item" href="/demos">
-          <h2 class="title is-5">Demos</h2>
-        </a><a class="nav-item" href="/howto">
-          <h2 class="title is-5">How To</h2>
-        </a><a class="nav-item" href="/tags/news">
-          <h2 class="title is-5">News</h2>
-        </a><a class="nav-item" href="/tutorials">
-          <h2 class="title is-5">Tutorials</h2>
-        </a><a class="nav-item" href="/verilog-lib">
-          <h2 class="title is-5">Verilog Lib</h2>
-        </a></div>
-      
-
-      
-    </nav>
-
-  </div>
-  <script src="/js/navicon-shift.js"></script>
-</section>
-
-<section class="section">
-  <div class="container">
-    <div class="subtitle tags is-6 is-pulled-right">
-      
-      
-<a class="subtitle is-6" href="/tags/maths/">#maths</a>
-
-
-
-
-      
-    </div>
-    <h2 class="subtitle is-6">22 December 2020</h2>
-    <h1 class="title">Square Root in Verilog</h1>
-    
-    <div class="content">
-      <p>The square root is useful in many circumstances, including statistics, graphics, and signal processing. In this <a href="/howto">how to</a>, we&rsquo;re going to look at a straightforward digit-by-digit square root algorithm for integer and <a href="/posts/fixed-point-numbers-in-verilog/">fixed-point numbers</a>. There are lower-latency methods, but this one is simple, using only subtraction and bit shifts. This post was last updated in June 2021.</p>
-<p>New to Verilog maths? Check out my introduction to <a href="/posts/numbers-in-verilog">Numbers in Verilog</a>.</p>
-<p><em>Get in touch with <a href="https://mastodon.social/@WillFlux">@WillFlux</a> or join me on <a href="https://github.com/projf/projf-explore/discussions">GitHub Discussions</a> and <a href="https://discord.gg/cf869yDbXf">1BitSquared Discord</a>.</em></p>
-<blockquote>
-<p><strong>Sponsor My Work</strong><br>
-If you like what I do, consider <a href="https://github.com/sponsors/WillGreen">sponsoring me</a> on GitHub.<br>
-I love FPGAs and want to help more people discover and use them in their projects.<br>
-My hardware designs are open source, and my blog is advert free.</p>
-</blockquote>
-<h3 id="source">Source</h3>
-<p>The SystemVerilog designs featured in this post are available from the <a href="https://github.com/projf/projf-explore/tree/main/lib/maths">Project F Library</a> under the open-source MIT licence: build on them to your heart&rsquo;s content. The rest of the blog content is subject to standard copyright restrictions: don&rsquo;t republish it without permission.</p>
-<h2 id="getting-radical">Getting Radical</h2>
-<p>The square root of a number is a second number that multiplied by itself produces the first number. If <code>b</code> is the square root of <code>a</code>, then the following are different ways of representing their relationship:</p>
-<ul>
-<li><code>b² = a</code></li>
-<li><code>b = a</code><sup><code>1/2</code></sup></li>
-<li><code>b = √a</code></li>
-</ul>
-<p>The square root is usually represented with the <strong><a href="https://en.wikipedia.org/wiki/Radical_symbol">radical sign</a></strong> <code>√</code>.</p>
-<p>Let&rsquo;s look at a few concrete examples:</p>
-<ul>
-<li><code>√4 = 2</code></li>
-<li><code>√100 = 10</code></li>
-<li><code>√2 ≈ 1.41421</code></li>
-<li><code>√3 ≈ 1.73205</code></li>
-</ul>
-<p>Most square roots are <a href="https://en.wikipedia.org/wiki/Irrational_number">irrational</a>, so we only get an approximate answer algorithmically. However, the good news is that our method will provide an exact solution if one exists.</p>
-<p>We&rsquo;re only going to consider the positive root in this post, but there is also a negative root. For example, the square roots of <code>4</code> are <code>+2</code> <em>and</em> <code>-2</code>.</p>
-<h2 id="triangles">Triangles</h2>
-<p><a href="https://en.wikipedia.org/wiki/Pythagorean_theorem">Pythagoras&rsquo;s theorem</a> is a fundamental equation in geometry. For a right-angled triangle, the area of the square of the hypotenuse is equal to the sum of the areas of the squares on the other two sides.</p>
-<p><img src="/img/posts/square-root-in-verilog/pythagorean-triangle.png" alt="Pythagorean Triangle"></p>
-<p><code>a² + b² = c²</code></p>
-<p>Finding <code>c</code> is a common problem in computer graphics, which means solving <code>√(a² + b²)</code>.</p>
-<p>For 3D modelling, it&rsquo;s common to need the <a href="https://en.wikipedia.org/wiki/Fast_inverse_square_root">reciprocal</a> of <code>c</code>.</p>
-<p><em>Diagram courtesy of <a href="https://commons.wikimedia.org/wiki/File:Pythagorean.svg">Wikipedia</a> under the Creative Commons <a href="https://creativecommons.org/licenses/by-sa/3.0/deed.en">Attribution-Share Alike licence</a>.</em></p>
-<h2 id="the-long-route">The Long Route</h2>
-<p>So far, so (probably) familiar. However, you&rsquo;re unlikely to have calculated square roots by hand. Superficially, square roots seem too hard to do manually, but the approach is almost the same as <a href="/posts/division-in-verilog/#long-division">long division</a>. I won&rsquo;t go into the mathematics here, but Wikipedia has a decent write up: <a href="https://en.wikipedia.org/wiki/Methods_of_computing_square_roots#Digit-by-digit_calculation">methods of computing square roots</a>. Instead, we&rsquo;ll take a simple example, then turn it into a Verilog algorithm.</p>
-<h3 id="example-1111001">Example: √1111001</h3>
-<p>The number we&rsquo;re finding the root of is known as the <strong>radicand</strong>.</p>
-<p>For our example, the radicand is <code>1111001</code> (121 in decimal).</p>
-<p>Our algorithm works with pairs of digits. Before we begin our calculation, we need to split the radicand into pairs starting with the least significant. Thus <code>1111001</code> becomes <code>01 11 10 01</code>.</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-plaintext" data-lang="plaintext"><span style="display:flex;"><span>     1  0  1  1     Our answer: one digit for each pair of digits in the radicand
-</span></span><span style="display:flex;"><span>    ———————————
-</span></span><span style="display:flex;"><span>   √01 11 10 01     Our radicand
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    01              Bring down the most significant pair
-</span></span><span style="display:flex;"><span>  - 01              Subtract 01
-</span></span><span style="display:flex;"><span>    ——
-</span></span><span style="display:flex;"><span>    00              Our answer is NOT negative, so our first answer digit is 1
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    00 11           Bring down the next pair of digits and append to previous result
-</span></span><span style="display:flex;"><span>  - 01 01           Append 01 to our existing answer, 1, and subtract it
-</span></span><span style="display:flex;"><span>    —————
-</span></span><span style="display:flex;"><span>    11 00           Our result is negative, so our second answer digit is 0
-</span></span><span style="display:flex;"><span>                    We discard the result because it&#39;s negative
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    00 11 10        Keep the existing digits, 00 11, and append the next pair
-</span></span><span style="display:flex;"><span>  -    10 01        Append 01 to our existing answer, 10, and subtract it
-</span></span><span style="display:flex;"><span>    ————————
-</span></span><span style="display:flex;"><span>       01 01        Our answer is NOT negative, so our next answer digit is 1
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>       01 01 01     Bring down the next pair of digits and append to previous result
-</span></span><span style="display:flex;"><span>    -  01 01 01     Append 01 to our existing answer, 101, and subtract it
-</span></span><span style="display:flex;"><span>       ————————
-</span></span><span style="display:flex;"><span>             00     Our answer is NOT negative, so our next answer digit is 1
-</span></span></code></pre></div><p>There are no more pairs of digits, and the result of our last step is 0, so our answer is exact:</p>
-<p><code>√1111001 = 1011</code> or in decimal <code>√121 = 11</code>.</p>
-<p>We&rsquo;ll look at what happens for irrational roots, such as √2, when we come to fixed-point numbers.</p>
-<h2 id="algorithm-implementation">Algorithm Implementation</h2>
-<p>To make our algorithm usable on an FPGA, we need to turn the steps into simple operations we can represent in Verilog. The main change is using shifts to select numbers to work on. We&rsquo;ll use four registers in our algorithm:</p>
-<ul>
-<li><strong>X</strong> - input radicand we want the square root of</li>
-<li><strong>A</strong> - holds the current value we&rsquo;re working on</li>
-<li><strong>T</strong> - result of sign test</li>
-<li><strong>Q</strong> - the square root</li>
-</ul>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-plaintext" data-lang="plaintext"><span style="display:flex;"><span>Input: X=01111001 (decimal 121)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Step  A         X         T         Q       Description
-</span></span><span style="display:flex;"><span>——————————————————————————————————————————————————————————————————————————————
-</span></span><span style="display:flex;"><span>      00000000  01111001  00000000  0000    Starting values.
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>1     00000001  11100100                    Left shift X by two places into A.
-</span></span><span style="display:flex;"><span>                          00000000          Set T = A - {Q,01}: 01 - 01.
-</span></span><span style="display:flex;"><span>                                    0000    Left shift Q.
-</span></span><span style="display:flex;"><span>      00000000                      0001    Is T≥0? Yes. Set A=T and Q[0]=1.
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>2     00000011  10010000                    Left shift X by two places into A.
-</span></span><span style="display:flex;"><span>                          11111100          Set T = A - {Q,01}: 11 - 101.
-</span></span><span style="display:flex;"><span>                                    0010    Left shift Q.
-</span></span><span style="display:flex;"><span>                                            Is T≥0? No. Move to next step.
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>3     00001110  01000000                    Left shift X by two places into A.
-</span></span><span style="display:flex;"><span>                          00000101          Set T = A - {Q,01}: 1110 - 1001
-</span></span><span style="display:flex;"><span>                                    0100    Left shift Q.
-</span></span><span style="display:flex;"><span>      00000101                      0101    Is T≥0? Yes. Set A=T and Q[0]=1.
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>4     00010101  00000000                    Left shift X by two places into A.
-</span></span><span style="display:flex;"><span>                          00000000          Set T = A - {Q,01}: 10101 - 10101.
-</span></span><span style="display:flex;"><span>                                    1010    Left shift Q.
-</span></span><span style="display:flex;"><span>      00000000                      1011    Is T≥0? Yes. Set A=T and Q[0]=1.
-</span></span><span style="display:flex;"><span>——————————————————————————————————————————————————————————————————————————————
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Output: Q=1010 (decimal 11), R=0 (remainder taken from final A).
-</span></span></code></pre></div><h2 id="verilog-module">Verilog Module</h2>
-<p>Our Verilog design uses the above algorithm, but you can configure the width of the radicand. <code>WIDTH</code> must be a multiple of two, for example, when working with seven binary digits, you must set the width to eight.</p>
-<p>Project F Library source: <strong>[<a href="https://github.com/projf/projf-explore/tree/main/lib/maths/sqrt_int.sv">sqrt_int.sv</a>]</strong>.</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> sqrt_int #(<span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>) (      <span style="color:#75715e">// width of radicand
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> start,             <span style="color:#75715e">// start signal
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> busy,              <span style="color:#75715e">// calculation in progress
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> valid,             <span style="color:#75715e">// root and rem are valid
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] rad,   <span style="color:#75715e">// radicand
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] root,  <span style="color:#75715e">// root
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] rem    <span style="color:#75715e">// remainder
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    );
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x, x_next;    <span style="color:#75715e">// radicand copy
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] q, q_next;    <span style="color:#75715e">// intermediate root (quotient)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">+</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] ac, ac_next;  <span style="color:#75715e">// accumulator (2 bits wider)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">+</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] test_res;     <span style="color:#75715e">// sign test result (2 bits wider)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">localparam</span> ITER <span style="color:#f92672">=</span> WIDTH <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">1</span>;   <span style="color:#75715e">// iterations are half radicand width
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(ITER)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] i;     <span style="color:#75715e">// iteration counter
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>        test_res <span style="color:#f92672">=</span> ac <span style="color:#f92672">-</span> {q, <span style="color:#ae81ff">2</span><span style="color:#ae81ff">&#39;b01</span>};
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (test_res[WIDTH<span style="color:#f92672">+</span><span style="color:#ae81ff">1</span>] <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// test_res ≥0? (check MSB)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            {ac_next, x_next} <span style="color:#f92672">=</span> {test_res[WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>], x, <span style="color:#ae81ff">2</span><span style="color:#ae81ff">&#39;b0</span>};
-</span></span><span style="display:flex;"><span>            q_next <span style="color:#f92672">=</span> {q[WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">2</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>], <span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b1</span>};
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>            {ac_next, x_next} <span style="color:#f92672">=</span> {ac[WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>], x, <span style="color:#ae81ff">2</span><span style="color:#ae81ff">&#39;b0</span>};
-</span></span><span style="display:flex;"><span>            q_next <span style="color:#f92672">=</span> q <span style="color:#f92672">&lt;&lt;</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (start) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>            busy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>            valid <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>            i <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>            q <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>            {ac, x} <span style="color:#f92672">&lt;=</span> {{WIDTH{<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>}}, rad, <span style="color:#ae81ff">2</span><span style="color:#ae81ff">&#39;b0</span>};
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (busy) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> (i <span style="color:#f92672">==</span> ITER<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// we&#39;re done
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                busy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>                valid <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>                root <span style="color:#f92672">&lt;=</span> q_next;
-</span></span><span style="display:flex;"><span>                rem <span style="color:#f92672">&lt;=</span> ac_next[WIDTH<span style="color:#f92672">+</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">2</span>];  <span style="color:#75715e">// undo final shift
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// next iteration
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                i <span style="color:#f92672">&lt;=</span> i <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>                x <span style="color:#f92672">&lt;=</span> x_next;
-</span></span><span style="display:flex;"><span>                ac <span style="color:#f92672">&lt;=</span> ac_next;
-</span></span><span style="display:flex;"><span>                q <span style="color:#f92672">&lt;=</span> q_next;
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
-</span></span></code></pre></div><p>To use the module, set <code>WIDTH</code> to the correct number of bits and input <code>rad</code> to the radicand. To begin the calculation set <code>start</code> high for one clock. The <code>valid</code> signal indicates when the output data is valid; you can then read the results from <code>root</code> and <code>rem</code>. The calculation takes one cycle for each pair of bits in the radicand, so a 16-bit radicand would take eight cycles. The <code>busy</code> signal is high during calculation.</p>
-<p>The Verilog itself is straightforward. The algorithm is in the <code>always_comb</code> block, though we start with the initial shift already in place. The <code>always_ff</code> block sets up the initial values, then runs the algorithm for the number of digits in the root.</p>
-<h3 id="testing">Testing</h3>
-<p>The following Vivado test bench exercises the module. A Verilator test bench will be added in due course.</p>
-<p>Project F Library source: <strong>[<a href="https://github.com/projf/projf-explore/tree/main/lib/maths/xc7/sqrt_int_tb.sv">xc7/sqrt_int_tb.sv</a>]</strong>.</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> sqrt_int_tb();
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> CLK_PERIOD <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>;
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> WIDTH <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span>;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> clk;
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> start;             <span style="color:#75715e">// start signal
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> busy;              <span style="color:#75715e">// calculation in progress
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> valid;             <span style="color:#75715e">// root and rem are valid
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] rad;   <span style="color:#75715e">// radicand
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] root;  <span style="color:#75715e">// root
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] rem;   <span style="color:#75715e">// remainder
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
-</span></span><span style="display:flex;"><span>    sqrt_int #(.WIDTH(WIDTH)) sqrt_inst (.<span style="color:#f92672">*</span>);
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always</span> #(CLK_PERIOD <span style="color:#f92672">/</span> <span style="color:#ae81ff">2</span>) clk <span style="color:#f92672">=</span> <span style="color:#f92672">~</span>clk;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">initial</span> <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>        $monitor(<span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">%d:</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">sqrt(%d) =%d (rem =%d) (V=%b)&#34;</span>, $time, rad, root, rem, valid);
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">initial</span> <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>                clk <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>        #<span style="color:#ae81ff">100</span>    rad <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b00000000</span>;  <span style="color:#75715e">// 0
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                start <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>        #<span style="color:#ae81ff">10</span>     start <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>        #<span style="color:#ae81ff">50</span>     rad <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b00000001</span>;  <span style="color:#75715e">// 1
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                start <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>        #<span style="color:#ae81ff">10</span>     start <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>        #<span style="color:#ae81ff">50</span>     rad <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b01111001</span>;  <span style="color:#75715e">// 121
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                start <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>        #<span style="color:#ae81ff">10</span>     start <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>        #<span style="color:#ae81ff">50</span>     rad <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b01010001</span>;  <span style="color:#75715e">// 81
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                start <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>        #<span style="color:#ae81ff">10</span>     start <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>        #<span style="color:#ae81ff">50</span>     rad <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b01011010</span>;  <span style="color:#75715e">// 90
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                start <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>        #<span style="color:#ae81ff">10</span>     start <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>        #<span style="color:#ae81ff">50</span>     rad <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b11111111</span>;  <span style="color:#75715e">// 255
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                start <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>        #<span style="color:#ae81ff">10</span>     start <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>        #<span style="color:#ae81ff">50</span>     $finish;
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
-</span></span></code></pre></div><p>The output looks like this (<code>V=1</code> indicates the result is valid):</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-plaintext" data-lang="plaintext"><span style="display:flex;"><span>  0:    sqrt(  x) =  x (rem =  x) (V=x)
-</span></span><span style="display:flex;"><span>100:    sqrt(  0) =  x (rem =  x) (V=0)
-</span></span><span style="display:flex;"><span>140:    sqrt(  0) =  0 (rem =  0) (V=1)
-</span></span><span style="display:flex;"><span>160:    sqrt(  1) =  0 (rem =  0) (V=0)
-</span></span><span style="display:flex;"><span>200:    sqrt(  1) =  1 (rem =  0) (V=1)
-</span></span><span style="display:flex;"><span>220:    sqrt(121) =  1 (rem =  0) (V=0)
-</span></span><span style="display:flex;"><span>260:    sqrt(121) = 11 (rem =  0) (V=1)
-</span></span><span style="display:flex;"><span>280:    sqrt( 81) = 11 (rem =  0) (V=0)
-</span></span><span style="display:flex;"><span>320:    sqrt( 81) =  9 (rem =  0) (V=1)
-</span></span><span style="display:flex;"><span>340:    sqrt( 90) =  9 (rem =  0) (V=0)
-</span></span><span style="display:flex;"><span>380:    sqrt( 90) =  9 (rem =  9) (V=1)
-</span></span><span style="display:flex;"><span>400:    sqrt(255) =  9 (rem =  9) (V=0)
-</span></span><span style="display:flex;"><span>440:    sqrt(255) = 15 (rem = 30) (V=1)
-</span></span></code></pre></div><h2 id="fixed-point-roots">Fixed-Point Roots</h2>
-<p>In a previous recipe, we looked at <a href="/posts/fixed-point-numbers-in-verilog/">Fixed Point Numbers in Verilog</a>. It turns out that supporting fixed-point square roots is straightforward: we just run more iterations to account for the fractional digits. Unlike with division, there&rsquo;s no possibility of overflow, as the root of a radicand greater than 1 is always smaller than the radicand itself.</p>
-<p>This new version of the sqrt module adds a parameter <code>FBITS</code> for the number of fractional bits in the radicand (<code>FBITS</code> must be a multiple of two). For example, if we want to calculate √2 using Q8.8 format (eight integer and eight fractional bits), we set <code>WIDTH=16</code> and <code>FBITS=8</code>. The only change within the module is for <code>ITER</code>, which now accounts for fractional bits. For a Q8.8 radicand, we now perform <code>(16+8)/2 = 12</code> iterations, generating four more bits for the root.</p>
-<p>Project F Library source: <strong>[<a href="https://github.com/projf/projf-explore/tree/main/lib/maths/sqrt.sv">sqrt.sv</a>]</strong>.</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> sqrt #(
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,  <span style="color:#75715e">// width of radicand
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> FBITS<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>   <span style="color:#75715e">// fractional bits (for fixed point)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    ) (
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> start,             <span style="color:#75715e">// start signal
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> busy,              <span style="color:#75715e">// calculation in progress
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> valid,             <span style="color:#75715e">// root and rem are valid
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] rad,   <span style="color:#75715e">// radicand
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] root,  <span style="color:#75715e">// root
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] rem    <span style="color:#75715e">// remainder
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    );
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x, x_next;    <span style="color:#75715e">// radicand copy
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] q, q_next;    <span style="color:#75715e">// intermediate root (quotient)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">+</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] ac, ac_next;  <span style="color:#75715e">// accumulator (2 bits wider)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">+</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] test_res;     <span style="color:#75715e">// sign test result (2 bits wider)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">localparam</span> ITER <span style="color:#f92672">=</span> (WIDTH<span style="color:#f92672">+</span>FBITS) <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// iterations are half radicand+fbits width
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(ITER)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] i;            <span style="color:#75715e">// iteration counter
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>        test_res <span style="color:#f92672">=</span> ac <span style="color:#f92672">-</span> {q, <span style="color:#ae81ff">2</span><span style="color:#ae81ff">&#39;b01</span>};
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (test_res[WIDTH<span style="color:#f92672">+</span><span style="color:#ae81ff">1</span>] <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// test_res ≥0? (check MSB)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            {ac_next, x_next} <span style="color:#f92672">=</span> {test_res[WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>], x, <span style="color:#ae81ff">2</span><span style="color:#ae81ff">&#39;b0</span>};
-</span></span><span style="display:flex;"><span>            q_next <span style="color:#f92672">=</span> {q[WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">2</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>], <span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b1</span>};
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>            {ac_next, x_next} <span style="color:#f92672">=</span> {ac[WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>], x, <span style="color:#ae81ff">2</span><span style="color:#ae81ff">&#39;b0</span>};
-</span></span><span style="display:flex;"><span>            q_next <span style="color:#f92672">=</span> q <span style="color:#f92672">&lt;&lt;</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (start) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>            busy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>            valid <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>            i <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>            q <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>            {ac, x} <span style="color:#f92672">&lt;=</span> {{WIDTH{<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>}}, rad, <span style="color:#ae81ff">2</span><span style="color:#ae81ff">&#39;b0</span>};
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (busy) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> (i <span style="color:#f92672">==</span> ITER<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// we&#39;re done
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                busy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>                valid <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>                root <span style="color:#f92672">&lt;=</span> q_next;
-</span></span><span style="display:flex;"><span>                rem <span style="color:#f92672">&lt;=</span> ac_next[WIDTH<span style="color:#f92672">+</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">2</span>];  <span style="color:#75715e">// undo final shift
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// next iteration
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                i <span style="color:#f92672">&lt;=</span> i <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>                x <span style="color:#f92672">&lt;=</span> x_next;
-</span></span><span style="display:flex;"><span>                ac <span style="color:#f92672">&lt;=</span> ac_next;
-</span></span><span style="display:flex;"><span>                q <span style="color:#f92672">&lt;=</span> q_next;
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
-</span></span></code></pre></div><p>And we can create a simple Vivado test bench for it.</p>
-<p>Project F Library source: <strong>[<a href="https://github.com/projf/projf-explore/tree/main/lib/maths/xc7/sqrt_tb.sv">xc7/sqrt_tb.sv</a>]</strong>.</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> sqrt_tb();
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> CLK_PERIOD <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span>;
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> WIDTH <span style="color:#f92672">=</span> <span style="color:#ae81ff">16</span>;
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> FBITS <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span>;
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> SF <span style="color:#f92672">=</span> <span style="color:#ae81ff">2.0</span><span style="color:#f92672">**-</span><span style="color:#ae81ff">8.0</span>;  <span style="color:#75715e">// Q8.8 scaling factor is 2^-8
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> clk;
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> start;             <span style="color:#75715e">// start signal
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> busy;              <span style="color:#75715e">// calculation in progress
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> valid;             <span style="color:#75715e">// root and rem are valid
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] rad;   <span style="color:#75715e">// radicand
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] root;  <span style="color:#75715e">// root
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] rem;   <span style="color:#75715e">// remainder
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
-</span></span><span style="display:flex;"><span>    sqrt #(.WIDTH(WIDTH), .FBITS(FBITS)) sqrt_inst (.<span style="color:#f92672">*</span>);
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always</span> #(CLK_PERIOD <span style="color:#f92672">/</span> <span style="color:#ae81ff">2</span>) clk <span style="color:#f92672">=</span> <span style="color:#f92672">~</span>clk;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">initial</span> <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>        $monitor(<span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">%d:</span><span style="color:#ae81ff">\t</span><span style="color:#e6db74">sqrt(%f) = %b (%f) (rem = %b) (V=%b)&#34;</span>,
-</span></span><span style="display:flex;"><span>                    $time, $itor(rad<span style="color:#f92672">*</span>SF), root, $itor(root<span style="color:#f92672">*</span>SF), rem, valid);
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">initial</span> <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>                clk <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>        #<span style="color:#ae81ff">100</span>    rad <span style="color:#f92672">=</span> <span style="color:#ae81ff">16</span><span style="color:#ae81ff">&#39;b1110</span>_1000_1001_0000;  <span style="color:#75715e">// 232.56250000
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                start <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>        #<span style="color:#ae81ff">10</span>     start <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>        #<span style="color:#ae81ff">120</span>    rad <span style="color:#f92672">=</span> <span style="color:#ae81ff">16</span><span style="color:#ae81ff">&#39;b0000</span>_0000_0100_0000;  <span style="color:#75715e">// 0.25
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                start <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>        #<span style="color:#ae81ff">10</span>     start <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>        #<span style="color:#ae81ff">120</span>    rad <span style="color:#f92672">=</span> <span style="color:#ae81ff">16</span><span style="color:#ae81ff">&#39;b0000</span>_0010_0000_0000;  <span style="color:#75715e">// 2.0
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                start <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>        #<span style="color:#ae81ff">10</span>     start <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>        #<span style="color:#ae81ff">120</span>    $finish;
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
-</span></span></code></pre></div><p><em>NB. I have tested with a wide range of roots, but only show a few here to keep the example managable.</em></p>
-<p>The output looks like this (<code>V=1</code> indicates the result is valid):</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-plaintext" data-lang="plaintext"><span style="display:flex;"><span>  0:    sqrt(0.000000)   = xxxxxxxxxxxxxxxx (0.000000)  (rem = xxxxxxxxxxxxxxxx) (V=x)
-</span></span><span style="display:flex;"><span>100:    sqrt(232.562500) = xxxxxxxxxxxxxxxx (0.000000)  (rem = xxxxxxxxxxxxxxxx) (V=0)
-</span></span><span style="display:flex;"><span>220:    sqrt(232.562500) = 0000111101000000 (15.250000) (rem = 0000000000000000) (V=1)
-</span></span><span style="display:flex;"><span>230:    sqrt(0.250000)   = 0000111101000000 (15.250000) (rem = 0000000000000000) (V=0)
-</span></span><span style="display:flex;"><span>350:    sqrt(0.250000)   = 0000000010000000 (0.500000)  (rem = 0000000000000000) (V=1)
-</span></span><span style="display:flex;"><span>360:    sqrt(2.000000)   = 0000000010000000 (0.500000)  (rem = 0000000000000000) (V=0)
-</span></span><span style="display:flex;"><span>480:    sqrt(2.000000)   = 0000000101101010 (1.414062)  (rem = 0000000000011100) (V=1)
-</span></span></code></pre></div><p><code>1.01101010</code> is the correct result for <code>√2</code> using eight fractional bits. Wolfram Alpha provides a quick way to check binary square roots, for example: <a href="https://www.wolframalpha.com/input/?i=%E2%88%9A2+to+base+2">√2 to base 2</a>.</p>
-<p>The smallest value the Q8.8 format can represent is 1/256 or ~0.004 in decimal; if you want a more accurate result, you need to use more fractional bits.</p>
-<p>That wraps up this recipe, but you might like to check out <a href="/posts/division-in-verilog/">Division</a> or <a href="/posts/fpga-sine-table/">Sine &amp; Cosine</a> in Verilog.</p>
-<p><em>Get in touch with <a href="https://mastodon.social/@WillFlux">@WillFlux</a> or join me on <a href="https://github.com/projf/projf-explore/discussions">GitHub Discussions</a> and <a href="https://discord.gg/cf869yDbXf">1BitSquared Discord</a>.</em></p>
-
-      
-    </div>
-    
-  </div>
-</section>
-
-    <script src="/js/copycode.js"></script>
-
-
-
-<section class="section">
-  <div class="container has-text-centered">
-    <p>©2023 Will Green, Project F</p>
-    
-  </div>
-</section>
-
-
-<script src="https://badgers.projectf.io/script.js" data-site="EVCGKVDN" defer></script>
-
-
-
-</body>
-</html>
-
+Get in touch with @WillFlux or join me on GitHub Discussions and 1BitSquared Discord."><meta name=author content="Will Green"><link rel="preload stylesheet" as=style href=https://projectf.io/main.min.css><script defer src=https://projectf.io/highlight.min.js onload=hljs.initHighlightingOnLoad()></script>
+<link rel=preload as=image href=https://projectf.io/theme.png><link rel=preload as=image href=https://projectf.io/github.svg><link rel=preload as=image href=https://projectf.io/mastodon.svg><link rel=preload as=image href=https://projectf.io/rss.svg><link rel=icon href=https://projectf.io/favicon.ico><link rel=apple-touch-icon href=https://projectf.io/apple-touch-icon.png><meta name=generator content="Hugo 0.110.0"><script src=https://badgers.projectf.io/script.js data-site=EVCGKVDN defer></script><meta property="og:title" content="Square Root in Verilog"><meta property="og:description" content="The square root is useful in many circumstances, including statistics, graphics, and signal processing. In this how to, we&rsquo;re going to look at a straightforward digit-by-digit square root algorithm for integer and fixed-point numbers. There are lower-latency methods, but this one is simple, using only subtraction and bit shifts.
+New to Verilog maths? Check out my introduction to Numbers in Verilog.
+Get in touch with @WillFlux or join me on GitHub Discussions and 1BitSquared Discord."><meta property="og:type" content="article"><meta property="og:url" content="https://projectf.io/posts/square-root-in-verilog/"><meta property="article:section" content="posts"><meta property="article:published_time" content="2020-12-22T00:00:00+00:00"><meta property="article:modified_time" content="2021-06-27T00:00:00+00:00"><meta itemprop=name content="Square Root in Verilog"><meta itemprop=description content="The square root is useful in many circumstances, including statistics, graphics, and signal processing. In this how to, we&rsquo;re going to look at a straightforward digit-by-digit square root algorithm for integer and fixed-point numbers. There are lower-latency methods, but this one is simple, using only subtraction and bit shifts.
+New to Verilog maths? Check out my introduction to Numbers in Verilog.
+Get in touch with @WillFlux or join me on GitHub Discussions and 1BitSquared Discord."><meta itemprop=datePublished content="2020-12-22T00:00:00+00:00"><meta itemprop=dateModified content="2021-06-27T00:00:00+00:00"><meta itemprop=wordCount content="2384"><meta itemprop=keywords content="maths,"><meta name=twitter:card content="summary"><meta name=twitter:title content="Square Root in Verilog"><meta name=twitter:description content="The square root is useful in many circumstances, including statistics, graphics, and signal processing. In this how to, we&rsquo;re going to look at a straightforward digit-by-digit square root algorithm for integer and fixed-point numbers. There are lower-latency methods, but this one is simple, using only subtraction and bit shifts.
+New to Verilog maths? Check out my introduction to Numbers in Verilog.
+Get in touch with @WillFlux or join me on GitHub Discussions and 1BitSquared Discord."></head><body class="text-black duration-200 ease-out dark:text-white"><header class="mx-auto flex h-[5rem] max-w-3xl px-8 lg:justify-center"><div class="relative z-50 mr-auto flex items-center"><a class="-translate-x-[1px] -translate-y-0.5 text-3xl font-bold" href=https://projectf.io/>Project F</a>
+<a class="btn-dark ml-6 h-6 w-6 shrink-0 cursor-pointer [background:url(./theme.png)_left_center/_auto_theme('spacing.6')_no-repeat] [transition:_background-position_0.4s_steps(5)] dark:[background-position:right]"></a></div><a class="btn-menu relative z-50 -mr-8 flex h-[5rem] w-[5rem] shrink-0 cursor-pointer flex-col items-center justify-center gap-2.5 lg:hidden"></a>
+<script>const htmlClass=document.documentElement.classList;setTimeout(()=>{htmlClass.remove("not-ready")},10);const btnMenu=document.querySelector(".btn-menu");btnMenu.addEventListener("click",()=>{htmlClass.toggle("open")});const metaTheme=document.querySelector('meta[name="theme-color"]'),lightBg=`"#fff"`.replace(/"/g,""),setDark=e=>{metaTheme.setAttribute("content",e?"#000":lightBg),htmlClass[e?"add":"remove"]("dark"),localStorage.setItem("dark",e)},darkScheme=window.matchMedia("(prefers-color-scheme: dark)");if(htmlClass.contains("dark"))setDark(!0);else{const e=localStorage.getItem("dark");setDark(e?e==="true":darkScheme.matches)}darkScheme.addEventListener("change",e=>{setDark(e.matches)});const btnDark=document.querySelector(".btn-dark");btnDark.addEventListener("click",()=>{setDark(localStorage.getItem("dark")!=="true")})</script><div class="nav-wrapper fixed inset-x-0 top-full z-40 flex h-full select-none flex-col justify-center pb-16 duration-200 dark:bg-black lg:static lg:h-auto lg:flex-row lg:!bg-transparent lg:pb-0 lg:transition-none"><nav class="lg:ml-12 lg:flex lg:flex-row lg:items-center lg:space-x-6"><a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/about/>About</a>
+<a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/demos/>Demos</a>
+<a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/verilog-lib/>Lib</a>
+<a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/tools/>Tools</a>
+<a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/tutorials/>Tutorials</a></nav><nav class="mt-12 flex justify-center space-x-10 dark:invert lg:mt-0 lg:ml-12 lg:items-center lg:space-x-6"><a class="h-8 w-8 [background:var(--url)_center_center/cover_no-repeat] lg:h-6 lg:w-6" style=--url:url(./github.svg) href=https://github.com/projf target=_blank rel=me></a>
+<a class="h-8 w-8 [background:var(--url)_center_center/cover_no-repeat] lg:h-6 lg:w-6" style=--url:url(./mastodon.svg) href=https://mastodon.social/@WillFlux target=_blank rel=me></a>
+<a class="h-8 w-8 [background:var(--url)_center_center/cover_no-repeat] lg:h-6 lg:w-6" style=--url:url(./rss.svg) href=https://projectf.io/index.xml target=_blank></a></nav></div></header><main class="prose prose-neutral relative mx-auto min-h-[calc(100%-10rem)] max-w-3xl px-8 pt-20 pb-1 dark:prose-invert"><article><header class=mb-1><h1 class="!my-0 pb-2.5">Square Root in Verilog</h1><div class="text-sm opacity-60">Published
+<time>22 Dec 2020</time>
+<span class=mx-1>&#183;</span>
+<span>Updated
+<time>27 Jun 2021</time></span></div></header><section><p>The square root is useful in many circumstances, including statistics, graphics, and signal processing. In this <a href=/tutorials/#how-to>how to</a>, we&rsquo;re going to look at a straightforward digit-by-digit square root algorithm for integer and <a href=/posts/fixed-point-numbers-in-verilog/>fixed-point numbers</a>. There are lower-latency methods, but this one is simple, using only subtraction and bit shifts.</p><p>New to Verilog maths? Check out my introduction to <a href=/posts/numbers-in-verilog>Numbers in Verilog</a>.</p><p><em>Get in touch with <a href=https://mastodon.social/@WillFlux>@WillFlux</a> or join me on <a href=https://github.com/projf/projf-explore/discussions>GitHub Discussions</a> and <a href=https://discord.gg/cf869yDbXf>1BitSquared Discord</a>.</em></p><blockquote><p><strong>Sponsor My Work</strong><br>If you like what I do, consider <a href=https://github.com/sponsors/WillGreen>sponsoring me</a> on GitHub.<br>I love FPGAs and want to help more people discover and use them in their projects.<br>My hardware designs are open source, and my blog is advert free.</p></blockquote><h3 id=source>Source</h3><p>The SystemVerilog designs featured in this post are available from the <a href=https://github.com/projf/projf-explore/tree/main/lib/maths>Project F Library</a> under the open-source MIT licence: build on them to your heart&rsquo;s content. The rest of the blog content is subject to standard copyright restrictions: don&rsquo;t republish it without permission.</p><h2 id=getting-radical>Getting Radical</h2><p>The square root of a number is a second number that multiplied by itself produces the first number. If <code>b</code> is the square root of <code>a</code>, then the following are different ways of representing their relationship:</p><ul><li><code>b² = a</code></li><li><code>b = a</code><sup><code>1/2</code></sup></li><li><code>b = √a</code></li></ul><p>The square root is usually represented with the <strong><a href=https://en.wikipedia.org/wiki/Radical_symbol>radical sign</a></strong> <code>√</code>.</p><p>Let&rsquo;s look at a few concrete examples:</p><ul><li><code>√4 = 2</code></li><li><code>√100 = 10</code></li><li><code>√2 ≈ 1.41421</code></li><li><code>√3 ≈ 1.73205</code></li></ul><p>Most square roots are <a href=https://en.wikipedia.org/wiki/Irrational_number>irrational</a>, so we only get an approximate answer algorithmically. However, the good news is that our method will provide an exact solution if one exists.</p><p>We&rsquo;re only going to consider the positive root in this post, but there is also a negative root. For example, the square roots of <code>4</code> are <code>+2</code> <em>and</em> <code>-2</code>.</p><h2 id=triangles>Triangles</h2><p><a href=https://en.wikipedia.org/wiki/Pythagorean_theorem>Pythagoras&rsquo;s theorem</a> is a fundamental equation in geometry. For a right-angled triangle, the area of the square of the hypotenuse is equal to the sum of the areas of the squares on the other two sides.</p><p><img src=/img/posts/square-root-in-verilog/pythagorean-triangle.png alt="Pythagorean Triangle"></p><p><code>a² + b² = c²</code></p><p>Finding <code>c</code> is a common problem in computer graphics, which means solving <code>√(a² + b²)</code>.</p><p>For 3D modelling, it&rsquo;s common to need the <a href=https://en.wikipedia.org/wiki/Fast_inverse_square_root>reciprocal</a> of <code>c</code>.</p><p><em>Diagram courtesy of <a href=https://commons.wikimedia.org/wiki/File:Pythagorean.svg>Wikipedia</a> under the Creative Commons <a href=https://creativecommons.org/licenses/by-sa/3.0/deed.en>Attribution-Share Alike licence</a>.</em></p><h2 id=the-long-route>The Long Route</h2><p>So far, so (probably) familiar. However, you&rsquo;re unlikely to have calculated square roots by hand. Superficially, square roots seem too hard to do manually, but the approach is almost the same as <a href=/posts/division-in-verilog/#long-division>long division</a>. I won&rsquo;t go into the mathematics here, but Wikipedia has a decent write up: <a href=https://en.wikipedia.org/wiki/Methods_of_computing_square_roots#Digit-by-digit_calculation>methods of computing square roots</a>. Instead, we&rsquo;ll take a simple example, then turn it into a Verilog algorithm.</p><h3 id=example-1111001>Example: √1111001</h3><p>The number we&rsquo;re finding the root of is known as the <strong>radicand</strong>.</p><p>For our example, the radicand is <code>1111001</code> (121 in decimal).</p><p>Our algorithm works with pairs of digits. Before we begin our calculation, we need to split the radicand into pairs starting with the least significant. Thus <code>1111001</code> becomes <code>01 11 10 01</code>.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-plaintext data-lang=plaintext><span style=display:flex><span>     1  0  1  1     Our answer: one digit for each pair of digits in the radicand
+</span></span><span style=display:flex><span>    ———————————
+</span></span><span style=display:flex><span>   √01 11 10 01     Our radicand
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    01              Bring down the most significant pair
+</span></span><span style=display:flex><span>  - 01              Subtract 01
+</span></span><span style=display:flex><span>    ——
+</span></span><span style=display:flex><span>    00              Our answer is NOT negative, so our first answer digit is 1
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    00 11           Bring down the next pair of digits and append to previous result
+</span></span><span style=display:flex><span>  - 01 01           Append 01 to our existing answer, 1, and subtract it
+</span></span><span style=display:flex><span>    —————
+</span></span><span style=display:flex><span>    11 00           Our result is negative, so our second answer digit is 0
+</span></span><span style=display:flex><span>                    We discard the result because it&#39;s negative
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    00 11 10        Keep the existing digits, 00 11, and append the next pair
+</span></span><span style=display:flex><span>  -    10 01        Append 01 to our existing answer, 10, and subtract it
+</span></span><span style=display:flex><span>    ————————
+</span></span><span style=display:flex><span>       01 01        Our answer is NOT negative, so our next answer digit is 1
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>       01 01 01     Bring down the next pair of digits and append to previous result
+</span></span><span style=display:flex><span>    -  01 01 01     Append 01 to our existing answer, 101, and subtract it
+</span></span><span style=display:flex><span>       ————————
+</span></span><span style=display:flex><span>             00     Our answer is NOT negative, so our next answer digit is 1
+</span></span></code></pre></div><p>There are no more pairs of digits, and the result of our last step is 0, so our answer is exact:</p><p><code>√1111001 = 1011</code> or in decimal <code>√121 = 11</code>.</p><p>We&rsquo;ll look at what happens for irrational roots, such as √2, when we come to fixed-point numbers.</p><h2 id=algorithm-implementation>Algorithm Implementation</h2><p>To make our algorithm usable on an FPGA, we need to turn the steps into simple operations we can represent in Verilog. The main change is using shifts to select numbers to work on. We&rsquo;ll use four registers in our algorithm:</p><ul><li><strong>X</strong> - input radicand we want the square root of</li><li><strong>A</strong> - holds the current value we&rsquo;re working on</li><li><strong>T</strong> - result of sign test</li><li><strong>Q</strong> - the square root</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-plaintext data-lang=plaintext><span style=display:flex><span>Input: X=01111001 (decimal 121)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Step  A         X         T         Q       Description
+</span></span><span style=display:flex><span>——————————————————————————————————————————————————————————————————————————————
+</span></span><span style=display:flex><span>      00000000  01111001  00000000  0000    Starting values.
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>1     00000001  11100100                    Left shift X by two places into A.
+</span></span><span style=display:flex><span>                          00000000          Set T = A - {Q,01}: 01 - 01.
+</span></span><span style=display:flex><span>                                    0000    Left shift Q.
+</span></span><span style=display:flex><span>      00000000                      0001    Is T≥0? Yes. Set A=T and Q[0]=1.
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>2     00000011  10010000                    Left shift X by two places into A.
+</span></span><span style=display:flex><span>                          11111100          Set T = A - {Q,01}: 11 - 101.
+</span></span><span style=display:flex><span>                                    0010    Left shift Q.
+</span></span><span style=display:flex><span>                                            Is T≥0? No. Move to next step.
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>3     00001110  01000000                    Left shift X by two places into A.
+</span></span><span style=display:flex><span>                          00000101          Set T = A - {Q,01}: 1110 - 1001
+</span></span><span style=display:flex><span>                                    0100    Left shift Q.
+</span></span><span style=display:flex><span>      00000101                      0101    Is T≥0? Yes. Set A=T and Q[0]=1.
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>4     00010101  00000000                    Left shift X by two places into A.
+</span></span><span style=display:flex><span>                          00000000          Set T = A - {Q,01}: 10101 - 10101.
+</span></span><span style=display:flex><span>                                    1010    Left shift Q.
+</span></span><span style=display:flex><span>      00000000                      1011    Is T≥0? Yes. Set A=T and Q[0]=1.
+</span></span><span style=display:flex><span>——————————————————————————————————————————————————————————————————————————————
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Output: Q=1010 (decimal 11), R=0 (remainder taken from final A).
+</span></span></code></pre></div><h2 id=verilog-module>Verilog Module</h2><p>Our Verilog design uses the above algorithm, but you can configure the width of the radicand. <code>WIDTH</code> must be a multiple of two, for example, when working with seven binary digits, you must set the width to eight.</p><p>Project F Library source: <strong>[<a href=https://github.com/projf/projf-explore/tree/main/lib/maths/sqrt_int.sv>sqrt_int.sv</a>]</strong>.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span><span style=color:#66d9ef>module</span> sqrt_int #(<span style=color:#66d9ef>parameter</span> WIDTH<span style=color:#f92672>=</span><span style=color:#ae81ff>8</span>) (      <span style=color:#75715e>// width of radicand
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>input</span> <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> clk,
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>input</span> <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> start,             <span style=color:#75715e>// start signal
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>     <span style=color:#66d9ef>logic</span> busy,              <span style=color:#75715e>// calculation in progress
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>     <span style=color:#66d9ef>logic</span> valid,             <span style=color:#75715e>// root and rem are valid
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>input</span> <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> [WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] rad,   <span style=color:#75715e>// radicand
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>     <span style=color:#66d9ef>logic</span> [WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] root,  <span style=color:#75715e>// root
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>     <span style=color:#66d9ef>logic</span> [WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] rem    <span style=color:#75715e>// remainder
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    );
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>logic</span> [WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] x, x_next;    <span style=color:#75715e>// radicand copy
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> [WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] q, q_next;    <span style=color:#75715e>// intermediate root (quotient)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> [WIDTH<span style=color:#f92672>+</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] ac, ac_next;  <span style=color:#75715e>// accumulator (2 bits wider)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> [WIDTH<span style=color:#f92672>+</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] test_res;     <span style=color:#75715e>// sign test result (2 bits wider)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>localparam</span> ITER <span style=color:#f92672>=</span> WIDTH <span style=color:#f92672>&gt;&gt;</span> <span style=color:#ae81ff>1</span>;   <span style=color:#75715e>// iterations are half radicand width
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> [$clog2(ITER)<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] i;     <span style=color:#75715e>// iteration counter
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>always_comb</span> <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>        test_res <span style=color:#f92672>=</span> ac <span style=color:#f92672>-</span> {q, <span style=color:#ae81ff>2</span><span style=color:#ae81ff>&#39;b01</span>};
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> (test_res[WIDTH<span style=color:#f92672>+</span><span style=color:#ae81ff>1</span>] <span style=color:#f92672>==</span> <span style=color:#ae81ff>0</span>) <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// test_res ≥0? (check MSB)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>            {ac_next, x_next} <span style=color:#f92672>=</span> {test_res[WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>], x, <span style=color:#ae81ff>2</span><span style=color:#ae81ff>&#39;b0</span>};
+</span></span><span style=display:flex><span>            q_next <span style=color:#f92672>=</span> {q[WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>2</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>], <span style=color:#ae81ff>1</span><span style=color:#ae81ff>&#39;b1</span>};
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>end</span> <span style=color:#66d9ef>else</span> <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>            {ac_next, x_next} <span style=color:#f92672>=</span> {ac[WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>], x, <span style=color:#ae81ff>2</span><span style=color:#ae81ff>&#39;b0</span>};
+</span></span><span style=display:flex><span>            q_next <span style=color:#f92672>=</span> q <span style=color:#f92672>&lt;&lt;</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>always_ff</span> @(<span style=color:#66d9ef>posedge</span> clk) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> (start) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>            busy <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>            valid <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>            i <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>            q <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>            {ac, x} <span style=color:#f92672>&lt;=</span> {{WIDTH{<span style=color:#ae81ff>1</span><span style=color:#ae81ff>&#39;b0</span>}}, rad, <span style=color:#ae81ff>2</span><span style=color:#ae81ff>&#39;b0</span>};
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>end</span> <span style=color:#66d9ef>else</span> <span style=color:#66d9ef>if</span> (busy) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>if</span> (i <span style=color:#f92672>==</span> ITER<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span>) <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// we&#39;re done
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                busy <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>                valid <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>                root <span style=color:#f92672>&lt;=</span> q_next;
+</span></span><span style=display:flex><span>                rem <span style=color:#f92672>&lt;=</span> ac_next[WIDTH<span style=color:#f92672>+</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>2</span>];  <span style=color:#75715e>// undo final shift
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>            <span style=color:#66d9ef>end</span> <span style=color:#66d9ef>else</span> <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// next iteration
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                i <span style=color:#f92672>&lt;=</span> i <span style=color:#f92672>+</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>                x <span style=color:#f92672>&lt;=</span> x_next;
+</span></span><span style=display:flex><span>                ac <span style=color:#f92672>&lt;=</span> ac_next;
+</span></span><span style=display:flex><span>                q <span style=color:#f92672>&lt;=</span> q_next;
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>endmodule</span>
+</span></span></code></pre></div><p>To use the module, set <code>WIDTH</code> to the correct number of bits and input <code>rad</code> to the radicand. To begin the calculation set <code>start</code> high for one clock. The <code>valid</code> signal indicates when the output data is valid; you can then read the results from <code>root</code> and <code>rem</code>. The calculation takes one cycle for each pair of bits in the radicand, so a 16-bit radicand would take eight cycles. The <code>busy</code> signal is high during calculation.</p><p>The Verilog itself is straightforward. The algorithm is in the <code>always_comb</code> block, though we start with the initial shift already in place. The <code>always_ff</code> block sets up the initial values, then runs the algorithm for the number of digits in the root.</p><h3 id=testing>Testing</h3><p>The following Vivado test bench exercises the module. A Verilator test bench will be added in due course.</p><p>Project F Library source: <strong>[<a href=https://github.com/projf/projf-explore/tree/main/lib/maths/xc7/sqrt_int_tb.sv>xc7/sqrt_int_tb.sv</a>]</strong>.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span><span style=color:#66d9ef>module</span> sqrt_int_tb();
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>parameter</span> CLK_PERIOD <span style=color:#f92672>=</span> <span style=color:#ae81ff>10</span>;
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>parameter</span> WIDTH <span style=color:#f92672>=</span> <span style=color:#ae81ff>8</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>logic</span> clk;
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>logic</span> start;             <span style=color:#75715e>// start signal
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> busy;              <span style=color:#75715e>// calculation in progress
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> valid;             <span style=color:#75715e>// root and rem are valid
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> [WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] rad;   <span style=color:#75715e>// radicand
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> [WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] root;  <span style=color:#75715e>// root
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> [WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] rem;   <span style=color:#75715e>// remainder
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
+</span></span><span style=display:flex><span>    sqrt_int #(.WIDTH(WIDTH)) sqrt_inst (.<span style=color:#f92672>*</span>);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>always</span> #(CLK_PERIOD <span style=color:#f92672>/</span> <span style=color:#ae81ff>2</span>) clk <span style=color:#f92672>=</span> <span style=color:#f92672>~</span>clk;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>initial</span> <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>        $monitor(<span style=color:#e6db74>&#34;</span><span style=color:#ae81ff>\t</span><span style=color:#e6db74>%d:</span><span style=color:#ae81ff>\t</span><span style=color:#e6db74>sqrt(%d) =%d (rem =%d) (V=%b)&#34;</span>, $time, rad, root, rem, valid);
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>initial</span> <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>                clk <span style=color:#f92672>=</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        #<span style=color:#ae81ff>100</span>    rad <span style=color:#f92672>=</span> <span style=color:#ae81ff>8</span><span style=color:#ae81ff>&#39;b00000000</span>;  <span style=color:#75715e>// 0
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                start <span style=color:#f92672>=</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>        #<span style=color:#ae81ff>10</span>     start <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        #<span style=color:#ae81ff>50</span>     rad <span style=color:#f92672>=</span> <span style=color:#ae81ff>8</span><span style=color:#ae81ff>&#39;b00000001</span>;  <span style=color:#75715e>// 1
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                start <span style=color:#f92672>=</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>        #<span style=color:#ae81ff>10</span>     start <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        #<span style=color:#ae81ff>50</span>     rad <span style=color:#f92672>=</span> <span style=color:#ae81ff>8</span><span style=color:#ae81ff>&#39;b01111001</span>;  <span style=color:#75715e>// 121
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                start <span style=color:#f92672>=</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>        #<span style=color:#ae81ff>10</span>     start <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        #<span style=color:#ae81ff>50</span>     rad <span style=color:#f92672>=</span> <span style=color:#ae81ff>8</span><span style=color:#ae81ff>&#39;b01010001</span>;  <span style=color:#75715e>// 81
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                start <span style=color:#f92672>=</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>        #<span style=color:#ae81ff>10</span>     start <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        #<span style=color:#ae81ff>50</span>     rad <span style=color:#f92672>=</span> <span style=color:#ae81ff>8</span><span style=color:#ae81ff>&#39;b01011010</span>;  <span style=color:#75715e>// 90
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                start <span style=color:#f92672>=</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>        #<span style=color:#ae81ff>10</span>     start <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        #<span style=color:#ae81ff>50</span>     rad <span style=color:#f92672>=</span> <span style=color:#ae81ff>8</span><span style=color:#ae81ff>&#39;b11111111</span>;  <span style=color:#75715e>// 255
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                start <span style=color:#f92672>=</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>        #<span style=color:#ae81ff>10</span>     start <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        #<span style=color:#ae81ff>50</span>     $finish;
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>endmodule</span>
+</span></span></code></pre></div><p>The output looks like this (<code>V=1</code> indicates the result is valid):</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-plaintext data-lang=plaintext><span style=display:flex><span>  0:    sqrt(  x) =  x (rem =  x) (V=x)
+</span></span><span style=display:flex><span>100:    sqrt(  0) =  x (rem =  x) (V=0)
+</span></span><span style=display:flex><span>140:    sqrt(  0) =  0 (rem =  0) (V=1)
+</span></span><span style=display:flex><span>160:    sqrt(  1) =  0 (rem =  0) (V=0)
+</span></span><span style=display:flex><span>200:    sqrt(  1) =  1 (rem =  0) (V=1)
+</span></span><span style=display:flex><span>220:    sqrt(121) =  1 (rem =  0) (V=0)
+</span></span><span style=display:flex><span>260:    sqrt(121) = 11 (rem =  0) (V=1)
+</span></span><span style=display:flex><span>280:    sqrt( 81) = 11 (rem =  0) (V=0)
+</span></span><span style=display:flex><span>320:    sqrt( 81) =  9 (rem =  0) (V=1)
+</span></span><span style=display:flex><span>340:    sqrt( 90) =  9 (rem =  0) (V=0)
+</span></span><span style=display:flex><span>380:    sqrt( 90) =  9 (rem =  9) (V=1)
+</span></span><span style=display:flex><span>400:    sqrt(255) =  9 (rem =  9) (V=0)
+</span></span><span style=display:flex><span>440:    sqrt(255) = 15 (rem = 30) (V=1)
+</span></span></code></pre></div><h2 id=fixed-point-roots>Fixed-Point Roots</h2><p>In a previous recipe, we looked at <a href=/posts/fixed-point-numbers-in-verilog/>Fixed Point Numbers in Verilog</a>. It turns out that supporting fixed-point square roots is straightforward: we just run more iterations to account for the fractional digits. Unlike with division, there&rsquo;s no possibility of overflow, as the root of a radicand greater than 1 is always smaller than the radicand itself.</p><p>This new version of the sqrt module adds a parameter <code>FBITS</code> for the number of fractional bits in the radicand (<code>FBITS</code> must be a multiple of two). For example, if we want to calculate √2 using Q8.8 format (eight integer and eight fractional bits), we set <code>WIDTH=16</code> and <code>FBITS=8</code>. The only change within the module is for <code>ITER</code>, which now accounts for fractional bits. For a Q8.8 radicand, we now perform <code>(16+8)/2 = 12</code> iterations, generating four more bits for the root.</p><p>Project F Library source: <strong>[<a href=https://github.com/projf/projf-explore/tree/main/lib/maths/sqrt.sv>sqrt.sv</a>]</strong>.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span><span style=color:#66d9ef>module</span> sqrt #(
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>parameter</span> WIDTH<span style=color:#f92672>=</span><span style=color:#ae81ff>8</span>,  <span style=color:#75715e>// width of radicand
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>parameter</span> FBITS<span style=color:#f92672>=</span><span style=color:#ae81ff>0</span>   <span style=color:#75715e>// fractional bits (for fixed point)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    ) (
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>input</span> <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> clk,
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>input</span> <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> start,             <span style=color:#75715e>// start signal
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>     <span style=color:#66d9ef>logic</span> busy,              <span style=color:#75715e>// calculation in progress
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>     <span style=color:#66d9ef>logic</span> valid,             <span style=color:#75715e>// root and rem are valid
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>input</span> <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> [WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] rad,   <span style=color:#75715e>// radicand
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>     <span style=color:#66d9ef>logic</span> [WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] root,  <span style=color:#75715e>// root
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>     <span style=color:#66d9ef>logic</span> [WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] rem    <span style=color:#75715e>// remainder
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    );
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>logic</span> [WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] x, x_next;    <span style=color:#75715e>// radicand copy
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> [WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] q, q_next;    <span style=color:#75715e>// intermediate root (quotient)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> [WIDTH<span style=color:#f92672>+</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] ac, ac_next;  <span style=color:#75715e>// accumulator (2 bits wider)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> [WIDTH<span style=color:#f92672>+</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] test_res;     <span style=color:#75715e>// sign test result (2 bits wider)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>localparam</span> ITER <span style=color:#f92672>=</span> (WIDTH<span style=color:#f92672>+</span>FBITS) <span style=color:#f92672>&gt;&gt;</span> <span style=color:#ae81ff>1</span>;  <span style=color:#75715e>// iterations are half radicand+fbits width
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> [$clog2(ITER)<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] i;            <span style=color:#75715e>// iteration counter
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>always_comb</span> <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>        test_res <span style=color:#f92672>=</span> ac <span style=color:#f92672>-</span> {q, <span style=color:#ae81ff>2</span><span style=color:#ae81ff>&#39;b01</span>};
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> (test_res[WIDTH<span style=color:#f92672>+</span><span style=color:#ae81ff>1</span>] <span style=color:#f92672>==</span> <span style=color:#ae81ff>0</span>) <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// test_res ≥0? (check MSB)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>            {ac_next, x_next} <span style=color:#f92672>=</span> {test_res[WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>], x, <span style=color:#ae81ff>2</span><span style=color:#ae81ff>&#39;b0</span>};
+</span></span><span style=display:flex><span>            q_next <span style=color:#f92672>=</span> {q[WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>2</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>], <span style=color:#ae81ff>1</span><span style=color:#ae81ff>&#39;b1</span>};
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>end</span> <span style=color:#66d9ef>else</span> <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>            {ac_next, x_next} <span style=color:#f92672>=</span> {ac[WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>], x, <span style=color:#ae81ff>2</span><span style=color:#ae81ff>&#39;b0</span>};
+</span></span><span style=display:flex><span>            q_next <span style=color:#f92672>=</span> q <span style=color:#f92672>&lt;&lt;</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>always_ff</span> @(<span style=color:#66d9ef>posedge</span> clk) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> (start) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>            busy <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>            valid <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>            i <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>            q <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>            {ac, x} <span style=color:#f92672>&lt;=</span> {{WIDTH{<span style=color:#ae81ff>1</span><span style=color:#ae81ff>&#39;b0</span>}}, rad, <span style=color:#ae81ff>2</span><span style=color:#ae81ff>&#39;b0</span>};
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>end</span> <span style=color:#66d9ef>else</span> <span style=color:#66d9ef>if</span> (busy) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>if</span> (i <span style=color:#f92672>==</span> ITER<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span>) <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// we&#39;re done
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                busy <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>                valid <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>                root <span style=color:#f92672>&lt;=</span> q_next;
+</span></span><span style=display:flex><span>                rem <span style=color:#f92672>&lt;=</span> ac_next[WIDTH<span style=color:#f92672>+</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>2</span>];  <span style=color:#75715e>// undo final shift
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>            <span style=color:#66d9ef>end</span> <span style=color:#66d9ef>else</span> <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// next iteration
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                i <span style=color:#f92672>&lt;=</span> i <span style=color:#f92672>+</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>                x <span style=color:#f92672>&lt;=</span> x_next;
+</span></span><span style=display:flex><span>                ac <span style=color:#f92672>&lt;=</span> ac_next;
+</span></span><span style=display:flex><span>                q <span style=color:#f92672>&lt;=</span> q_next;
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>endmodule</span>
+</span></span></code></pre></div><p>And we can create a simple Vivado test bench for it.</p><p>Project F Library source: <strong>[<a href=https://github.com/projf/projf-explore/tree/main/lib/maths/xc7/sqrt_tb.sv>xc7/sqrt_tb.sv</a>]</strong>.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span><span style=color:#66d9ef>module</span> sqrt_tb();
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>parameter</span> CLK_PERIOD <span style=color:#f92672>=</span> <span style=color:#ae81ff>10</span>;
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>parameter</span> WIDTH <span style=color:#f92672>=</span> <span style=color:#ae81ff>16</span>;
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>parameter</span> FBITS <span style=color:#f92672>=</span> <span style=color:#ae81ff>8</span>;
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>parameter</span> SF <span style=color:#f92672>=</span> <span style=color:#ae81ff>2.0</span><span style=color:#f92672>**-</span><span style=color:#ae81ff>8.0</span>;  <span style=color:#75715e>// Q8.8 scaling factor is 2^-8
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>logic</span> clk;
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>logic</span> start;             <span style=color:#75715e>// start signal
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> busy;              <span style=color:#75715e>// calculation in progress
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> valid;             <span style=color:#75715e>// root and rem are valid
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> [WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] rad;   <span style=color:#75715e>// radicand
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> [WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] root;  <span style=color:#75715e>// root
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> [WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] rem;   <span style=color:#75715e>// remainder
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
+</span></span><span style=display:flex><span>    sqrt #(.WIDTH(WIDTH), .FBITS(FBITS)) sqrt_inst (.<span style=color:#f92672>*</span>);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>always</span> #(CLK_PERIOD <span style=color:#f92672>/</span> <span style=color:#ae81ff>2</span>) clk <span style=color:#f92672>=</span> <span style=color:#f92672>~</span>clk;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>initial</span> <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>        $monitor(<span style=color:#e6db74>&#34;</span><span style=color:#ae81ff>\t</span><span style=color:#e6db74>%d:</span><span style=color:#ae81ff>\t</span><span style=color:#e6db74>sqrt(%f) = %b (%f) (rem = %b) (V=%b)&#34;</span>,
+</span></span><span style=display:flex><span>                    $time, $itor(rad<span style=color:#f92672>*</span>SF), root, $itor(root<span style=color:#f92672>*</span>SF), rem, valid);
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>initial</span> <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>                clk <span style=color:#f92672>=</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        #<span style=color:#ae81ff>100</span>    rad <span style=color:#f92672>=</span> <span style=color:#ae81ff>16</span><span style=color:#ae81ff>&#39;b1110</span>_1000_1001_0000;  <span style=color:#75715e>// 232.56250000
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                start <span style=color:#f92672>=</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>        #<span style=color:#ae81ff>10</span>     start <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        #<span style=color:#ae81ff>120</span>    rad <span style=color:#f92672>=</span> <span style=color:#ae81ff>16</span><span style=color:#ae81ff>&#39;b0000</span>_0000_0100_0000;  <span style=color:#75715e>// 0.25
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                start <span style=color:#f92672>=</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>        #<span style=color:#ae81ff>10</span>     start <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        #<span style=color:#ae81ff>120</span>    rad <span style=color:#f92672>=</span> <span style=color:#ae81ff>16</span><span style=color:#ae81ff>&#39;b0000</span>_0010_0000_0000;  <span style=color:#75715e>// 2.0
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                start <span style=color:#f92672>=</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>        #<span style=color:#ae81ff>10</span>     start <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>        #<span style=color:#ae81ff>120</span>    $finish;
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>endmodule</span>
+</span></span></code></pre></div><p><em>NB. I have tested with a wide range of roots, but only show a few here to keep the example managable.</em></p><p>The output looks like this (<code>V=1</code> indicates the result is valid):</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-plaintext data-lang=plaintext><span style=display:flex><span>  0:    sqrt(0.000000)   = xxxxxxxxxxxxxxxx (0.000000)  (rem = xxxxxxxxxxxxxxxx) (V=x)
+</span></span><span style=display:flex><span>100:    sqrt(232.562500) = xxxxxxxxxxxxxxxx (0.000000)  (rem = xxxxxxxxxxxxxxxx) (V=0)
+</span></span><span style=display:flex><span>220:    sqrt(232.562500) = 0000111101000000 (15.250000) (rem = 0000000000000000) (V=1)
+</span></span><span style=display:flex><span>230:    sqrt(0.250000)   = 0000111101000000 (15.250000) (rem = 0000000000000000) (V=0)
+</span></span><span style=display:flex><span>350:    sqrt(0.250000)   = 0000000010000000 (0.500000)  (rem = 0000000000000000) (V=1)
+</span></span><span style=display:flex><span>360:    sqrt(2.000000)   = 0000000010000000 (0.500000)  (rem = 0000000000000000) (V=0)
+</span></span><span style=display:flex><span>480:    sqrt(2.000000)   = 0000000101101010 (1.414062)  (rem = 0000000000011100) (V=1)
+</span></span></code></pre></div><p><code>1.01101010</code> is the correct result for <code>√2</code> using eight fractional bits. Wolfram Alpha provides a quick way to check binary square roots, for example: <a href="https://www.wolframalpha.com/input/?i=%E2%88%9A2+to+base+2">√2 to base 2</a>.</p><p>The smallest value the Q8.8 format can represent is 1/256 or ~0.004 in decimal; if you want a more accurate result, you need to use more fractional bits.</p><p>That wraps up this recipe, but you might like to check out <a href=/posts/division-in-verilog/>Division</a> or <a href=/posts/fpga-sine-table/>Sine & Cosine</a> in Verilog.</p><p><em>Get in touch with <a href=https://mastodon.social/@WillFlux>@WillFlux</a> or join me on <a href=https://github.com/projf/projf-explore/discussions>GitHub Discussions</a> and <a href=https://discord.gg/cf869yDbXf>1BitSquared Discord</a>.</em></p></section><footer class="mt-12 flex flex-wrap"><a class="mr-1.5 mb-1.5 rounded-lg bg-black/[3%] px-5 py-2 no-underline dark:bg-white/[8%]" href=https://projectf.io/tags/maths>maths</a></footer><nav class="mt-24 flex rounded-lg bg-black/[3%] text-lg dark:bg-white/[8%]"><a class="flex w-1/2 items-center rounded-l-md p-6 pr-3 no-underline hover:bg-black/[2%]" href=https://projectf.io/posts/verilog-lint-with-verilator/><span class=mr-1.5>←</span><span>Verilog Lint with Verilator</span></a>
+<a class="ml-auto flex w-1/2 items-center justify-end rounded-r-md p-6 pl-3 no-underline hover:bg-black/[2%]" href=https://projectf.io/posts/building-ice40-fpga-toolchain/><span>iCE40 FPGA Toolchain on Linux</span><span class=ml-1.5>→</span></a></nav></article></main><footer class="opaco mx-auto flex h-[5rem] max-w-3xl items-center px-8 text-[0.9em] opacity-60"><div class=mr-auto><a class=link href=https://projectf.io>Project F</a>
+&copy; 2023 Will Green.</div></footer></body></html>

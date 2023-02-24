@@ -1,342 +1,136 @@
-<!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml"  lang="en-gb">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
-<title>Display Signals | Project F: FPGA Dev</title>
-
-<meta property='og:title' content='Display Signals - Project F: FPGA Dev'>
-<meta property='og:description' content='Welcome back to Exploring FPGA Graphics. Last time, we played Pong against our FPGA; this time, we revisit displays signals and learn about palettes and indexed colour. This post was last updated in June 2022.
-In this series, we learn about graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how screens work, play Pong, create starfields and sprites, paint Michelangelo&rsquo;s David, draw lines and triangles, and animate characters and shapes.'>
-<meta property='og:url' content='https://projectf.io/posts/display-signals/'>
-<meta property='og:site_name' content='Project F: FPGA Dev'>
-<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/display-signals/social-card.png'><meta property='article:published_time' content='2022-05-07T00:00:00Z'><meta property='article:modified_time' content='2022-06-13T00:00:00Z'><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
-
-
-<link href="https://projectf.io/index.xml" rel="alternate" type="application/rss+xml" title="Project F: FPGA Dev">
-
-<link rel="stylesheet" href="/css/style.css"><link rel='stylesheet' href='https://projectf.io/css/custom.css'>
-
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-<link rel="manifest" href="/site.webmanifest">
-<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
-<link rel="canonical" href="https://projectf.io/posts/display-signals/">
-<meta name="msapplication-TileColor" content="#da532c">
-<meta name="theme-color" content="#ffffff">
-</head>
-<body>
-
-<section class="section">
-  <div class="container">
-    <nav id="nav-main" class="nav">
-      <div id="nav-name" class="nav-left">
-        <a id="nav-anchor" class="nav-item" href="https://projectf.io">
-          <h1 id="nav-heading" class="title is-4">Project F: FPGA Dev</h1>
-        </a>
-      </div>
-      <div class="nav-right">
-        <nav id="nav-items" class="nav-item level is-mobile"><a class="level-item" aria-label="github" href='https://github.com/projf/projf-explore'
-            target='_blank' rel='me noopener'>
-            <span class="icon">
-              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
-    
-    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
-    
-  </svg>
-</i>
-            </span>
-          </a><a class="level-item" aria-label="mastodon" href='https://mastodon.social/@WillFlux'
-            target='_blank' rel='me noopener'>
-            <span class="icon">
-              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
-    
-    <path d="M 11.966876,0.80329086 C 9.1123466,0.82665791 6.3664935,1.1367094 4.7662978,1.8737549 c 0,0 -3.1736685,1.4237835 -3.1736685,6.2815982 0,1.1123884 -0.021554,2.4424309 0.013571,3.8529439 0.1152443,4.750677 0.8683725,9.432704 5.2479219,10.595273 2.0193066,0.53604 3.7531218,0.648348 5.1494078,0.571373 2.532141,-0.140797 3.953603,-0.906282 3.953603,-0.906282 l -0.08353,-1.842608 c 0,0 -1.809527,0.572181 -3.841713,0.50245 -2.013417,-0.06922 -4.138986,-0.217713 -4.4646269,-2.696937 -0.030082,-0.217772 -0.045075,-0.450712 -0.045075,-0.695267 0,0 1.9765387,0.484554 4.4813709,0.599656 1.531629,0.07049 2.9679,-0.08996 4.426746,-0.264563 2.797636,-0.335045 5.233581,-2.063856 5.539741,-3.643517 0.482392,-2.488386 0.442651,-6.0725219 0.442651,-6.0725219 0,-4.8578147 -3.173492,-6.2815982 -3.173492,-6.2815982 C 17.639136,1.1367094 14.891579,0.82669685 12.03704,0.80329086 Z"/>
-  <path d="M 6.4286668,14.016701 V 9.1034254 c 0,-1.0041614 0.2549569,-1.8022059 0.7670342,-2.3925638 0.5280486,-0.590366 1.2196579,-0.8929946 2.0781049,-0.8929946 0.9931961,0 1.7452181,0.3828583 2.2425191,1.1486808 L 11.999859,7.7793695 12,11.451148 11.999859,7.7793695 12.483392,6.9665478 C 12.980596,6.2007253 13.732618,5.817867 14.72592,5.817867 c 0.858341,0 1.549951,0.3026286 2.078097,0.8929946 0.511971,0.5903579 0.766887,1.3884024 0.766887,2.3925638 v 4.9132756" />
-    
-  </svg>
-</i>
-            </span>
-          </a><a class="level-item" aria-label="youtube" href='https://youtube.com/@projf'
-            target='_blank' rel='me noopener'>
-            <span class="icon">
-              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
-    
-    <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/>
-    <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/>
-    
-  </svg>
-</i>
-            </span>
-          </a><a class="level-item" aria-label="rss" href='/index.xml'
-            target='_blank' rel='me noopener'>
-            <span class="icon">
-              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
-    
-    <path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle>
-    
-  </svg>
-</i>
-            </span>
-          </a></nav>
-      </div>
-    </nav>
-
-    <nav class="nav">
-      
-      <div class="nav-left"><a class="nav-item" href="/about">
-          <h2 class="title is-5">About</h2>
-        </a><a class="nav-item" href="/demos">
-          <h2 class="title is-5">Demos</h2>
-        </a><a class="nav-item" href="/howto">
-          <h2 class="title is-5">How To</h2>
-        </a><a class="nav-item" href="/tags/news">
-          <h2 class="title is-5">News</h2>
-        </a><a class="nav-item" href="/tutorials">
-          <h2 class="title is-5">Tutorials</h2>
-        </a><a class="nav-item" href="/verilog-lib">
-          <h2 class="title is-5">Verilog Lib</h2>
-        </a></div>
-      
-
-      
-    </nav>
-
-  </div>
-  <script src="/js/navicon-shift.js"></script>
-</section>
-
-<section class="section">
-  <div class="container">
-    <div class="subtitle tags is-6 is-pulled-right">
-      
-      
-<a class="subtitle is-6" href="/tags/graphics/">#graphics</a>
-
-
-
-
-      
-    </div>
-    <h2 class="subtitle is-6">7 May 2022</h2>
-    <h1 class="title">Display Signals</h1>
-    
-    <div class="content">
-      <p>Welcome back to <em>Exploring FPGA Graphics</em>. Last time, we <a href="/posts/fpga-pong/">played Pong against our FPGA</a>; this time, we revisit displays signals and learn about palettes and indexed colour. This post was last updated in June 2022.</p>
-<p>In this series, we learn about graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how screens work, play Pong, create starfields and sprites, paint Michelangelo&rsquo;s David, draw lines and triangles, and animate characters and shapes. New to the series? Start with <a href="/posts/fpga-graphics/">Beginning FPGA Graphics</a>.</p>
-<p><em>Get in touch with <a href="https://mastodon.social/@WillFlux">@WillFlux</a> or join me on <a href="https://github.com/projf/projf-explore/discussions">GitHub Discussions</a> and <a href="https://discord.gg/cf869yDbXf">1BitSquared Discord</a>.</em></p>
-<p><img src="/img/posts/display-signals/banner.png" alt="" title=""></p>
-<h3 id="series-outline">Series Outline</h3>
-<ul>
-<li><a href="/posts/fpga-graphics/">Beginning FPGA Graphics</a> - video signals and basic graphics</li>
-<li><a href="/posts/racing-the-beam/">Racing the Beam</a> - simple demo effects with minimal logic</li>
-<li><a href="/posts/fpga-pong/">FPGA Pong</a> - recreate the classic arcade on an FPGA</li>
-<li>Display Signals (this post) - revisit display signals and meet colour palettes</li>
-<li><a href="/posts/hardware-sprites/">Hardware Sprites</a> - fast, colourful graphics for games</li>
-<li><a href="/posts/framebuffers/">Framebuffers</a> - bitmap graphics featuring Michelangelo&rsquo;s David</li>
-<li><a href="/posts/lines-and-triangles/">Lines and Triangles</a> - drawing lines and triangles</li>
-<li><a href="/posts/fpga-shapes/">2D Shapes</a> - filled shapes and simple pictures</li>
-<li><a href="/posts/animated-shapes/">Animated Shapes</a> - animation and double-buffering</li>
-</ul>
-<blockquote>
-<p><strong>Sponsor My Work</strong><br>
-If you like what I do, consider <a href="https://github.com/sponsors/WillGreen">sponsoring me</a> on GitHub.<br>
-I love FPGAs and want to help more people discover and use them in their projects.<br>
-My hardware designs are open source, and my blog is advert free.</p>
-</blockquote>
-<h2 id="revisiting-the-display">Revisiting the Display</h2>
-<p>Didn&rsquo;t we already sort out display signal generation at the <a href="/posts/fpga-graphics/#display-signals">start of the series</a>? Yes, we did, but there are good reasons to change how we treat screen coordinates before we start drawing sprites.</p>
-<p>The new signals module has several improvements at the cost of a little complexity:</p>
-<ol>
-<li>Blanking intervals occur <em>before</em> the active drawing area</li>
-<li>Signed coordinates for screen position</li>
-<li>Addition of <strong>frame</strong> and <strong>line</strong> signals</li>
-<li>Registered signals to improve timing</li>
-</ol>
-<p>Take a look at the new <strong>[<a href="https://github.com/projf/projf-explore/blob/main/lib/display/display_480p.sv">display_480p.sv</a>]</strong> module, then we&rsquo;ll discuss the changes in more detail:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> display_480p #(
-</span></span><span style="display:flex;"><span>    CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>,    <span style="color:#75715e">// signed coordinate width (bits)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    H_RES<span style="color:#f92672">=</span><span style="color:#ae81ff">640</span>,   <span style="color:#75715e">// horizontal resolution (pixels)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    V_RES<span style="color:#f92672">=</span><span style="color:#ae81ff">480</span>,   <span style="color:#75715e">// vertical resolution (lines)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    H_FP<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>,     <span style="color:#75715e">// horizontal front porch
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    H_SYNC<span style="color:#f92672">=</span><span style="color:#ae81ff">96</span>,   <span style="color:#75715e">// horizontal sync
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    H_BP<span style="color:#f92672">=</span><span style="color:#ae81ff">48</span>,     <span style="color:#75715e">// horizontal back porch
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    V_FP<span style="color:#f92672">=</span><span style="color:#ae81ff">10</span>,     <span style="color:#75715e">// vertical front porch
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    V_SYNC<span style="color:#f92672">=</span><span style="color:#ae81ff">2</span>,    <span style="color:#75715e">// vertical sync
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    V_BP<span style="color:#f92672">=</span><span style="color:#ae81ff">33</span>,     <span style="color:#75715e">// vertical back porch
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    H_POL<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>,     <span style="color:#75715e">// horizontal sync polarity (0:neg, 1:pos)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    V_POL<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>      <span style="color:#75715e">// vertical sync polarity (0:neg, 1:pos)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    ) (
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_pix,  <span style="color:#75715e">// pixel clock
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst_pix,  <span style="color:#75715e">// reset in pixel clock domain
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> hsync,    <span style="color:#75715e">// horizontal sync
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> vsync,    <span style="color:#75715e">// vertical sync
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> de,       <span style="color:#75715e">// data enable (low in blanking interval)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> frame,    <span style="color:#75715e">// high at start of frame
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> line,     <span style="color:#75715e">// high at start of line
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sx,  <span style="color:#75715e">// horizontal screen position
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sy   <span style="color:#75715e">// vertical screen position
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    );
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// horizontal timings
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> <span style="color:#66d9ef">signed</span> H_STA  <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">-</span> H_FP <span style="color:#f92672">-</span> H_SYNC <span style="color:#f92672">-</span> H_BP;    <span style="color:#75715e">// horizontal start
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> <span style="color:#66d9ef">signed</span> HS_STA <span style="color:#f92672">=</span> H_STA <span style="color:#f92672">+</span> H_FP;                <span style="color:#75715e">// sync start
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> <span style="color:#66d9ef">signed</span> HS_END <span style="color:#f92672">=</span> HS_STA <span style="color:#f92672">+</span> H_SYNC;             <span style="color:#75715e">// sync end
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> <span style="color:#66d9ef">signed</span> HA_STA <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;                           <span style="color:#75715e">// active start
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> <span style="color:#66d9ef">signed</span> HA_END <span style="color:#f92672">=</span> H_RES <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;                   <span style="color:#75715e">// active end
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// vertical timings
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> <span style="color:#66d9ef">signed</span> V_STA  <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">-</span> V_FP <span style="color:#f92672">-</span> V_SYNC <span style="color:#f92672">-</span> V_BP;    <span style="color:#75715e">// vertical start
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> <span style="color:#66d9ef">signed</span> VS_STA <span style="color:#f92672">=</span> V_STA <span style="color:#f92672">+</span> V_FP;                <span style="color:#75715e">// sync start
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> <span style="color:#66d9ef">signed</span> VS_END <span style="color:#f92672">=</span> VS_STA <span style="color:#f92672">+</span> V_SYNC;             <span style="color:#75715e">// sync end
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> <span style="color:#66d9ef">signed</span> VA_STA <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;                           <span style="color:#75715e">// active start
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> <span style="color:#66d9ef">signed</span> VA_END <span style="color:#f92672">=</span> V_RES <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;                   <span style="color:#75715e">// active end
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x, y;  <span style="color:#75715e">// screen position
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// generate horizontal and vertical sync with correct polarity
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>        hsync <span style="color:#f92672">&lt;=</span> H_POL <span style="color:#f92672">?</span> (x <span style="color:#f92672">&gt;</span> HS_STA <span style="color:#f92672">&amp;&amp;</span> x <span style="color:#f92672">&lt;=</span> HS_END) <span style="color:#f92672">:</span> <span style="color:#f92672">~</span>(x <span style="color:#f92672">&gt;</span> HS_STA <span style="color:#f92672">&amp;&amp;</span> x <span style="color:#f92672">&lt;=</span> HS_END);
-</span></span><span style="display:flex;"><span>        vsync <span style="color:#f92672">&lt;=</span> V_POL <span style="color:#f92672">?</span> (y <span style="color:#f92672">&gt;</span> VS_STA <span style="color:#f92672">&amp;&amp;</span> y <span style="color:#f92672">&lt;=</span> VS_END) <span style="color:#f92672">:</span> <span style="color:#f92672">~</span>(y <span style="color:#f92672">&gt;</span> VS_STA <span style="color:#f92672">&amp;&amp;</span> y <span style="color:#f92672">&lt;=</span> VS_END);
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (rst_pix) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>            hsync <span style="color:#f92672">&lt;=</span> H_POL <span style="color:#f92672">?</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>            vsync <span style="color:#f92672">&lt;=</span> V_POL <span style="color:#f92672">?</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// control signals
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>        de    <span style="color:#f92672">&lt;=</span> (y <span style="color:#f92672">&gt;=</span> VA_STA <span style="color:#f92672">&amp;&amp;</span> x <span style="color:#f92672">&gt;=</span> HA_STA);
-</span></span><span style="display:flex;"><span>        frame <span style="color:#f92672">&lt;=</span> (y <span style="color:#f92672">==</span> V_STA  <span style="color:#f92672">&amp;&amp;</span> x <span style="color:#f92672">==</span> H_STA);
-</span></span><span style="display:flex;"><span>        line  <span style="color:#f92672">&lt;=</span> (x <span style="color:#f92672">==</span> H_STA);
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (rst_pix) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>            de <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>            frame <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>            line <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// calculate horizontal and vertical screen position
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (x <span style="color:#f92672">==</span> HA_END) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// last pixel on line?
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            x <span style="color:#f92672">&lt;=</span> H_STA;
-</span></span><span style="display:flex;"><span>            y <span style="color:#f92672">&lt;=</span> (y <span style="color:#f92672">==</span> VA_END) <span style="color:#f92672">?</span> V_STA <span style="color:#f92672">:</span> y <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// last line on screen?
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>            x <span style="color:#f92672">&lt;=</span> x <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (rst_pix) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>            x <span style="color:#f92672">&lt;=</span> H_STA;
-</span></span><span style="display:flex;"><span>            y <span style="color:#f92672">&lt;=</span> V_STA;
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// delay screen position to match sync and control signals
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @ (<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>        sx <span style="color:#f92672">&lt;=</span> x;
-</span></span><span style="display:flex;"><span>        sy <span style="color:#f92672">&lt;=</span> y;
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (rst_pix) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>            sx <span style="color:#f92672">&lt;=</span> H_STA;
-</span></span><span style="display:flex;"><span>            sy <span style="color:#f92672">&lt;=</span> V_STA;
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
-</span></span></code></pre></div><h3 id="blanking-first">Blanking First</h3>
-<p>The changes to blanking first and signed coordinates are linked.</p>
-<p>Imagine we want to draw a sprite at the far-left of the screen. We need to start the drawing process before the first sprite pixel, for example, to load pixels from flash memory. If horizontal blanking occurs at the end of the line, we need to start the drawing process on the previous line. There is no prior line if we want to draw at the top of the screen, so we need to start during the last frame. Dealing with these edge cases complicates drawing needlessly.</p>
-<p>If blanking the before active area is so handy, why didn&rsquo;t we do this before? Putting the blanking interval first means the first visible pixel is no longer (0,0); for 640x480, it moves to (160,45). We can add an offset to all our positions, which is slightly annoying, but the <a href="http://amigadev.elowar.com/read/ADCD_2.1/Hardware_Manual_guide/node0071.html">Amiga successfully used this approach</a>. However, this creates a new issue when using different resolutions: the Amiga worked around this by always using low-resolution sprite coordinates.</p>
-<p>There is a better way if we&rsquo;re prepared to accept signed coordinates. We retain (0,0) as the top-left of the visible screen, while blanking occurs at negative coordinates. If we adopt 16-bit signed coordinates, we can handle any plausible screen size and an (X,Y) coordinate pair fits cleanly into a 32-bit word. Signed signals are a bit of a pain in Verilog, but I&rsquo;ve found the slight inconvenience more than worth it when working with sprites and framebuffers.</p>
-<p>The following diagram shows the new display signals to scale with two 64x64 pixel squares drawn:</p>
-<p><img src="/img/posts/display-signals/display-signals.png" alt="Display Signals" title="New display signals"></p>
-<h3 id="frame-start-line-start">Frame Start, Line Start</h3>
-<p>In our new design, the start of a line or frame depends on the display timings. For example, with 640x480, a line begins at pixel <code>-160</code> and a frame at line <code>-45</code>.</p>
-<p>To avoid having to hard-code these values into designs, we create two new signals:</p>
-<ul>
-<li><strong>frame</strong> - high for one tick at the start of a frame</li>
-<li><strong>line</strong> - high for one tick at the start of a line</li>
-</ul>
-<p>With these signals, you can safely link your logic to frames and lines, whatever the display mode.</p>
-<h3 id="registered-signals">Registered Signals</h3>
-<p>For simplicity, our original <strong>[<a href="https://github.com/projf/projf-explore/blob/main/graphics/fpga-graphics/simple_480p.sv">simple_480p.sv</a>]</strong> design had sync and data enable signals directly derived from <code>sx</code> and <code>sy</code>. However, it&rsquo;s good practice to register module outputs: this maximises the time the module user has to work with.</p>
-<p>Our improved design registers all outputs, which forces us to delay <code>sx</code> and <code>sy</code> to match; otherwise, the sync and control signals would be one cycle late. We use <code>x</code> and <code>y</code> internally and assign <code>sx</code> and <code>sy</code> from them.</p>
-<h3 id="display-signals-in-action">Display Signals in Action</h3>
-<p>The revised <a href="/posts/hardware-sprites/">Hardware Sprites</a> post includes examples of this new display signals module.</p>
-<h2 id="a-refined-palette">A Refined Palette</h2>
-<p>So far in this series, we&rsquo;ve been using 12-bit colour values directly. For example, <code>#137</code> is dark blue and <code>#FFF</code> is white.
-However, using a full 12 bits for every pixel is wasteful for graphics with only a few colours.</p>
-<p>To save resources, we can use fewer bits per pixel. The smallest we can get in RGB colour is 3 bits: one for each of red, green, and blue. However, this restricts us to eight fixed colours: black, red, green, yellow, blue, magenta, cyan, and white:</p>
-<p><img src="/img/posts/display-signals/3-bit-colour.png" alt="3-bit Colour" title=""></p>
-<p>These eight colours were a fixture of 80s computers, including the BBC Micro and IBM PC CGA.</p>
-<h3 id="indexed-colour">Indexed Colour</h3>
-<p>What we want is a few colours, but of our choosing. Using a little indirection, we can use few bits per pixel but with a full choice of colours.</p>
-<p>Instead of each pixel storing the colour, we store an index. When we display a pixel, we look the index up in a table to find the colour to show. The table is a &ldquo;colour lookup table&rdquo; or <strong>CLUT</strong>.</p>
-<p>Indexed colour was common in late 80s and early 90s computers, including the Amiga, Macintosh II, and IBM PC VGA. While most contemporary computers use 24-bit colour, PNG and GIF formats still use indexed colour to reduce file sizes.</p>
-<p>With a 4-bit index, we can have 16 colours, but these can be any of our 4,096 12-bit colours. I&rsquo;ve shown a couple of sample palettes below:</p>
-<p><img src="/img/posts/display-signals/greyscale-palette.png" alt="Greyscale Palette" title=""></p>
-<p><img src="/img/posts/display-signals/teleport-palette.png" alt="Teleport Palette" title=""></p>
-<p>For example, if we set a pixel index to &lsquo;3&rsquo;, it would appear orange with the second palette.</p>
-<h3 id="clut-module">CLUT Module</h3>
-<p>A CLUT needs a small amount of fast memory, for which block ram is ideal.
-I&rsquo;ve designed a simple CLUT module using a single BRAM <strong>[<a href="https://github.com/projf/projf-explore/blob/main/lib/display/clut_simple.sv">clut_simple.sv</a>]</strong>:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> clut_simple #(
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> COLRW<span style="color:#f92672">=</span><span style="color:#ae81ff">12</span>,  <span style="color:#75715e">// colour output width (bits)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> CIDXW<span style="color:#f92672">=</span><span style="color:#ae81ff">4</span>,   <span style="color:#75715e">// colour index width (bits)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> F_PAL<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;&#34;</span>   <span style="color:#75715e">// init file for colour palette
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    ) (
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_write,  <span style="color:#75715e">// write clock
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk_read,   <span style="color:#75715e">// read clock
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> we,         <span style="color:#75715e">// write enable
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [CIDXW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cidx_write,  <span style="color:#75715e">// colour index to write
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [CIDXW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cidx_read,   <span style="color:#75715e">// colour index to read
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [COLRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] colr_in,     <span style="color:#75715e">// write colour
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [COLRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] colr_out     <span style="color:#75715e">// read colour
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    );
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    bram_sdp #(
-</span></span><span style="display:flex;"><span>        .WIDTH(COLRW),
-</span></span><span style="display:flex;"><span>        .DEPTH(<span style="color:#ae81ff">2</span><span style="color:#f92672">**</span>CIDXW),
-</span></span><span style="display:flex;"><span>        .INIT_F(F_PAL)
-</span></span><span style="display:flex;"><span>        ) bram_clut (
-</span></span><span style="display:flex;"><span>        .clk_write,
-</span></span><span style="display:flex;"><span>        .clk_read,
-</span></span><span style="display:flex;"><span>        .we,
-</span></span><span style="display:flex;"><span>        .addr_write(cidx_write),
-</span></span><span style="display:flex;"><span>        .addr_read(cidx_read),
-</span></span><span style="display:flex;"><span>        .data_in(colr_in),
-</span></span><span style="display:flex;"><span>        .data_out(colr_out)
-</span></span><span style="display:flex;"><span>    );
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
-</span></span></code></pre></div><h3 id="palette-files">Palette Files</h3>
-<p>You can set the colours directly in logic, but loading an initial palette from a file is common. Our module supports this using the <code>F_PAL</code> parameter. The Project F Verilog Library includes several ready-to-use palettes in <code>$readmemh</code> format: <strong>[<a href="https://github.com/projf/projf-explore/tree/main/lib/res/palettes">lib/res/palettes</a>]</strong>.</p>
-<h3 id="colours-in-action">Colours in Action</h3>
-<p>The revised <a href="/posts/hardware-sprites/">Hardware Sprites</a> post includes examples of this CLUT module.</p>
-<h2 id="next-time">Next Time</h2>
-<p>Next, we&rsquo;ll learn about <a href="/posts/hardware-sprites/">hardware sprites</a>, generating fast, colourful graphics using our new CLUT and display signals modules. Check out the <a href="/demos/">demo</a> and <a href="/tutorials/">tutorial</a> sections for more FPGA projects.</p>
-<p><em>Get in touch with <a href="https://mastodon.social/@WillFlux">@WillFlux</a> or join me on <a href="https://github.com/projf/projf-explore/discussions">GitHub Discussions</a> and <a href="https://discord.gg/cf869yDbXf">1BitSquared Discord</a>.</em></p>
-
-      
-    </div>
-    
-  </div>
-</section>
-
-    <script src="/js/copycode.js"></script>
-
-
-
-<section class="section">
-  <div class="container has-text-centered">
-    <p>©2023 Will Green, Project F</p>
-    
-  </div>
-</section>
-
-
-<script src="https://badgers.projectf.io/script.js" data-site="EVCGKVDN" defer></script>
-
-
-
-</body>
-</html>
-
+<!doctype html><html class="not-ready text-sm lg:text-base" style=--bg:#fff lang=en-gb><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><title>Display Signals - Project F</title><meta name=theme-color><meta name=description content="Welcome back to Exploring FPGA Graphics. Last time, we played Pong against our FPGA; this time, we revisit displays signals and learn about palettes and indexed colour.
+In this series, we learn about graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how screens work, play Pong, create starfields and sprites, paint Michelangelo&rsquo;s David, draw lines and triangles, and animate characters and shapes. New to the series?"><meta name=author content="Will Green"><link rel="preload stylesheet" as=style href=https://projectf.io/main.min.css><script defer src=https://projectf.io/highlight.min.js onload=hljs.initHighlightingOnLoad()></script>
+<link rel=preload as=image href=https://projectf.io/theme.png><link rel=preload as=image href=https://projectf.io/github.svg><link rel=preload as=image href=https://projectf.io/mastodon.svg><link rel=preload as=image href=https://projectf.io/rss.svg><link rel=icon href=https://projectf.io/favicon.ico><link rel=apple-touch-icon href=https://projectf.io/apple-touch-icon.png><meta name=generator content="Hugo 0.110.0"><script src=https://badgers.projectf.io/script.js data-site=EVCGKVDN defer></script><meta property="og:title" content="Display Signals"><meta property="og:description" content="Welcome back to Exploring FPGA Graphics. Last time, we played Pong against our FPGA; this time, we revisit displays signals and learn about palettes and indexed colour.
+In this series, we learn about graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how screens work, play Pong, create starfields and sprites, paint Michelangelo&rsquo;s David, draw lines and triangles, and animate characters and shapes. New to the series?"><meta property="og:type" content="article"><meta property="og:url" content="https://projectf.io/posts/display-signals/"><meta property="article:section" content="posts"><meta property="article:published_time" content="2022-05-07T00:00:00+00:00"><meta property="article:modified_time" content="2022-06-13T00:00:00+00:00"><meta itemprop=name content="Display Signals"><meta itemprop=description content="Welcome back to Exploring FPGA Graphics. Last time, we played Pong against our FPGA; this time, we revisit displays signals and learn about palettes and indexed colour.
+In this series, we learn about graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how screens work, play Pong, create starfields and sprites, paint Michelangelo&rsquo;s David, draw lines and triangles, and animate characters and shapes. New to the series?"><meta itemprop=datePublished content="2022-05-07T00:00:00+00:00"><meta itemprop=dateModified content="2022-06-13T00:00:00+00:00"><meta itemprop=wordCount content="1715"><meta itemprop=keywords content="graphics,"><meta name=twitter:card content="summary"><meta name=twitter:title content="Display Signals"><meta name=twitter:description content="Welcome back to Exploring FPGA Graphics. Last time, we played Pong against our FPGA; this time, we revisit displays signals and learn about palettes and indexed colour.
+In this series, we learn about graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how screens work, play Pong, create starfields and sprites, paint Michelangelo&rsquo;s David, draw lines and triangles, and animate characters and shapes. New to the series?"></head><body class="text-black duration-200 ease-out dark:text-white"><header class="mx-auto flex h-[5rem] max-w-3xl px-8 lg:justify-center"><div class="relative z-50 mr-auto flex items-center"><a class="-translate-x-[1px] -translate-y-0.5 text-3xl font-bold" href=https://projectf.io/>Project F</a>
+<a class="btn-dark ml-6 h-6 w-6 shrink-0 cursor-pointer [background:url(./theme.png)_left_center/_auto_theme('spacing.6')_no-repeat] [transition:_background-position_0.4s_steps(5)] dark:[background-position:right]"></a></div><a class="btn-menu relative z-50 -mr-8 flex h-[5rem] w-[5rem] shrink-0 cursor-pointer flex-col items-center justify-center gap-2.5 lg:hidden"></a>
+<script>const htmlClass=document.documentElement.classList;setTimeout(()=>{htmlClass.remove("not-ready")},10);const btnMenu=document.querySelector(".btn-menu");btnMenu.addEventListener("click",()=>{htmlClass.toggle("open")});const metaTheme=document.querySelector('meta[name="theme-color"]'),lightBg=`"#fff"`.replace(/"/g,""),setDark=e=>{metaTheme.setAttribute("content",e?"#000":lightBg),htmlClass[e?"add":"remove"]("dark"),localStorage.setItem("dark",e)},darkScheme=window.matchMedia("(prefers-color-scheme: dark)");if(htmlClass.contains("dark"))setDark(!0);else{const e=localStorage.getItem("dark");setDark(e?e==="true":darkScheme.matches)}darkScheme.addEventListener("change",e=>{setDark(e.matches)});const btnDark=document.querySelector(".btn-dark");btnDark.addEventListener("click",()=>{setDark(localStorage.getItem("dark")!=="true")})</script><div class="nav-wrapper fixed inset-x-0 top-full z-40 flex h-full select-none flex-col justify-center pb-16 duration-200 dark:bg-black lg:static lg:h-auto lg:flex-row lg:!bg-transparent lg:pb-0 lg:transition-none"><nav class="lg:ml-12 lg:flex lg:flex-row lg:items-center lg:space-x-6"><a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/about/>About</a>
+<a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/demos/>Demos</a>
+<a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/verilog-lib/>Lib</a>
+<a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/tools/>Tools</a>
+<a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/tutorials/>Tutorials</a></nav><nav class="mt-12 flex justify-center space-x-10 dark:invert lg:mt-0 lg:ml-12 lg:items-center lg:space-x-6"><a class="h-8 w-8 [background:var(--url)_center_center/cover_no-repeat] lg:h-6 lg:w-6" style=--url:url(./github.svg) href=https://github.com/projf target=_blank rel=me></a>
+<a class="h-8 w-8 [background:var(--url)_center_center/cover_no-repeat] lg:h-6 lg:w-6" style=--url:url(./mastodon.svg) href=https://mastodon.social/@WillFlux target=_blank rel=me></a>
+<a class="h-8 w-8 [background:var(--url)_center_center/cover_no-repeat] lg:h-6 lg:w-6" style=--url:url(./rss.svg) href=https://projectf.io/index.xml target=_blank></a></nav></div></header><main class="prose prose-neutral relative mx-auto min-h-[calc(100%-10rem)] max-w-3xl px-8 pt-20 pb-1 dark:prose-invert"><article><header class=mb-1><h1 class="!my-0 pb-2.5">Display Signals</h1><div class="text-sm opacity-60">Published
+<time>07 May 2022</time>
+<span class=mx-1>&#183;</span>
+<span>Updated
+<time>13 Jun 2022</time></span></div></header><section><p>Welcome back to <em>Exploring FPGA Graphics</em>. Last time, we <a href=/posts/fpga-pong/>played Pong against our FPGA</a>; this time, we revisit displays signals and learn about palettes and indexed colour.</p><p>In this series, we learn about graphics at the hardware level and get a feel for the power of FPGAs. We&rsquo;ll learn how screens work, play Pong, create starfields and sprites, paint Michelangelo&rsquo;s David, draw lines and triangles, and animate characters and shapes. New to the series? Start with <a href=/posts/fpga-graphics/>Beginning FPGA Graphics</a>.</p><p><em>Get in touch with <a href=https://mastodon.social/@WillFlux>@WillFlux</a> or join me on <a href=https://github.com/projf/projf-explore/discussions>GitHub Discussions</a> and <a href=https://discord.gg/cf869yDbXf>1BitSquared Discord</a>.</em></p><p><img src=/img/posts/display-signals/banner.png alt title></p><h3 id=series-outline>Series Outline</h3><ul><li><a href=/posts/fpga-graphics/>Beginning FPGA Graphics</a> - video signals and basic graphics</li><li><a href=/posts/racing-the-beam/>Racing the Beam</a> - simple demo effects with minimal logic</li><li><a href=/posts/fpga-pong/>FPGA Pong</a> - recreate the classic arcade on an FPGA</li><li>Display Signals (this post) - revisit display signals and meet colour palettes</li><li><a href=/posts/hardware-sprites/>Hardware Sprites</a> - fast, colourful graphics for games</li><li><a href=/posts/framebuffers/>Framebuffers</a> - bitmap graphics featuring Michelangelo&rsquo;s David</li><li><a href=/posts/lines-and-triangles/>Lines and Triangles</a> - drawing lines and triangles</li><li><a href=/posts/fpga-shapes/>2D Shapes</a> - filled shapes and simple pictures</li><li><a href=/posts/animated-shapes/>Animated Shapes</a> - animation and double-buffering</li></ul><blockquote><p><strong>Sponsor My Work</strong><br>If you like what I do, consider <a href=https://github.com/sponsors/WillGreen>sponsoring me</a> on GitHub.<br>I love FPGAs and want to help more people discover and use them in their projects.<br>My hardware designs are open source, and my blog is advert free.</p></blockquote><h2 id=revisiting-the-display>Revisiting the Display</h2><p>Didn&rsquo;t we already sort out display signal generation at the <a href=/posts/fpga-graphics/#display-signals>start of the series</a>? Yes, we did, but there are good reasons to change how we treat screen coordinates before we start drawing sprites.</p><p>The new signals module has several improvements at the cost of a little complexity:</p><ol><li>Blanking intervals occur <em>before</em> the active drawing area</li><li>Signed coordinates for screen position</li><li>Addition of <strong>frame</strong> and <strong>line</strong> signals</li><li>Registered signals to improve timing</li></ol><p>Take a look at the new <strong>[<a href=https://github.com/projf/projf-explore/blob/main/lib/display/display_480p.sv>display_480p.sv</a>]</strong> module, then we&rsquo;ll discuss the changes in more detail:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span><span style=color:#66d9ef>module</span> display_480p #(
+</span></span><span style=display:flex><span>    CORDW<span style=color:#f92672>=</span><span style=color:#ae81ff>16</span>,    <span style=color:#75715e>// signed coordinate width (bits)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    H_RES<span style=color:#f92672>=</span><span style=color:#ae81ff>640</span>,   <span style=color:#75715e>// horizontal resolution (pixels)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    V_RES<span style=color:#f92672>=</span><span style=color:#ae81ff>480</span>,   <span style=color:#75715e>// vertical resolution (lines)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    H_FP<span style=color:#f92672>=</span><span style=color:#ae81ff>16</span>,     <span style=color:#75715e>// horizontal front porch
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    H_SYNC<span style=color:#f92672>=</span><span style=color:#ae81ff>96</span>,   <span style=color:#75715e>// horizontal sync
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    H_BP<span style=color:#f92672>=</span><span style=color:#ae81ff>48</span>,     <span style=color:#75715e>// horizontal back porch
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    V_FP<span style=color:#f92672>=</span><span style=color:#ae81ff>10</span>,     <span style=color:#75715e>// vertical front porch
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    V_SYNC<span style=color:#f92672>=</span><span style=color:#ae81ff>2</span>,    <span style=color:#75715e>// vertical sync
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    V_BP<span style=color:#f92672>=</span><span style=color:#ae81ff>33</span>,     <span style=color:#75715e>// vertical back porch
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    H_POL<span style=color:#f92672>=</span><span style=color:#ae81ff>0</span>,     <span style=color:#75715e>// horizontal sync polarity (0:neg, 1:pos)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    V_POL<span style=color:#f92672>=</span><span style=color:#ae81ff>0</span>      <span style=color:#75715e>// vertical sync polarity (0:neg, 1:pos)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    ) (
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>input</span>  <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> clk_pix,  <span style=color:#75715e>// pixel clock
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>input</span>  <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> rst_pix,  <span style=color:#75715e>// reset in pixel clock domain
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>      <span style=color:#66d9ef>logic</span> hsync,    <span style=color:#75715e>// horizontal sync
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>      <span style=color:#66d9ef>logic</span> vsync,    <span style=color:#75715e>// vertical sync
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>      <span style=color:#66d9ef>logic</span> de,       <span style=color:#75715e>// data enable (low in blanking interval)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>      <span style=color:#66d9ef>logic</span> frame,    <span style=color:#75715e>// high at start of frame
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>      <span style=color:#66d9ef>logic</span> line,     <span style=color:#75715e>// high at start of line
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>      <span style=color:#66d9ef>logic</span> <span style=color:#66d9ef>signed</span> [CORDW<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] sx,  <span style=color:#75715e>// horizontal screen position
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>      <span style=color:#66d9ef>logic</span> <span style=color:#66d9ef>signed</span> [CORDW<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] sy   <span style=color:#75715e>// vertical screen position
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    );
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e>// horizontal timings
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>localparam</span> <span style=color:#66d9ef>signed</span> H_STA  <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span> <span style=color:#f92672>-</span> H_FP <span style=color:#f92672>-</span> H_SYNC <span style=color:#f92672>-</span> H_BP;    <span style=color:#75715e>// horizontal start
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>localparam</span> <span style=color:#66d9ef>signed</span> HS_STA <span style=color:#f92672>=</span> H_STA <span style=color:#f92672>+</span> H_FP;                <span style=color:#75715e>// sync start
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>localparam</span> <span style=color:#66d9ef>signed</span> HS_END <span style=color:#f92672>=</span> HS_STA <span style=color:#f92672>+</span> H_SYNC;             <span style=color:#75715e>// sync end
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>localparam</span> <span style=color:#66d9ef>signed</span> HA_STA <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span>;                           <span style=color:#75715e>// active start
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>localparam</span> <span style=color:#66d9ef>signed</span> HA_END <span style=color:#f92672>=</span> H_RES <span style=color:#f92672>-</span> <span style=color:#ae81ff>1</span>;                   <span style=color:#75715e>// active end
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e>// vertical timings
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>localparam</span> <span style=color:#66d9ef>signed</span> V_STA  <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span> <span style=color:#f92672>-</span> V_FP <span style=color:#f92672>-</span> V_SYNC <span style=color:#f92672>-</span> V_BP;    <span style=color:#75715e>// vertical start
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>localparam</span> <span style=color:#66d9ef>signed</span> VS_STA <span style=color:#f92672>=</span> V_STA <span style=color:#f92672>+</span> V_FP;                <span style=color:#75715e>// sync start
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>localparam</span> <span style=color:#66d9ef>signed</span> VS_END <span style=color:#f92672>=</span> VS_STA <span style=color:#f92672>+</span> V_SYNC;             <span style=color:#75715e>// sync end
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>localparam</span> <span style=color:#66d9ef>signed</span> VA_STA <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span>;                           <span style=color:#75715e>// active start
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>localparam</span> <span style=color:#66d9ef>signed</span> VA_END <span style=color:#f92672>=</span> V_RES <span style=color:#f92672>-</span> <span style=color:#ae81ff>1</span>;                   <span style=color:#75715e>// active end
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>logic</span> <span style=color:#66d9ef>signed</span> [CORDW<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] x, y;  <span style=color:#75715e>// screen position
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e>// generate horizontal and vertical sync with correct polarity
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>always_ff</span> @(<span style=color:#66d9ef>posedge</span> clk_pix) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>        hsync <span style=color:#f92672>&lt;=</span> H_POL <span style=color:#f92672>?</span> (x <span style=color:#f92672>&gt;</span> HS_STA <span style=color:#f92672>&amp;&amp;</span> x <span style=color:#f92672>&lt;=</span> HS_END) <span style=color:#f92672>:</span> <span style=color:#f92672>~</span>(x <span style=color:#f92672>&gt;</span> HS_STA <span style=color:#f92672>&amp;&amp;</span> x <span style=color:#f92672>&lt;=</span> HS_END);
+</span></span><span style=display:flex><span>        vsync <span style=color:#f92672>&lt;=</span> V_POL <span style=color:#f92672>?</span> (y <span style=color:#f92672>&gt;</span> VS_STA <span style=color:#f92672>&amp;&amp;</span> y <span style=color:#f92672>&lt;=</span> VS_END) <span style=color:#f92672>:</span> <span style=color:#f92672>~</span>(y <span style=color:#f92672>&gt;</span> VS_STA <span style=color:#f92672>&amp;&amp;</span> y <span style=color:#f92672>&lt;=</span> VS_END);
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> (rst_pix) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>            hsync <span style=color:#f92672>&lt;=</span> H_POL <span style=color:#f92672>?</span> <span style=color:#ae81ff>0</span> <span style=color:#f92672>:</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>            vsync <span style=color:#f92672>&lt;=</span> V_POL <span style=color:#f92672>?</span> <span style=color:#ae81ff>0</span> <span style=color:#f92672>:</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e>// control signals
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>always_ff</span> @(<span style=color:#66d9ef>posedge</span> clk_pix) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>        de    <span style=color:#f92672>&lt;=</span> (y <span style=color:#f92672>&gt;=</span> VA_STA <span style=color:#f92672>&amp;&amp;</span> x <span style=color:#f92672>&gt;=</span> HA_STA);
+</span></span><span style=display:flex><span>        frame <span style=color:#f92672>&lt;=</span> (y <span style=color:#f92672>==</span> V_STA  <span style=color:#f92672>&amp;&amp;</span> x <span style=color:#f92672>==</span> H_STA);
+</span></span><span style=display:flex><span>        line  <span style=color:#f92672>&lt;=</span> (x <span style=color:#f92672>==</span> H_STA);
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> (rst_pix) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>            de <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>            frame <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>            line <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e>// calculate horizontal and vertical screen position
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>always_ff</span> @(<span style=color:#66d9ef>posedge</span> clk_pix) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> (x <span style=color:#f92672>==</span> HA_END) <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// last pixel on line?
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>            x <span style=color:#f92672>&lt;=</span> H_STA;
+</span></span><span style=display:flex><span>            y <span style=color:#f92672>&lt;=</span> (y <span style=color:#f92672>==</span> VA_END) <span style=color:#f92672>?</span> V_STA <span style=color:#f92672>:</span> y <span style=color:#f92672>+</span> <span style=color:#ae81ff>1</span>;  <span style=color:#75715e>// last line on screen?
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>        <span style=color:#66d9ef>end</span> <span style=color:#66d9ef>else</span> <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>            x <span style=color:#f92672>&lt;=</span> x <span style=color:#f92672>+</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> (rst_pix) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>            x <span style=color:#f92672>&lt;=</span> H_STA;
+</span></span><span style=display:flex><span>            y <span style=color:#f92672>&lt;=</span> V_STA;
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e>// delay screen position to match sync and control signals
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>always_ff</span> @ (<span style=color:#66d9ef>posedge</span> clk_pix) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>        sx <span style=color:#f92672>&lt;=</span> x;
+</span></span><span style=display:flex><span>        sy <span style=color:#f92672>&lt;=</span> y;
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> (rst_pix) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>            sx <span style=color:#f92672>&lt;=</span> H_STA;
+</span></span><span style=display:flex><span>            sy <span style=color:#f92672>&lt;=</span> V_STA;
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>endmodule</span>
+</span></span></code></pre></div><h3 id=blanking-first>Blanking First</h3><p>The changes to blanking first and signed coordinates are linked.</p><p>Imagine we want to draw a sprite at the far-left of the screen. We need to start the drawing process before the first sprite pixel, for example, to load pixels from flash memory. If horizontal blanking occurs at the end of the line, we need to start the drawing process on the previous line. There is no prior line if we want to draw at the top of the screen, so we need to start during the last frame. Dealing with these edge cases complicates drawing needlessly.</p><p>If blanking the before active area is so handy, why didn&rsquo;t we do this before? Putting the blanking interval first means the first visible pixel is no longer (0,0); for 640x480, it moves to (160,45). We can add an offset to all our positions, which is slightly annoying, but the <a href=http://amigadev.elowar.com/read/ADCD_2.1/Hardware_Manual_guide/node0071.html>Amiga successfully used this approach</a>. However, this creates a new issue when using different resolutions: the Amiga worked around this by always using low-resolution sprite coordinates.</p><p>There is a better way if we&rsquo;re prepared to accept signed coordinates. We retain (0,0) as the top-left of the visible screen, while blanking occurs at negative coordinates. If we adopt 16-bit signed coordinates, we can handle any plausible screen size and an (X,Y) coordinate pair fits cleanly into a 32-bit word. Signed signals are a bit of a pain in Verilog, but I&rsquo;ve found the slight inconvenience more than worth it when working with sprites and framebuffers.</p><p>The following diagram shows the new display signals to scale with two 64x64 pixel squares drawn:</p><p><img src=/img/posts/display-signals/display-signals.png alt="Display Signals" title="New display signals"></p><h3 id=frame-start-line-start>Frame Start, Line Start</h3><p>In our new design, the start of a line or frame depends on the display timings. For example, with 640x480, a line begins at pixel <code>-160</code> and a frame at line <code>-45</code>.</p><p>To avoid having to hard-code these values into designs, we create two new signals:</p><ul><li><strong>frame</strong> - high for one tick at the start of a frame</li><li><strong>line</strong> - high for one tick at the start of a line</li></ul><p>With these signals, you can safely link your logic to frames and lines, whatever the display mode.</p><h3 id=registered-signals>Registered Signals</h3><p>For simplicity, our original <strong>[<a href=https://github.com/projf/projf-explore/blob/main/graphics/fpga-graphics/simple_480p.sv>simple_480p.sv</a>]</strong> design had sync and data enable signals directly derived from <code>sx</code> and <code>sy</code>. However, it&rsquo;s good practice to register module outputs: this maximises the time the module user has to work with.</p><p>Our improved design registers all outputs, which forces us to delay <code>sx</code> and <code>sy</code> to match; otherwise, the sync and control signals would be one cycle late. We use <code>x</code> and <code>y</code> internally and assign <code>sx</code> and <code>sy</code> from them.</p><h3 id=display-signals-in-action>Display Signals in Action</h3><p>The revised <a href=/posts/hardware-sprites/>Hardware Sprites</a> post includes examples of this new display signals module.</p><h2 id=a-refined-palette>A Refined Palette</h2><p>So far in this series, we&rsquo;ve been using 12-bit colour values directly. For example, <code>#137</code> is dark blue and <code>#FFF</code> is white.
+However, using a full 12 bits for every pixel is wasteful for graphics with only a few colours.</p><p>To save resources, we can use fewer bits per pixel. The smallest we can get in RGB colour is 3 bits: one for each of red, green, and blue. However, this restricts us to eight fixed colours: black, red, green, yellow, blue, magenta, cyan, and white:</p><p><img src=/img/posts/display-signals/3-bit-colour.png alt="3-bit Colour" title></p><p>These eight colours were a fixture of 80s computers, including the BBC Micro and IBM PC CGA.</p><h3 id=indexed-colour>Indexed Colour</h3><p>What we want is a few colours, but of our choosing. Using a little indirection, we can use few bits per pixel but with a full choice of colours.</p><p>Instead of each pixel storing the colour, we store an index. When we display a pixel, we look the index up in a table to find the colour to show. The table is a &ldquo;colour lookup table&rdquo; or <strong>CLUT</strong>.</p><p>Indexed colour was common in late 80s and early 90s computers, including the Amiga, Macintosh II, and IBM PC VGA. While most contemporary computers use 24-bit colour, PNG and GIF formats still use indexed colour to reduce file sizes.</p><p>With a 4-bit index, we can have 16 colours, but these can be any of our 4,096 12-bit colours. I&rsquo;ve shown a couple of sample palettes below:</p><p><img src=/img/posts/display-signals/greyscale-palette.png alt="Greyscale Palette" title></p><p><img src=/img/posts/display-signals/teleport-palette.png alt="Teleport Palette" title></p><p>For example, if we set a pixel index to &lsquo;3&rsquo;, it would appear orange with the second palette.</p><h3 id=clut-module>CLUT Module</h3><p>A CLUT needs a small amount of fast memory, for which block ram is ideal.
+I&rsquo;ve designed a simple CLUT module using a single BRAM <strong>[<a href=https://github.com/projf/projf-explore/blob/main/lib/display/clut_simple.sv>clut_simple.sv</a>]</strong>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span><span style=color:#66d9ef>module</span> clut_simple #(
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>parameter</span> COLRW<span style=color:#f92672>=</span><span style=color:#ae81ff>12</span>,  <span style=color:#75715e>// colour output width (bits)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>parameter</span> CIDXW<span style=color:#f92672>=</span><span style=color:#ae81ff>4</span>,   <span style=color:#75715e>// colour index width (bits)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>parameter</span> F_PAL<span style=color:#f92672>=</span><span style=color:#e6db74>&#34;&#34;</span>   <span style=color:#75715e>// init file for colour palette
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    ) (
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>input</span>  <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> clk_write,  <span style=color:#75715e>// write clock
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>input</span>  <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> clk_read,   <span style=color:#75715e>// read clock
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>input</span>  <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> we,         <span style=color:#75715e>// write enable
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>input</span>  <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> [CIDXW<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] cidx_write,  <span style=color:#75715e>// colour index to write
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>input</span>  <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> [CIDXW<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] cidx_read,   <span style=color:#75715e>// colour index to read
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>input</span>  <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> [COLRW<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] colr_in,     <span style=color:#75715e>// write colour
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>      <span style=color:#66d9ef>logic</span> [COLRW<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] colr_out     <span style=color:#75715e>// read colour
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    );
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    bram_sdp #(
+</span></span><span style=display:flex><span>        .WIDTH(COLRW),
+</span></span><span style=display:flex><span>        .DEPTH(<span style=color:#ae81ff>2</span><span style=color:#f92672>**</span>CIDXW),
+</span></span><span style=display:flex><span>        .INIT_F(F_PAL)
+</span></span><span style=display:flex><span>        ) bram_clut (
+</span></span><span style=display:flex><span>        .clk_write,
+</span></span><span style=display:flex><span>        .clk_read,
+</span></span><span style=display:flex><span>        .we,
+</span></span><span style=display:flex><span>        .addr_write(cidx_write),
+</span></span><span style=display:flex><span>        .addr_read(cidx_read),
+</span></span><span style=display:flex><span>        .data_in(colr_in),
+</span></span><span style=display:flex><span>        .data_out(colr_out)
+</span></span><span style=display:flex><span>    );
+</span></span><span style=display:flex><span><span style=color:#66d9ef>endmodule</span>
+</span></span></code></pre></div><h3 id=palette-files>Palette Files</h3><p>You can set the colours directly in logic, but loading an initial palette from a file is common. Our module supports this using the <code>F_PAL</code> parameter. The Project F Verilog Library includes several ready-to-use palettes in <code>$readmemh</code> format: <strong>[<a href=https://github.com/projf/projf-explore/tree/main/lib/res/palettes>lib/res/palettes</a>]</strong>.</p><h3 id=colours-in-action>Colours in Action</h3><p>The revised <a href=/posts/hardware-sprites/>Hardware Sprites</a> post includes examples of this CLUT module.</p><h2 id=next-time>Next Time</h2><p>Next, we&rsquo;ll learn about <a href=/posts/hardware-sprites/>hardware sprites</a>, generating fast, colourful graphics using our new CLUT and display signals modules. Check out the <a href=/demos/>demo</a> and <a href=/tutorials/>tutorial</a> sections for more FPGA projects.</p><p><em>Get in touch with <a href=https://mastodon.social/@WillFlux>@WillFlux</a> or join me on <a href=https://github.com/projf/projf-explore/discussions>GitHub Discussions</a> and <a href=https://discord.gg/cf869yDbXf>1BitSquared Discord</a>.</em></p></section><footer class="mt-12 flex flex-wrap"><a class="mr-1.5 mb-1.5 rounded-lg bg-black/[3%] px-5 py-2 no-underline dark:bg-white/[8%]" href=https://projectf.io/tags/graphics>graphics</a></footer><nav class="mt-24 flex rounded-lg bg-black/[3%] text-lg dark:bg-white/[8%]"><a class="flex w-1/2 items-center rounded-l-md p-6 pr-3 no-underline hover:bg-black/[2%]" href=https://projectf.io/posts/lib-clock-xd/><span class=mr-1.5>←</span><span>Lib: clock/xd</span></a>
+<a class="ml-auto flex w-1/2 items-center justify-end rounded-r-md p-6 pl-3 no-underline hover:bg-black/[2%]" href=https://projectf.io/posts/racing-the-beam/><span>Racing the Beam</span><span class=ml-1.5>→</span></a></nav></article></main><footer class="opaco mx-auto flex h-[5rem] max-w-3xl items-center px-8 text-[0.9em] opacity-60"><div class=mr-auto><a class=link href=https://projectf.io>Project F</a>
+&copy; 2023 Will Green.</div></footer></body></html>

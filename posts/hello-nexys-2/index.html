@@ -1,376 +1,136 @@
-<!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml"  lang="en-gb">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
-<title>Hello Nexys - Part 2 | Project F: FPGA Dev</title>
-
-<meta property='og:title' content='Hello Nexys - Part 2 - Project F: FPGA Dev'>
-<meta property='og:description' content='Welcome back to our three-part FPGA tutorial with SystemVerilog and the Digilent Nexys Video. In part two, we&rsquo;re going to learn about clocks and counting. Along the way, we&rsquo;ll cover maintaining state with flip-flops, timing things with clock dividers, creating our first Verilog module, and controlling LEDs with pulse width modulation. This post is also available for the Arty. This post was last updated in December 2021.
-New to the series?'>
-<meta property='og:url' content='https://projectf.io/posts/hello-nexys-2/'>
-<meta property='og:site_name' content='Project F: FPGA Dev'>
-<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/hello-nexys/social-card.jpg'><meta property='article:published_time' content='2021-02-11T00:00:00Z'><meta property='article:modified_time' content='2021-12-21T00:00:00Z'><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
-
-
-<link href="https://projectf.io/index.xml" rel="alternate" type="application/rss+xml" title="Project F: FPGA Dev">
-
-<link rel="stylesheet" href="/css/style.css"><link rel='stylesheet' href='https://projectf.io/css/custom.css'>
-
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-<link rel="manifest" href="/site.webmanifest">
-<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
-<link rel="canonical" href="https://projectf.io/posts/hello-nexys-2/">
-<meta name="msapplication-TileColor" content="#da532c">
-<meta name="theme-color" content="#ffffff">
-</head>
-<body>
-
-<section class="section">
-  <div class="container">
-    <nav id="nav-main" class="nav">
-      <div id="nav-name" class="nav-left">
-        <a id="nav-anchor" class="nav-item" href="https://projectf.io">
-          <h1 id="nav-heading" class="title is-4">Project F: FPGA Dev</h1>
-        </a>
-      </div>
-      <div class="nav-right">
-        <nav id="nav-items" class="nav-item level is-mobile"><a class="level-item" aria-label="github" href='https://github.com/projf/projf-explore'
-            target='_blank' rel='me noopener'>
-            <span class="icon">
-              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
-    
-    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
-    
-  </svg>
-</i>
-            </span>
-          </a><a class="level-item" aria-label="mastodon" href='https://mastodon.social/@WillFlux'
-            target='_blank' rel='me noopener'>
-            <span class="icon">
-              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
-    
-    <path d="M 11.966876,0.80329086 C 9.1123466,0.82665791 6.3664935,1.1367094 4.7662978,1.8737549 c 0,0 -3.1736685,1.4237835 -3.1736685,6.2815982 0,1.1123884 -0.021554,2.4424309 0.013571,3.8529439 0.1152443,4.750677 0.8683725,9.432704 5.2479219,10.595273 2.0193066,0.53604 3.7531218,0.648348 5.1494078,0.571373 2.532141,-0.140797 3.953603,-0.906282 3.953603,-0.906282 l -0.08353,-1.842608 c 0,0 -1.809527,0.572181 -3.841713,0.50245 -2.013417,-0.06922 -4.138986,-0.217713 -4.4646269,-2.696937 -0.030082,-0.217772 -0.045075,-0.450712 -0.045075,-0.695267 0,0 1.9765387,0.484554 4.4813709,0.599656 1.531629,0.07049 2.9679,-0.08996 4.426746,-0.264563 2.797636,-0.335045 5.233581,-2.063856 5.539741,-3.643517 0.482392,-2.488386 0.442651,-6.0725219 0.442651,-6.0725219 0,-4.8578147 -3.173492,-6.2815982 -3.173492,-6.2815982 C 17.639136,1.1367094 14.891579,0.82669685 12.03704,0.80329086 Z"/>
-  <path d="M 6.4286668,14.016701 V 9.1034254 c 0,-1.0041614 0.2549569,-1.8022059 0.7670342,-2.3925638 0.5280486,-0.590366 1.2196579,-0.8929946 2.0781049,-0.8929946 0.9931961,0 1.7452181,0.3828583 2.2425191,1.1486808 L 11.999859,7.7793695 12,11.451148 11.999859,7.7793695 12.483392,6.9665478 C 12.980596,6.2007253 13.732618,5.817867 14.72592,5.817867 c 0.858341,0 1.549951,0.3026286 2.078097,0.8929946 0.511971,0.5903579 0.766887,1.3884024 0.766887,2.3925638 v 4.9132756" />
-    
-  </svg>
-</i>
-            </span>
-          </a><a class="level-item" aria-label="youtube" href='https://youtube.com/@projf'
-            target='_blank' rel='me noopener'>
-            <span class="icon">
-              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
-    
-    <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/>
-    <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/>
-    
-  </svg>
-</i>
-            </span>
-          </a><a class="level-item" aria-label="rss" href='/index.xml'
-            target='_blank' rel='me noopener'>
-            <span class="icon">
-              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
-    
-    <path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle>
-    
-  </svg>
-</i>
-            </span>
-          </a></nav>
-      </div>
-    </nav>
-
-    <nav class="nav">
-      
-      <div class="nav-left"><a class="nav-item" href="/about">
-          <h2 class="title is-5">About</h2>
-        </a><a class="nav-item" href="/demos">
-          <h2 class="title is-5">Demos</h2>
-        </a><a class="nav-item" href="/howto">
-          <h2 class="title is-5">How To</h2>
-        </a><a class="nav-item" href="/tags/news">
-          <h2 class="title is-5">News</h2>
-        </a><a class="nav-item" href="/tutorials">
-          <h2 class="title is-5">Tutorials</h2>
-        </a><a class="nav-item" href="/verilog-lib">
-          <h2 class="title is-5">Verilog Lib</h2>
-        </a></div>
-      
-
-      
-    </nav>
-
-  </div>
-  <script src="/js/navicon-shift.js"></script>
-</section>
-
-<section class="section">
-  <div class="container">
-    <div class="subtitle tags is-6 is-pulled-right">
-      
-      
-<a class="subtitle is-6" href="/tags/nexys/">#nexys</a>
-
-
-
-  
-  | <a class="subtitle is-6" href="/tags/hello/">#hello</a>
-  
-
-
-      
-    </div>
-    <h2 class="subtitle is-6">11 February 2021</h2>
-    <h1 class="title">Hello Nexys - Part 2</h1>
-    
-    <div class="content">
-      <p>Welcome back to our three-part FPGA tutorial with <strong>SystemVerilog</strong> and the <strong>Digilent Nexys Video</strong>. In part two, we&rsquo;re going to learn about clocks and counting. Along the way, we&rsquo;ll cover maintaining state with flip-flops, timing things with clock dividers, creating our first Verilog module, and controlling LEDs with pulse width modulation. This post is also available for the <strong><a href="/posts/hello-arty-2/">Arty</a></strong>. This post was last updated in December 2021.</p>
-<p>New to the series? Start with <strong><a href="/posts/hello-nexys-1/">part 1</a></strong>.</p>
-<p><em>Get in touch with <a href="https://mastodon.social/@WillFlux">@WillFlux</a> or join me on <a href="https://github.com/projf/projf-explore/discussions">GitHub Discussions</a> and <a href="https://discord.gg/cf869yDbXf">1BitSquared Discord</a>.</em></p>
-<h3 id="requirements">Requirements</h3>
-<p>For this series, we are be using the <a href="https://reference.digilentinc.com/reference/programmable-logic/nexys-video/start">Digilent Nexys Video</a>, a $480 dev board based on a <a href="https://www.xilinx.com/products/silicon-devices/fpga/artix-7.html">Xilinx Artix-7 FPGA</a>. This board is widely available and supports Xilinx&rsquo;s latest Vivado software, which runs on Linux and Windows.</p>
-<p>For this <em>Hello Nexys</em> series you need:</p>
-<ol>
-<li><a href="https://reference.digilentinc.com/reference/programmable-logic/nexys-video/start">Digilent Nexys Video</a></li>
-<li>Micro USB cable to program the Nexys Video board</li>
-<li>12V power adaptor (EU/US plug is provided by Digilent - UK users will need an adaptor)</li>
-<li>Xilinx Vivado 2019 or later: <a href="https://www.xilinx.com/support/download.html">Download</a> and <a href="https://www.xilinx.com/support/documentation-navigation/see-all-versions.html?xlnxproducttypes=Design%20Tools&amp;xlnxdocumentid=UG973">Install Guide</a></li>
-<li><a href="https://reference.digilentinc.com/vivado/installing-vivado/start#installing_digilent_board_files">Digilent board files</a></li>
-</ol>
-<h3 id="source">Source</h3>
-<p>The SystemVerilog designs featured in this series are available from the <a href="https://github.com/projf/projf-explore/tree/main/hello">projf-explore</a> git repo under the open-source MIT licence: build on them to your heart&rsquo;s content. The rest of the blog content is subject to standard copyright restrictions: don&rsquo;t republish it without permission.</p>
-<h2 id="learning-to-count">Learning to Count</h2>
-<p>Think about what happens when you count <a href="https://www.youtube.com/watch?v=M7AAwIWxIpM">1, 2, 3, 4, 5&hellip;</a>. You need to <em>remember</em> the current number in order to decide what comes next. If you&rsquo;re interrupted while counting, you lose your place and have to start over. Without memory, you can&rsquo;t count.</p>
-<p>In <a href="/posts/hello-nexys-1/">part 1</a> our designs had no memory; to put it more abstractly they didn&rsquo;t maintain any <strong>state</strong>.</p>
-<p>That&rsquo;s not quite true: when you moved a slide switch, it did maintain its state. Alas, that&rsquo;s not a viable approach for circuit design: the switches are huge, and the FPGA can&rsquo;t move them! Instead, we&rsquo;re going to make use of <strong>flip-flops</strong>.</p>
-<p>A flip-flop maintains the state of a single bit. That&rsquo;s right: 1 bit. Are you dismayed? Don&rsquo;t be: the FPGA on the Nexys Video board has 270,000 flip-flops, and we don&rsquo;t use them as general-purpose ram. Think of a flip-flop as a tiny, extremely fast, box for storing something you&rsquo;re working on right now: like a CPU register.</p>
-<p>When a flip-flop receives a trigger, it updates its bit. You could use any signal to trigger an update, but we&rsquo;ll always use a common clock to trigger our flip-flops simultaneously. Using a common clock ensures that all signals are updated and ready at the same time. The clock is like the conductor of an orchestra keeping everyone playing to time.</p>
-<p>To see a flip-flop in action watch the LearnElectronics video: <a href="https://youtu.be/OYtGr2faYpw">Digital Logic: D type Flip Flop</a>.</p>
-<h3 id="counting-project">Counting Project</h3>
-<p>Create a new project in Vivado called <strong><code>hello-nexys-2</code></strong> using the same settings as in <a href="/posts/hello-nexys-1/">part 1</a>: an RTL Project with the Nexys Video board.</p>
-<p>Add a new SystemVerilog design source to your project called <code>top.sv</code> with <strong>[<a href="https://github.com/projf/projf-explore/blob/main/hello/hello-nexys/E/top.sv">src</a>]</strong>:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> top (
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] led
-</span></span><span style="display:flex;"><span>    );
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">31</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// 32-bit counter
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>        cnt <span style="color:#f92672">&lt;=</span> cnt <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>        led[<span style="color:#ae81ff">0</span>] <span style="color:#f92672">&lt;=</span> cnt[<span style="color:#ae81ff">26</span>];
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
-</span></span></code></pre></div><p>In part 1, we used <code>always_comb</code> blocks. Flip-flips require a new type of block: <strong>always_ff</strong>.</p>
-<p>Our <code>always_ff</code> block has the positive edge (<code>posedge</code>) of the clock (<code>clk</code>) on its <strong>sensitivity list</strong> <code>@(...)</code>. This means the block is triggered on every rising (positive) edge of the clock.</p>
-<p>We&rsquo;re using the 100 MHz oscillator on the Nexys Video board, so we get a rising clock edge every 10 nanoseconds: this is known as the <strong>clock period</strong>. Every 10 ns our counter <code>cnt</code> increments; when it reaches its maximum value, it rolls over to 0 and repeats.</p>
-<blockquote>
-<p>How long does it take the 32-bit counter to roll over?</p>
-</blockquote>
-<p>At the <em>same time</em> as our counter is being incremented, one bit of the counter is being copied to a flip-flop that maintains the LED state. Statements in an <code>always_ff</code> block happen independently and in parallel.</p>
-<blockquote>
-<p><strong>Assignment</strong><br>
-You may have noticed we snuck in a new type of assignment with flip-flops:</p>
-<p><code>always_comb</code> blocks use <code>=</code> for assignment<br>
-<code>always_ff</code> blocks use <code>&lt;=</code> for assignment</p>
-<p><em>We won&rsquo;t go into the reasons for this right now, but follow this rule and all will be well.</em></p>
-</blockquote>
-<h3 id="constraints">Constraints</h3>
-<p>Add the following <code>nexys.xdc</code>constraints file to your project <strong>[<a href="https://github.com/projf/projf-explore/blob/main/hello/hello-nexys/E/nexys.xdc">src</a>]</strong>.</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-tcl" data-lang="tcl"><span style="display:flex;"><span><span style="color:#75715e">## FPGA Configuration I/O Options
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>set_property CONFIG_VOLTAGE <span style="color:#ae81ff">3.3</span> <span style="color:#66d9ef">[</span>current_design<span style="color:#66d9ef">]</span>
-</span></span><span style="display:flex;"><span>set_property CFGBVS VCCO <span style="color:#66d9ef">[</span>current_design<span style="color:#66d9ef">]</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#75715e">## Board Clock: 100 MHz
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>set_property <span style="color:#f92672">-</span>dict <span style="color:#66d9ef">{</span>PACKAGE_PIN R4 IOSTANDARD LVCMOS33<span style="color:#66d9ef">}</span> <span style="color:#66d9ef">[</span>get_ports <span style="color:#66d9ef">{</span>clk<span style="color:#66d9ef">}];</span>
-</span></span><span style="display:flex;"><span>create_clock <span style="color:#f92672">-</span>name clk_100m <span style="color:#f92672">-</span>period <span style="color:#ae81ff">10.00</span> <span style="color:#66d9ef">[</span>get_ports <span style="color:#66d9ef">{</span>clk<span style="color:#66d9ef">}];</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#75715e">## LEDs
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>set_property <span style="color:#f92672">-</span>dict <span style="color:#66d9ef">{</span>PACKAGE_PIN T14 IOSTANDARD LVCMOS25<span style="color:#66d9ef">}</span> <span style="color:#66d9ef">[</span>get_ports <span style="color:#66d9ef">{</span>led<span style="color:#66d9ef">[</span>0<span style="color:#66d9ef">]}];</span>
-</span></span><span style="display:flex;"><span>set_property <span style="color:#f92672">-</span>dict <span style="color:#66d9ef">{</span>PACKAGE_PIN T15 IOSTANDARD LVCMOS25<span style="color:#66d9ef">}</span> <span style="color:#66d9ef">[</span>get_ports <span style="color:#66d9ef">{</span>led<span style="color:#66d9ef">[</span>1<span style="color:#66d9ef">]}];</span>
-</span></span><span style="display:flex;"><span>set_property <span style="color:#f92672">-</span>dict <span style="color:#66d9ef">{</span>PACKAGE_PIN T16 IOSTANDARD LVCMOS25<span style="color:#66d9ef">}</span> <span style="color:#66d9ef">[</span>get_ports <span style="color:#66d9ef">{</span>led<span style="color:#66d9ef">[</span>2<span style="color:#66d9ef">]}];</span>
-</span></span><span style="display:flex;"><span>set_property <span style="color:#f92672">-</span>dict <span style="color:#66d9ef">{</span>PACKAGE_PIN U16 IOSTANDARD LVCMOS25<span style="color:#66d9ef">}</span> <span style="color:#66d9ef">[</span>get_ports <span style="color:#66d9ef">{</span>led<span style="color:#66d9ef">[</span>3<span style="color:#66d9ef">]}];</span>
-</span></span></code></pre></div><p><em>See <a href="/posts/hello-nexys-1/#constraints-file">part 1</a> if you need a reminder on how to add constraints.</em></p>
-<p>Note how the period of the clock is set to 10.00 ns. This tells Vivado what the oscillator clock period is: you can&rsquo;t use it to adjust the clock frequency! We&rsquo;ll learn how to generate other frequencies later in this tutorial.</p>
-<h3 id="generate--program-bitstream">Generate &amp; Program Bitstream</h3>
-<p>We&rsquo;re ready to run this design on our board. We could individually synthesise, implement, and generate bitstream as we learnt in part 1. However, you don&rsquo;t have to run these steps one-by-one: you can select <strong>Generate Bitstream</strong>, and Vivado performs all the necessary steps.</p>
-<p>Program your board, and you should see the green LED <strong><code>LD0</code></strong> blinking. We&rsquo;ve wired up bit 26 of our counter to <code>led[0]</code>, so it changes state every 2<sup>26</sup> x 10 ns = 0.67 seconds. That&rsquo;s one blink every 1.34 seconds.</p>
-<h3 id="blinky-blinky">Blinky, Blinky</h3>
-<p>Try replacing the <code>always_ff</code> block in <code>top.sv</code> with <strong>[<a href="https://github.com/projf/projf-explore/blob/main/hello/hello-nexys/F/top.sv">src</a>]</strong>:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>    cnt <span style="color:#f92672">&lt;=</span> cnt <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>    led[<span style="color:#ae81ff">0</span>] <span style="color:#f92672">&lt;=</span> cnt[<span style="color:#ae81ff">26</span>];
-</span></span><span style="display:flex;"><span>    led[<span style="color:#ae81ff">1</span>] <span style="color:#f92672">&lt;=</span> cnt[<span style="color:#ae81ff">24</span>];
-</span></span><span style="display:flex;"><span>    led[<span style="color:#ae81ff">2</span>] <span style="color:#f92672">&lt;=</span> cnt[<span style="color:#ae81ff">22</span>];
-</span></span><span style="display:flex;"><span>    led[<span style="color:#ae81ff">3</span>] <span style="color:#f92672">&lt;=</span> cnt[<span style="color:#ae81ff">20</span>];
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">end</span>
-</span></span></code></pre></div><p><em>NB. We use code snippets to focus on what&rsquo;s changed, but the full design is available via [src].</em></p>
-<p>Rerun bitstream generation and program your board. How often is each LED blinking?</p>
-<p><strong><code>LD3</code></strong> on our board (<strong><code>led[3]</code></strong> in Verilog) looks like it&rsquo;s on all time, but is less bright. It&rsquo;s blinking fifty times per second, so fast that your eyes hardly see the flashes. We&rsquo;ll make use of this later.</p>
-<h2 id="division-of-time">Division of Time</h2>
-<p>Earlier we said we would always use a single clock in our designs. What happens if we want to do something less than 100 million times a second? We could take a bit from a counter, but there&rsquo;s a more elegant way using a <strong>strobe</strong>. With a strobe we&rsquo;re not limited to dividing by powers of two.</p>
-<p>For example, to divide by three:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">logic</span> stb;
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (cnt <span style="color:#f92672">!=</span> <span style="color:#ae81ff">2</span><span style="color:#ae81ff">&#39;d2</span>) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>        stb <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>        cnt <span style="color:#f92672">&lt;=</span> cnt <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>        stb <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>        cnt <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">end</span>
-</span></span></code></pre></div><p>This example divides by three because we start counting at zero: 0, 1, 2, 0, 1, 2&hellip;</p>
-<p>The following simulation shows how the counter and strobe vary over time:</p>
-<p><img src="/img/posts/hello-arty/strobe_div_by_3.png" alt="Strobe dividing by three" title="Strobe dividing by three"></p>
-<p>To use the strobe, you add a test for it inside your always block:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (stb) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// do something every time the strobe fires
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">end</span>
-</span></span></code></pre></div><p>It&rsquo;s tempting to simplify this by using: <code>always_ff @(posedge stb)</code>.</p>
-<p><strong>Never do this!</strong></p>
-<p>While this might work for simple designs, it quickly leads to unstable designs and debugging headaches. Hardware design is hard enough without messing with clock distribution and crossing clock domains unnecessarily. Always use a proper clock signal in your sensitivity list.</p>
-<h3 id="every-second-counts">Every Second Counts</h3>
-<p>Let&rsquo;s say you want a one-second strobe: our clock is 100 MHz, so we need to divide by 100 million! Our counter needs to be 27 bits wide because log<sub>2</sub>(100,000,000) = 26.6.</p>
-<p>We can use our new one-second strobe to turn four green LEDs into a simple binary clock <strong>[<a href="https://github.com/projf/projf-explore/blob/main/hello/hello-nexys/G/top.sv">src</a>]</strong>:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> top (
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] led
-</span></span><span style="display:flex;"><span>    );
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">localparam</span> DIV_BY <span style="color:#f92672">=</span> <span style="color:#ae81ff">27</span><span style="color:#ae81ff">&#39;d100</span>_000_000;  <span style="color:#75715e">// 100 million
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> stb;
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">26</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (cnt <span style="color:#f92672">!=</span> DIV_BY<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>            stb <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>            cnt <span style="color:#f92672">&lt;=</span> cnt <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>            stb <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>            cnt <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (stb) led <span style="color:#f92672">&lt;=</span> led <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
+<!doctype html><html class="not-ready text-sm lg:text-base" style=--bg:#fff lang=en-gb><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><title>Hello Nexys - Part 2 - Project F</title><meta name=theme-color><meta name=description content="Welcome back to our three-part FPGA tutorial with SystemVerilog and the Digilent Nexys Video. In part two, we&rsquo;re going to learn about clocks and counting. Along the way, we&rsquo;ll cover maintaining state with flip-flops, timing things with clock dividers, creating our first Verilog module, and controlling LEDs with pulse width modulation. This post is also available for the Arty.
+New to the series? Start with part 1.
+Get in touch with @WillFlux or join me on GitHub Discussions and 1BitSquared Discord."><meta name=author content="Will Green"><link rel="preload stylesheet" as=style href=https://projectf.io/main.min.css><script defer src=https://projectf.io/highlight.min.js onload=hljs.initHighlightingOnLoad()></script>
+<link rel=preload as=image href=https://projectf.io/theme.png><link rel=preload as=image href=https://projectf.io/github.svg><link rel=preload as=image href=https://projectf.io/mastodon.svg><link rel=preload as=image href=https://projectf.io/rss.svg><link rel=icon href=https://projectf.io/favicon.ico><link rel=apple-touch-icon href=https://projectf.io/apple-touch-icon.png><meta name=generator content="Hugo 0.110.0"><script src=https://badgers.projectf.io/script.js data-site=EVCGKVDN defer></script><meta property="og:title" content="Hello Nexys - Part 2"><meta property="og:description" content="Welcome back to our three-part FPGA tutorial with SystemVerilog and the Digilent Nexys Video. In part two, we&rsquo;re going to learn about clocks and counting. Along the way, we&rsquo;ll cover maintaining state with flip-flops, timing things with clock dividers, creating our first Verilog module, and controlling LEDs with pulse width modulation. This post is also available for the Arty.
+New to the series? Start with part 1.
+Get in touch with @WillFlux or join me on GitHub Discussions and 1BitSquared Discord."><meta property="og:type" content="article"><meta property="og:url" content="https://projectf.io/posts/hello-nexys-2/"><meta property="article:section" content="posts"><meta property="article:published_time" content="2021-02-11T00:00:00+00:00"><meta property="article:modified_time" content="2021-12-21T00:00:00+00:00"><meta itemprop=name content="Hello Nexys - Part 2"><meta itemprop=description content="Welcome back to our three-part FPGA tutorial with SystemVerilog and the Digilent Nexys Video. In part two, we&rsquo;re going to learn about clocks and counting. Along the way, we&rsquo;ll cover maintaining state with flip-flops, timing things with clock dividers, creating our first Verilog module, and controlling LEDs with pulse width modulation. This post is also available for the Arty.
+New to the series? Start with part 1.
+Get in touch with @WillFlux or join me on GitHub Discussions and 1BitSquared Discord."><meta itemprop=datePublished content="2021-02-11T00:00:00+00:00"><meta itemprop=dateModified content="2021-12-21T00:00:00+00:00"><meta itemprop=wordCount content="2252"><meta itemprop=keywords content="nexys,hello,"><meta name=twitter:card content="summary"><meta name=twitter:title content="Hello Nexys - Part 2"><meta name=twitter:description content="Welcome back to our three-part FPGA tutorial with SystemVerilog and the Digilent Nexys Video. In part two, we&rsquo;re going to learn about clocks and counting. Along the way, we&rsquo;ll cover maintaining state with flip-flops, timing things with clock dividers, creating our first Verilog module, and controlling LEDs with pulse width modulation. This post is also available for the Arty.
+New to the series? Start with part 1.
+Get in touch with @WillFlux or join me on GitHub Discussions and 1BitSquared Discord."></head><body class="text-black duration-200 ease-out dark:text-white"><header class="mx-auto flex h-[5rem] max-w-3xl px-8 lg:justify-center"><div class="relative z-50 mr-auto flex items-center"><a class="-translate-x-[1px] -translate-y-0.5 text-3xl font-bold" href=https://projectf.io/>Project F</a>
+<a class="btn-dark ml-6 h-6 w-6 shrink-0 cursor-pointer [background:url(./theme.png)_left_center/_auto_theme('spacing.6')_no-repeat] [transition:_background-position_0.4s_steps(5)] dark:[background-position:right]"></a></div><a class="btn-menu relative z-50 -mr-8 flex h-[5rem] w-[5rem] shrink-0 cursor-pointer flex-col items-center justify-center gap-2.5 lg:hidden"></a>
+<script>const htmlClass=document.documentElement.classList;setTimeout(()=>{htmlClass.remove("not-ready")},10);const btnMenu=document.querySelector(".btn-menu");btnMenu.addEventListener("click",()=>{htmlClass.toggle("open")});const metaTheme=document.querySelector('meta[name="theme-color"]'),lightBg=`"#fff"`.replace(/"/g,""),setDark=e=>{metaTheme.setAttribute("content",e?"#000":lightBg),htmlClass[e?"add":"remove"]("dark"),localStorage.setItem("dark",e)},darkScheme=window.matchMedia("(prefers-color-scheme: dark)");if(htmlClass.contains("dark"))setDark(!0);else{const e=localStorage.getItem("dark");setDark(e?e==="true":darkScheme.matches)}darkScheme.addEventListener("change",e=>{setDark(e.matches)});const btnDark=document.querySelector(".btn-dark");btnDark.addEventListener("click",()=>{setDark(localStorage.getItem("dark")!=="true")})</script><div class="nav-wrapper fixed inset-x-0 top-full z-40 flex h-full select-none flex-col justify-center pb-16 duration-200 dark:bg-black lg:static lg:h-auto lg:flex-row lg:!bg-transparent lg:pb-0 lg:transition-none"><nav class="lg:ml-12 lg:flex lg:flex-row lg:items-center lg:space-x-6"><a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/about/>About</a>
+<a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/demos/>Demos</a>
+<a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/verilog-lib/>Lib</a>
+<a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/tools/>Tools</a>
+<a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/tutorials/>Tutorials</a></nav><nav class="mt-12 flex justify-center space-x-10 dark:invert lg:mt-0 lg:ml-12 lg:items-center lg:space-x-6"><a class="h-8 w-8 [background:var(--url)_center_center/cover_no-repeat] lg:h-6 lg:w-6" style=--url:url(./github.svg) href=https://github.com/projf target=_blank rel=me></a>
+<a class="h-8 w-8 [background:var(--url)_center_center/cover_no-repeat] lg:h-6 lg:w-6" style=--url:url(./mastodon.svg) href=https://mastodon.social/@WillFlux target=_blank rel=me></a>
+<a class="h-8 w-8 [background:var(--url)_center_center/cover_no-repeat] lg:h-6 lg:w-6" style=--url:url(./rss.svg) href=https://projectf.io/index.xml target=_blank></a></nav></div></header><main class="prose prose-neutral relative mx-auto min-h-[calc(100%-10rem)] max-w-3xl px-8 pt-20 pb-1 dark:prose-invert"><article><header class=mb-1><h1 class="!my-0 pb-2.5">Hello Nexys - Part 2</h1><div class="text-sm opacity-60">Published
+<time>11 Feb 2021</time>
+<span class=mx-1>&#183;</span>
+<span>Updated
+<time>21 Dec 2021</time></span></div></header><section><p>Welcome back to our three-part FPGA tutorial with <strong>SystemVerilog</strong> and the <strong>Digilent Nexys Video</strong>. In part two, we&rsquo;re going to learn about clocks and counting. Along the way, we&rsquo;ll cover maintaining state with flip-flops, timing things with clock dividers, creating our first Verilog module, and controlling LEDs with pulse width modulation. This post is also available for the <strong><a href=/posts/hello-arty-2/>Arty</a></strong>.</p><p>New to the series? Start with <strong><a href=/posts/hello-nexys-1/>part 1</a></strong>.</p><p><em>Get in touch with <a href=https://mastodon.social/@WillFlux>@WillFlux</a> or join me on <a href=https://github.com/projf/projf-explore/discussions>GitHub Discussions</a> and <a href=https://discord.gg/cf869yDbXf>1BitSquared Discord</a>.</em></p><h3 id=requirements>Requirements</h3><p>For this series, we are be using the <a href=https://reference.digilentinc.com/reference/programmable-logic/nexys-video/start>Digilent Nexys Video</a>, a $480 dev board based on a <a href=https://www.xilinx.com/products/silicon-devices/fpga/artix-7.html>Xilinx Artix-7 FPGA</a>. This board is widely available and supports Xilinx&rsquo;s latest Vivado software, which runs on Linux and Windows.</p><p>For this <em>Hello Nexys</em> series you need:</p><ol><li><a href=https://reference.digilentinc.com/reference/programmable-logic/nexys-video/start>Digilent Nexys Video</a></li><li>Micro USB cable to program the Nexys Video board</li><li>12V power adaptor (EU/US plug is provided by Digilent - UK users will need an adaptor)</li><li>Xilinx Vivado 2019 or later: <a href=https://www.xilinx.com/support/download.html>Download</a> and <a href="https://www.xilinx.com/support/documentation-navigation/see-all-versions.html?xlnxproducttypes=Design%20Tools&xlnxdocumentid=UG973">Install Guide</a></li><li><a href=https://reference.digilentinc.com/vivado/installing-vivado/start#installing_digilent_board_files>Digilent board files</a></li></ol><h3 id=source>Source</h3><p>The SystemVerilog designs featured in this series are available from the <a href=https://github.com/projf/projf-explore/tree/main/hello>projf-explore</a> git repo under the open-source MIT licence: build on them to your heart&rsquo;s content. The rest of the blog content is subject to standard copyright restrictions: don&rsquo;t republish it without permission.</p><h2 id=learning-to-count>Learning to Count</h2><p>Think about what happens when you count <a href="https://www.youtube.com/watch?v=M7AAwIWxIpM">1, 2, 3, 4, 5&mldr;</a>. You need to <em>remember</em> the current number in order to decide what comes next. If you&rsquo;re interrupted while counting, you lose your place and have to start over. Without memory, you can&rsquo;t count.</p><p>In <a href=/posts/hello-nexys-1/>part 1</a> our designs had no memory; to put it more abstractly they didn&rsquo;t maintain any <strong>state</strong>.</p><p>That&rsquo;s not quite true: when you moved a slide switch, it did maintain its state. Alas, that&rsquo;s not a viable approach for circuit design: the switches are huge, and the FPGA can&rsquo;t move them! Instead, we&rsquo;re going to make use of <strong>flip-flops</strong>.</p><p>A flip-flop maintains the state of a single bit. That&rsquo;s right: 1 bit. Are you dismayed? Don&rsquo;t be: the FPGA on the Nexys Video board has 270,000 flip-flops, and we don&rsquo;t use them as general-purpose ram. Think of a flip-flop as a tiny, extremely fast, box for storing something you&rsquo;re working on right now: like a CPU register.</p><p>When a flip-flop receives a trigger, it updates its bit. You could use any signal to trigger an update, but we&rsquo;ll always use a common clock to trigger our flip-flops simultaneously. Using a common clock ensures that all signals are updated and ready at the same time. The clock is like the conductor of an orchestra keeping everyone playing to time.</p><p>To see a flip-flop in action watch the LearnElectronics video: <a href=https://youtu.be/OYtGr2faYpw>Digital Logic: D type Flip Flop</a>.</p><h3 id=counting-project>Counting Project</h3><p>Create a new project in Vivado called <strong><code>hello-nexys-2</code></strong> using the same settings as in <a href=/posts/hello-nexys-1/>part 1</a>: an RTL Project with the Nexys Video board.</p><p>Add a new SystemVerilog design source to your project called <code>top.sv</code> with <strong>[<a href=https://github.com/projf/projf-explore/blob/main/hello/hello-nexys/E/top.sv>src</a>]</strong>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span><span style=color:#66d9ef>module</span> top (
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>input</span> <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> clk,
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>output</span>     <span style=color:#66d9ef>logic</span> [<span style=color:#ae81ff>3</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] led
+</span></span><span style=display:flex><span>    );
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>logic</span> [<span style=color:#ae81ff>31</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] cnt <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span>;  <span style=color:#75715e>// 32-bit counter
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>always_ff</span> @(<span style=color:#66d9ef>posedge</span> clk) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>        cnt <span style=color:#f92672>&lt;=</span> cnt <span style=color:#f92672>+</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>        led[<span style=color:#ae81ff>0</span>] <span style=color:#f92672>&lt;=</span> cnt[<span style=color:#ae81ff>26</span>];
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>endmodule</span>
+</span></span></code></pre></div><p>In part 1, we used <code>always_comb</code> blocks. Flip-flips require a new type of block: <strong>always_ff</strong>.</p><p>Our <code>always_ff</code> block has the positive edge (<code>posedge</code>) of the clock (<code>clk</code>) on its <strong>sensitivity list</strong> <code>@(...)</code>. This means the block is triggered on every rising (positive) edge of the clock.</p><p>We&rsquo;re using the 100 MHz oscillator on the Nexys Video board, so we get a rising clock edge every 10 nanoseconds: this is known as the <strong>clock period</strong>. Every 10 ns our counter <code>cnt</code> increments; when it reaches its maximum value, it rolls over to 0 and repeats.</p><blockquote><p>How long does it take the 32-bit counter to roll over?</p></blockquote><p>At the <em>same time</em> as our counter is being incremented, one bit of the counter is being copied to a flip-flop that maintains the LED state. Statements in an <code>always_ff</code> block happen independently and in parallel.</p><blockquote><p><strong>Assignment</strong><br>You may have noticed we snuck in a new type of assignment with flip-flops:</p><p><code>always_comb</code> blocks use <code>=</code> for assignment<br><code>always_ff</code> blocks use <code>&lt;=</code> for assignment</p><p><em>We won&rsquo;t go into the reasons for this right now, but follow this rule and all will be well.</em></p></blockquote><h3 id=constraints>Constraints</h3><p>Add the following <code>nexys.xdc</code>constraints file to your project <strong>[<a href=https://github.com/projf/projf-explore/blob/main/hello/hello-nexys/E/nexys.xdc>src</a>]</strong>.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-tcl data-lang=tcl><span style=display:flex><span><span style=color:#75715e>## FPGA Configuration I/O Options
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>set_property CONFIG_VOLTAGE <span style=color:#ae81ff>3.3</span> <span style=color:#66d9ef>[</span>current_design<span style=color:#66d9ef>]</span>
+</span></span><span style=display:flex><span>set_property CFGBVS VCCO <span style=color:#66d9ef>[</span>current_design<span style=color:#66d9ef>]</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>## Board Clock: 100 MHz
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>set_property <span style=color:#f92672>-</span>dict <span style=color:#66d9ef>{</span>PACKAGE_PIN R4 IOSTANDARD LVCMOS33<span style=color:#66d9ef>}</span> <span style=color:#66d9ef>[</span>get_ports <span style=color:#66d9ef>{</span>clk<span style=color:#66d9ef>}];</span>
+</span></span><span style=display:flex><span>create_clock <span style=color:#f92672>-</span>name clk_100m <span style=color:#f92672>-</span>period <span style=color:#ae81ff>10.00</span> <span style=color:#66d9ef>[</span>get_ports <span style=color:#66d9ef>{</span>clk<span style=color:#66d9ef>}];</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>## LEDs
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>set_property <span style=color:#f92672>-</span>dict <span style=color:#66d9ef>{</span>PACKAGE_PIN T14 IOSTANDARD LVCMOS25<span style=color:#66d9ef>}</span> <span style=color:#66d9ef>[</span>get_ports <span style=color:#66d9ef>{</span>led<span style=color:#66d9ef>[</span>0<span style=color:#66d9ef>]}];</span>
+</span></span><span style=display:flex><span>set_property <span style=color:#f92672>-</span>dict <span style=color:#66d9ef>{</span>PACKAGE_PIN T15 IOSTANDARD LVCMOS25<span style=color:#66d9ef>}</span> <span style=color:#66d9ef>[</span>get_ports <span style=color:#66d9ef>{</span>led<span style=color:#66d9ef>[</span>1<span style=color:#66d9ef>]}];</span>
+</span></span><span style=display:flex><span>set_property <span style=color:#f92672>-</span>dict <span style=color:#66d9ef>{</span>PACKAGE_PIN T16 IOSTANDARD LVCMOS25<span style=color:#66d9ef>}</span> <span style=color:#66d9ef>[</span>get_ports <span style=color:#66d9ef>{</span>led<span style=color:#66d9ef>[</span>2<span style=color:#66d9ef>]}];</span>
+</span></span><span style=display:flex><span>set_property <span style=color:#f92672>-</span>dict <span style=color:#66d9ef>{</span>PACKAGE_PIN U16 IOSTANDARD LVCMOS25<span style=color:#66d9ef>}</span> <span style=color:#66d9ef>[</span>get_ports <span style=color:#66d9ef>{</span>led<span style=color:#66d9ef>[</span>3<span style=color:#66d9ef>]}];</span>
+</span></span></code></pre></div><p><em>See <a href=/posts/hello-nexys-1/#constraints-file>part 1</a> if you need a reminder on how to add constraints.</em></p><p>Note how the period of the clock is set to 10.00 ns. This tells Vivado what the oscillator clock period is: you can&rsquo;t use it to adjust the clock frequency! We&rsquo;ll learn how to generate other frequencies later in this tutorial.</p><h3 id=generate--program-bitstream>Generate & Program Bitstream</h3><p>We&rsquo;re ready to run this design on our board. We could individually synthesise, implement, and generate bitstream as we learnt in part 1. However, you don&rsquo;t have to run these steps one-by-one: you can select <strong>Generate Bitstream</strong>, and Vivado performs all the necessary steps.</p><p>Program your board, and you should see the green LED <strong><code>LD0</code></strong> blinking. We&rsquo;ve wired up bit 26 of our counter to <code>led[0]</code>, so it changes state every 2<sup>26</sup> x 10 ns = 0.67 seconds. That&rsquo;s one blink every 1.34 seconds.</p><h3 id=blinky-blinky>Blinky, Blinky</h3><p>Try replacing the <code>always_ff</code> block in <code>top.sv</code> with <strong>[<a href=https://github.com/projf/projf-explore/blob/main/hello/hello-nexys/F/top.sv>src</a>]</strong>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span><span style=color:#66d9ef>always_ff</span> @(<span style=color:#66d9ef>posedge</span> clk) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>    cnt <span style=color:#f92672>&lt;=</span> cnt <span style=color:#f92672>+</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>    led[<span style=color:#ae81ff>0</span>] <span style=color:#f92672>&lt;=</span> cnt[<span style=color:#ae81ff>26</span>];
+</span></span><span style=display:flex><span>    led[<span style=color:#ae81ff>1</span>] <span style=color:#f92672>&lt;=</span> cnt[<span style=color:#ae81ff>24</span>];
+</span></span><span style=display:flex><span>    led[<span style=color:#ae81ff>2</span>] <span style=color:#f92672>&lt;=</span> cnt[<span style=color:#ae81ff>22</span>];
+</span></span><span style=display:flex><span>    led[<span style=color:#ae81ff>3</span>] <span style=color:#f92672>&lt;=</span> cnt[<span style=color:#ae81ff>20</span>];
+</span></span><span style=display:flex><span><span style=color:#66d9ef>end</span>
+</span></span></code></pre></div><p><em>NB. We use code snippets to focus on what&rsquo;s changed, but the full design is available via [src].</em></p><p>Rerun bitstream generation and program your board. How often is each LED blinking?</p><p><strong><code>LD3</code></strong> on our board (<strong><code>led[3]</code></strong> in Verilog) looks like it&rsquo;s on all time, but is less bright. It&rsquo;s blinking fifty times per second, so fast that your eyes hardly see the flashes. We&rsquo;ll make use of this later.</p><h2 id=division-of-time>Division of Time</h2><p>Earlier we said we would always use a single clock in our designs. What happens if we want to do something less than 100 million times a second? We could take a bit from a counter, but there&rsquo;s a more elegant way using a <strong>strobe</strong>. With a strobe we&rsquo;re not limited to dividing by powers of two.</p><p>For example, to divide by three:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span><span style=color:#66d9ef>logic</span> stb;
+</span></span><span style=display:flex><span><span style=color:#66d9ef>logic</span> [<span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] cnt <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span><span style=color:#66d9ef>always_ff</span> @(<span style=color:#66d9ef>posedge</span> clk) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>if</span> (cnt <span style=color:#f92672>!=</span> <span style=color:#ae81ff>2</span><span style=color:#ae81ff>&#39;d2</span>) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>        stb <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>        cnt <span style=color:#f92672>&lt;=</span> cnt <span style=color:#f92672>+</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span> <span style=color:#66d9ef>else</span> <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>        stb <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>        cnt <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>end</span>
+</span></span></code></pre></div><p>This example divides by three because we start counting at zero: 0, 1, 2, 0, 1, 2&mldr;</p><p>The following simulation shows how the counter and strobe vary over time:</p><p><img src=/img/posts/hello-arty/strobe_div_by_3.png alt="Strobe dividing by three" title="Strobe dividing by three"></p><p>To use the strobe, you add a test for it inside your always block:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span><span style=color:#66d9ef>always_ff</span> @(<span style=color:#66d9ef>posedge</span> clk) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>if</span> (stb) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>        <span style=color:#75715e>// do something every time the strobe fires
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>end</span>
+</span></span></code></pre></div><p>It&rsquo;s tempting to simplify this by using: <code>always_ff @(posedge stb)</code>.</p><p><strong>Never do this!</strong></p><p>While this might work for simple designs, it quickly leads to unstable designs and debugging headaches. Hardware design is hard enough without messing with clock distribution and crossing clock domains unnecessarily. Always use a proper clock signal in your sensitivity list.</p><h3 id=every-second-counts>Every Second Counts</h3><p>Let&rsquo;s say you want a one-second strobe: our clock is 100 MHz, so we need to divide by 100 million! Our counter needs to be 27 bits wide because log<sub>2</sub>(100,000,000) = 26.6.</p><p>We can use our new one-second strobe to turn four green LEDs into a simple binary clock <strong>[<a href=https://github.com/projf/projf-explore/blob/main/hello/hello-nexys/G/top.sv>src</a>]</strong>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span><span style=color:#66d9ef>module</span> top (
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>input</span> <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> clk,
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>output</span>     <span style=color:#66d9ef>logic</span> [<span style=color:#ae81ff>3</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] led
+</span></span><span style=display:flex><span>    );
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>localparam</span> DIV_BY <span style=color:#f92672>=</span> <span style=color:#ae81ff>27</span><span style=color:#ae81ff>&#39;d100</span>_000_000;  <span style=color:#75715e>// 100 million
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>logic</span> stb;
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>logic</span> [<span style=color:#ae81ff>26</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] cnt <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>always_ff</span> @(<span style=color:#66d9ef>posedge</span> clk) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> (cnt <span style=color:#f92672>!=</span> DIV_BY<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span>) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>            stb <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>            cnt <span style=color:#f92672>&lt;=</span> cnt <span style=color:#f92672>+</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>end</span> <span style=color:#66d9ef>else</span> <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>            stb <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>            cnt <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>always_ff</span> @(<span style=color:#66d9ef>posedge</span> clk) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> (stb) led <span style=color:#f92672>&lt;=</span> led <span style=color:#f92672>+</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>endmodule</span>
 </span></span></code></pre></div><p><code>led</code> is a normal variable, so we can perform arithmetic on it, even though each of its bits is driving an LED.
-<code>localparam</code> allows us to define a constant. You can use underscores to make numbers more readable.</p>
-<blockquote>
-<p>Our binary clock counts from zero to fifteen, then repeats.
-You can extend this design to create a clock with seconds, minutes, and hours. How many LEDs would you need for this?</p>
-</blockquote>
-<h2 id="brighter-dimmer">Brighter, Dimmer</h2>
-<p>Earlier we used a counter to blink LEDs. At low switching speeds they blink, but at higher speeds, they look like they&rsquo;re on all the time, but less bright. By altering the <em>proportion</em> of time the signal is high, and hence the LED is illuminated, we can control the perceived brightness. The is known as <strong>pulse width modulation</strong> or <strong>PWM</strong>.</p>
-<p>PWN is commonly used in digital circuits to control the speed of motors as well as the brightness of lights (for example in the backlight of LCD screens).</p>
-<p>The proportion of time the signal is high is known as the <strong>duty cycle</strong>. An 8-bit value (0-255), is commonly used for the duty cycle. The brightness of the LED is proportional to the duty: for example, if the duty is 64/255, the LED is roughly a quarter as bright.</p>
-<p><img src="/img/posts/hello-arty/pwm.jpg" alt="Pulse Width Modulation" title="Pulse Width Modulation"></p>
-<p>In the following example, we reduce the brightness of four LEDs using a small duty cycle of 5/255. Replace the existing module in <code>top.sv</code> with <strong>[<a href="https://github.com/projf/projf-explore/blob/main/hello/hello-nexys/H/top.sv">src</a>]</strong>:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> top (
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] led
-</span></span><span style="display:flex;"><span>    );
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] duty <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;d5</span>;
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>        cnt <span style="color:#f92672">&lt;=</span> cnt <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>        led[<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] <span style="color:#f92672">&lt;=</span> (cnt <span style="color:#f92672">&lt;</span> duty) <span style="color:#f92672">?</span> <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;b1111</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">4</span><span style="color:#ae81ff">&#39;b0000</span>;
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
-</span></span></code></pre></div><p>Run through the usual steps to program your board. The green LEDs should all be very dim; around 2% of maximum brightness.</p>
-<p>Try adjusting the <strong>duty</strong> value to different values between 0 and 255 to see how the brightness changes. You can use binary, decimal, or hexadecimal literals as you like.</p>
-<h2 id="duty-cycle-module">Duty Cycle Module</h2>
-<p>If we wanted to control the brightness of each individual LED using the above approach we&rsquo;d end up with a great deal of duplication. Instead, we can break the PWM design out into a separate Verilog <strong>module</strong>. You should keep each module in a separate file.</p>
-<p>The <code>pwm</code> module has inputs and outputs, just like the <code>top</code> module: it takes a duty input between 0 and 255 and produces the expected PWM output.</p>
-<p>Create a <strong>new</strong> design source called <code>pwm.sv</code>, being sure to choose SystemVerilog as the file type. The module looks like this <strong>[<a href="https://github.com/projf/projf-explore/blob/main/hello/hello-nexys/I/pwm.sv">src</a>]</strong>:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> pwm (
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] duty,
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> pwm_out
-</span></span><span style="display:flex;"><span>    );
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b0</span>;
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>        cnt <span style="color:#f92672">&lt;=</span> cnt <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always_comb</span> pwm_out <span style="color:#f92672">=</span> (cnt <span style="color:#f92672">&lt;</span> duty);
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
-</span></span></code></pre></div><p><em>ProTip: If you only have one statement in a block you don&rsquo;t need <code>begin</code> and <code>end</code>.</em></p>
-<p>This design makes use of an <code>always_comb</code> and an <code>always_ff</code> block. <code>pwm_out</code> only depends on its current inputs, so we use an <code>always_comb</code> block. Whereas the counter <code>cnt</code> needs to maintain state, so has to use an <code>always_ff</code> block.</p>
-<blockquote>
-<p><strong>Combinational Logic</strong><br>
-Depends on the combination of present inputs; past inputs are irrelevant.
-Combinational outputs change immediately. Combinational logic is created with an <code>always_comb</code> block.</p>
-<p><strong>Sequential Logic</strong><br>
-Depends on the past sequence of inputs, as well as the present ones.
-Sequential outputs change on a clock edge and use flip-flops. Sequential logic is created with an <code>always_ff</code> block.</p>
-<p><em>Don&rsquo;t worry if this doesn&rsquo;t make sense right away. Keep designing and come back to it.</em></p>
-</blockquote>
-<h3 id="duty-to-our-leds">Duty to our LEDs</h3>
-<p>To use the <code>pwm</code> module within our <code>top</code> module, we create an instance and connect up the inputs and outputs. Each module instance needs a unique name. We&rsquo;re using four LEDs, so we create four module instances: <code>pwm_led_0</code>, <code>pwm_led_1</code> etc. Replace your existing <code>top.sv</code> with <strong>[<a href="https://github.com/projf/projf-explore/blob/main/hello/hello-nexys/I/top.sv">src</a>]</strong>:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> top (
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] led
-</span></span><span style="display:flex;"><span>    );
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    pwm pwm_led_0 (.clk, .duty(<span style="color:#ae81ff">4</span>),   .pwm_out(led[<span style="color:#ae81ff">0</span>]));
-</span></span><span style="display:flex;"><span>    pwm pwm_led_1 (.clk, .duty(<span style="color:#ae81ff">16</span>),  .pwm_out(led[<span style="color:#ae81ff">1</span>]));
-</span></span><span style="display:flex;"><span>    pwm pwm_led_2 (.clk, .duty(<span style="color:#ae81ff">64</span>),  .pwm_out(led[<span style="color:#ae81ff">2</span>]));
-</span></span><span style="display:flex;"><span>    pwm pwm_led_3 (.clk, .duty(<span style="color:#ae81ff">255</span>), .pwm_out(led[<span style="color:#ae81ff">3</span>]));
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
-</span></span></code></pre></div><p><em>ProTip: You can write <code>.clk</code> rather than <code>.clk(clk)</code> because the names match.</em></p>
-<p>Once you&rsquo;ve programmed your board with the updated design, you should see four green LEDs lit, getting brighter from <strong><code>LD0</code></strong> to <strong><code>LD3</code></strong>.</p>
-<h2 id="explore">Explore</h2>
-<p>In the <a href="/posts/hello-arty-2/#red-green-blue">Arty version</a> of this post we now turn our attention to RGB LEDs. The Nexys Video doesn&rsquo;t have any RGB LEDs; instead try extending the designs to use all eight green LEDs on your board.</p>
-<ul>
-<li>Can you reduce the intensity of an LED to 50% <em>and</em> make it flash once a second?</li>
-<li>Create a binary clock that counts the seconds from 0 to 59.</li>
-</ul>
-<blockquote>
-<p><strong>Sponsor My Work</strong><br>
-If you like what I do, consider <a href="https://github.com/sponsors/WillGreen">sponsoring me</a> on GitHub.<br>
-I love FPGAs and want to help more people discover and use them in their projects.<br>
-My hardware designs are open source, and my blog is advert free.</p>
-</blockquote>
-<h2 id="whats-next">What&rsquo;s Next?</h2>
-<p>The next instalment of this series is not currently available for the Nexys Video. If you&rsquo;d like to continue learning with your Nexys, you can adapt <a href="/posts/hello-arty-3/">Hello Arty Part 3</a> or check out <a href="/sitemap">other posts</a>.</p>
-<p>If you&rsquo;re looking for other great resources, try <a href="/recommended-fpga-sites">recommended FPGA sites</a>.</p>
-<p><em>Get in touch with <a href="https://mastodon.social/@WillFlux">@WillFlux</a> or join me on <a href="https://github.com/projf/projf-explore/discussions">GitHub Discussions</a> and <a href="https://discord.gg/cf869yDbXf">1BitSquared Discord</a>.</em></p>
-
-      
-    </div>
-    
-  </div>
-</section>
-
-    <script src="/js/copycode.js"></script>
-
-
-
-<section class="section">
-  <div class="container has-text-centered">
-    <p>©2023 Will Green, Project F</p>
-    
-  </div>
-</section>
-
-
-<script src="https://badgers.projectf.io/script.js" data-site="EVCGKVDN" defer></script>
-
-
-
-</body>
-</html>
-
+<code>localparam</code> allows us to define a constant. You can use underscores to make numbers more readable.</p><blockquote><p>Our binary clock counts from zero to fifteen, then repeats.
+You can extend this design to create a clock with seconds, minutes, and hours. How many LEDs would you need for this?</p></blockquote><h2 id=brighter-dimmer>Brighter, Dimmer</h2><p>Earlier we used a counter to blink LEDs. At low switching speeds they blink, but at higher speeds, they look like they&rsquo;re on all the time, but less bright. By altering the <em>proportion</em> of time the signal is high, and hence the LED is illuminated, we can control the perceived brightness. The is known as <strong>pulse width modulation</strong> or <strong>PWM</strong>.</p><p>PWN is commonly used in digital circuits to control the speed of motors as well as the brightness of lights (for example in the backlight of LCD screens).</p><p>The proportion of time the signal is high is known as the <strong>duty cycle</strong>. An 8-bit value (0-255), is commonly used for the duty cycle. The brightness of the LED is proportional to the duty: for example, if the duty is 64/255, the LED is roughly a quarter as bright.</p><p><img src=/img/posts/hello-arty/pwm.jpg alt="Pulse Width Modulation" title="Pulse Width Modulation"></p><p>In the following example, we reduce the brightness of four LEDs using a small duty cycle of 5/255. Replace the existing module in <code>top.sv</code> with <strong>[<a href=https://github.com/projf/projf-explore/blob/main/hello/hello-nexys/H/top.sv>src</a>]</strong>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span><span style=color:#66d9ef>module</span> top (
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>input</span> <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> clk,
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>output</span>     <span style=color:#66d9ef>logic</span> [<span style=color:#ae81ff>3</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] led
+</span></span><span style=display:flex><span>    );
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>logic</span> [<span style=color:#ae81ff>7</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] cnt <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>logic</span> [<span style=color:#ae81ff>7</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] duty <span style=color:#f92672>=</span> <span style=color:#ae81ff>8</span><span style=color:#ae81ff>&#39;d5</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>always_ff</span> @(<span style=color:#66d9ef>posedge</span> clk) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>        cnt <span style=color:#f92672>&lt;=</span> cnt <span style=color:#f92672>+</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>        led[<span style=color:#ae81ff>3</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] <span style=color:#f92672>&lt;=</span> (cnt <span style=color:#f92672>&lt;</span> duty) <span style=color:#f92672>?</span> <span style=color:#ae81ff>4</span><span style=color:#ae81ff>&#39;b1111</span> <span style=color:#f92672>:</span> <span style=color:#ae81ff>4</span><span style=color:#ae81ff>&#39;b0000</span>;
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>endmodule</span>
+</span></span></code></pre></div><p>Run through the usual steps to program your board. The green LEDs should all be very dim; around 2% of maximum brightness.</p><p>Try adjusting the <strong>duty</strong> value to different values between 0 and 255 to see how the brightness changes. You can use binary, decimal, or hexadecimal literals as you like.</p><h2 id=duty-cycle-module>Duty Cycle Module</h2><p>If we wanted to control the brightness of each individual LED using the above approach we&rsquo;d end up with a great deal of duplication. Instead, we can break the PWM design out into a separate Verilog <strong>module</strong>. You should keep each module in a separate file.</p><p>The <code>pwm</code> module has inputs and outputs, just like the <code>top</code> module: it takes a duty input between 0 and 255 and produces the expected PWM output.</p><p>Create a <strong>new</strong> design source called <code>pwm.sv</code>, being sure to choose SystemVerilog as the file type. The module looks like this <strong>[<a href=https://github.com/projf/projf-explore/blob/main/hello/hello-nexys/I/pwm.sv>src</a>]</strong>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span><span style=color:#66d9ef>module</span> pwm (
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>input</span> <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> clk,
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>input</span> <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> [<span style=color:#ae81ff>7</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] duty,
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>output</span>     <span style=color:#66d9ef>logic</span> pwm_out
+</span></span><span style=display:flex><span>    );
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>logic</span> [<span style=color:#ae81ff>7</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] cnt <span style=color:#f92672>=</span> <span style=color:#ae81ff>8</span><span style=color:#ae81ff>&#39;b0</span>;
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>always_ff</span> @(<span style=color:#66d9ef>posedge</span> clk) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>        cnt <span style=color:#f92672>&lt;=</span> cnt <span style=color:#f92672>+</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>always_comb</span> pwm_out <span style=color:#f92672>=</span> (cnt <span style=color:#f92672>&lt;</span> duty);
+</span></span><span style=display:flex><span><span style=color:#66d9ef>endmodule</span>
+</span></span></code></pre></div><p><em>ProTip: If you only have one statement in a block you don&rsquo;t need <code>begin</code> and <code>end</code>.</em></p><p>This design makes use of an <code>always_comb</code> and an <code>always_ff</code> block. <code>pwm_out</code> only depends on its current inputs, so we use an <code>always_comb</code> block. Whereas the counter <code>cnt</code> needs to maintain state, so has to use an <code>always_ff</code> block.</p><blockquote><p><strong>Combinational Logic</strong><br>Depends on the combination of present inputs; past inputs are irrelevant.
+Combinational outputs change immediately. Combinational logic is created with an <code>always_comb</code> block.</p><p><strong>Sequential Logic</strong><br>Depends on the past sequence of inputs, as well as the present ones.
+Sequential outputs change on a clock edge and use flip-flops. Sequential logic is created with an <code>always_ff</code> block.</p><p><em>Don&rsquo;t worry if this doesn&rsquo;t make sense right away. Keep designing and come back to it.</em></p></blockquote><h3 id=duty-to-our-leds>Duty to our LEDs</h3><p>To use the <code>pwm</code> module within our <code>top</code> module, we create an instance and connect up the inputs and outputs. Each module instance needs a unique name. We&rsquo;re using four LEDs, so we create four module instances: <code>pwm_led_0</code>, <code>pwm_led_1</code> etc. Replace your existing <code>top.sv</code> with <strong>[<a href=https://github.com/projf/projf-explore/blob/main/hello/hello-nexys/I/top.sv>src</a>]</strong>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span><span style=color:#66d9ef>module</span> top (
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>input</span> <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> clk,
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>output</span>     <span style=color:#66d9ef>logic</span> [<span style=color:#ae81ff>3</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] led
+</span></span><span style=display:flex><span>    );
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    pwm pwm_led_0 (.clk, .duty(<span style=color:#ae81ff>4</span>),   .pwm_out(led[<span style=color:#ae81ff>0</span>]));
+</span></span><span style=display:flex><span>    pwm pwm_led_1 (.clk, .duty(<span style=color:#ae81ff>16</span>),  .pwm_out(led[<span style=color:#ae81ff>1</span>]));
+</span></span><span style=display:flex><span>    pwm pwm_led_2 (.clk, .duty(<span style=color:#ae81ff>64</span>),  .pwm_out(led[<span style=color:#ae81ff>2</span>]));
+</span></span><span style=display:flex><span>    pwm pwm_led_3 (.clk, .duty(<span style=color:#ae81ff>255</span>), .pwm_out(led[<span style=color:#ae81ff>3</span>]));
+</span></span><span style=display:flex><span><span style=color:#66d9ef>endmodule</span>
+</span></span></code></pre></div><p><em>ProTip: You can write <code>.clk</code> rather than <code>.clk(clk)</code> because the names match.</em></p><p>Once you&rsquo;ve programmed your board with the updated design, you should see four green LEDs lit, getting brighter from <strong><code>LD0</code></strong> to <strong><code>LD3</code></strong>.</p><h2 id=explore>Explore</h2><p>In the <a href=/posts/hello-arty-2/#red-green-blue>Arty version</a> of this post we now turn our attention to RGB LEDs. The Nexys Video doesn&rsquo;t have any RGB LEDs; instead try extending the designs to use all eight green LEDs on your board.</p><ul><li>Can you reduce the intensity of an LED to 50% <em>and</em> make it flash once a second?</li><li>Create a binary clock that counts the seconds from 0 to 59.</li></ul><blockquote><p><strong>Sponsor My Work</strong><br>If you like what I do, consider <a href=https://github.com/sponsors/WillGreen>sponsoring me</a> on GitHub.<br>I love FPGAs and want to help more people discover and use them in their projects.<br>My hardware designs are open source, and my blog is advert free.</p></blockquote><h2 id=whats-next>What&rsquo;s Next?</h2><p>The next instalment of this series is not currently available for the Nexys Video. If you&rsquo;d like to continue learning with your Nexys, you can adapt <a href=/posts/hello-arty-3/>Hello Arty Part 3</a> or check out <a href=/sitemap>other posts</a>.</p><p>If you&rsquo;re looking for other great resources, try <a href=/recommended-fpga-sites>recommended FPGA sites</a>.</p><p><em>Get in touch with <a href=https://mastodon.social/@WillFlux>@WillFlux</a> or join me on <a href=https://github.com/projf/projf-explore/discussions>GitHub Discussions</a> and <a href=https://discord.gg/cf869yDbXf>1BitSquared Discord</a>.</em></p></section><footer class="mt-12 flex flex-wrap"><a class="mr-1.5 mb-1.5 rounded-lg bg-black/[3%] px-5 py-2 no-underline dark:bg-white/[8%]" href=https://projectf.io/tags/nexys>nexys</a>
+<a class="mr-1.5 mb-1.5 rounded-lg bg-black/[3%] px-5 py-2 no-underline dark:bg-white/[8%]" href=https://projectf.io/tags/hello>hello</a></footer><nav class="mt-24 flex rounded-lg bg-black/[3%] text-lg dark:bg-white/[8%]"><a class="flex w-1/2 items-center rounded-l-md p-6 pr-3 no-underline hover:bg-black/[2%]" href=https://projectf.io/posts/fpga-shapes/><span class=mr-1.5>←</span><span>2D Shapes</span></a>
+<a class="ml-auto flex w-1/2 items-center justify-end rounded-r-md p-6 pl-3 no-underline hover:bg-black/[2%]" href=https://projectf.io/posts/lines-and-triangles/><span>Lines and Triangles</span><span class=ml-1.5>→</span></a></nav></article></main><footer class="opaco mx-auto flex h-[5rem] max-w-3xl items-center px-8 text-[0.9em] opacity-60"><div class=mr-auto><a class=link href=https://projectf.io>Project F</a>
+&copy; 2023 Will Green.</div></footer></body></html>

@@ -1,269 +1,90 @@
-<!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml"  lang="en-gb">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
-<title>Verilog Lint with Verilator | Project F: FPGA Dev</title>
-
-<meta property='og:title' content='Verilog Lint with Verilator - Project F: FPGA Dev'>
-<meta property='og:description' content='Hardware design can be unforgiving, so it pays to use any advantage you can get. Verilator is a Verilog simulator and C&#43;&#43; compiler that also supports linting: statically analysing your designs for issues. Not only can Verilator spot problems your synthesis tool might overlook, but it also runs quickly. Verilator is also great for graphics simulation with SDL. This post was last updated in July 2021.
-Get in touch with @WillFlux or join me on GitHub Discussions and 1BitSquared Discord.'>
-<meta property='og:url' content='https://projectf.io/posts/verilog-lint-with-verilator/'>
-<meta property='og:site_name' content='Project F: FPGA Dev'>
-<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/verilog-lint-with-verilator/social-card.png'><meta property='article:published_time' content='2020-12-31T00:00:00Z'><meta property='article:modified_time' content='2021-07-20T00:00:00Z'><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
-
-
-<link href="https://projectf.io/index.xml" rel="alternate" type="application/rss+xml" title="Project F: FPGA Dev">
-
-<link rel="stylesheet" href="/css/style.css"><link rel='stylesheet' href='https://projectf.io/css/custom.css'>
-
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-<link rel="manifest" href="/site.webmanifest">
-<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
-<link rel="canonical" href="https://projectf.io/posts/verilog-lint-with-verilator/">
-<meta name="msapplication-TileColor" content="#da532c">
-<meta name="theme-color" content="#ffffff">
-</head>
-<body>
-
-<section class="section">
-  <div class="container">
-    <nav id="nav-main" class="nav">
-      <div id="nav-name" class="nav-left">
-        <a id="nav-anchor" class="nav-item" href="https://projectf.io">
-          <h1 id="nav-heading" class="title is-4">Project F: FPGA Dev</h1>
-        </a>
-      </div>
-      <div class="nav-right">
-        <nav id="nav-items" class="nav-item level is-mobile"><a class="level-item" aria-label="github" href='https://github.com/projf/projf-explore'
-            target='_blank' rel='me noopener'>
-            <span class="icon">
-              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
-    
-    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
-    
-  </svg>
-</i>
-            </span>
-          </a><a class="level-item" aria-label="mastodon" href='https://mastodon.social/@WillFlux'
-            target='_blank' rel='me noopener'>
-            <span class="icon">
-              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
-    
-    <path d="M 11.966876,0.80329086 C 9.1123466,0.82665791 6.3664935,1.1367094 4.7662978,1.8737549 c 0,0 -3.1736685,1.4237835 -3.1736685,6.2815982 0,1.1123884 -0.021554,2.4424309 0.013571,3.8529439 0.1152443,4.750677 0.8683725,9.432704 5.2479219,10.595273 2.0193066,0.53604 3.7531218,0.648348 5.1494078,0.571373 2.532141,-0.140797 3.953603,-0.906282 3.953603,-0.906282 l -0.08353,-1.842608 c 0,0 -1.809527,0.572181 -3.841713,0.50245 -2.013417,-0.06922 -4.138986,-0.217713 -4.4646269,-2.696937 -0.030082,-0.217772 -0.045075,-0.450712 -0.045075,-0.695267 0,0 1.9765387,0.484554 4.4813709,0.599656 1.531629,0.07049 2.9679,-0.08996 4.426746,-0.264563 2.797636,-0.335045 5.233581,-2.063856 5.539741,-3.643517 0.482392,-2.488386 0.442651,-6.0725219 0.442651,-6.0725219 0,-4.8578147 -3.173492,-6.2815982 -3.173492,-6.2815982 C 17.639136,1.1367094 14.891579,0.82669685 12.03704,0.80329086 Z"/>
-  <path d="M 6.4286668,14.016701 V 9.1034254 c 0,-1.0041614 0.2549569,-1.8022059 0.7670342,-2.3925638 0.5280486,-0.590366 1.2196579,-0.8929946 2.0781049,-0.8929946 0.9931961,0 1.7452181,0.3828583 2.2425191,1.1486808 L 11.999859,7.7793695 12,11.451148 11.999859,7.7793695 12.483392,6.9665478 C 12.980596,6.2007253 13.732618,5.817867 14.72592,5.817867 c 0.858341,0 1.549951,0.3026286 2.078097,0.8929946 0.511971,0.5903579 0.766887,1.3884024 0.766887,2.3925638 v 4.9132756" />
-    
-  </svg>
-</i>
-            </span>
-          </a><a class="level-item" aria-label="youtube" href='https://youtube.com/@projf'
-            target='_blank' rel='me noopener'>
-            <span class="icon">
-              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
-    
-    <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/>
-    <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/>
-    
-  </svg>
-</i>
-            </span>
-          </a><a class="level-item" aria-label="rss" href='/index.xml'
-            target='_blank' rel='me noopener'>
-            <span class="icon">
-              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
-    
-    <path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle>
-    
-  </svg>
-</i>
-            </span>
-          </a></nav>
-      </div>
-    </nav>
-
-    <nav class="nav">
-      
-      <div class="nav-left"><a class="nav-item" href="/about">
-          <h2 class="title is-5">About</h2>
-        </a><a class="nav-item" href="/demos">
-          <h2 class="title is-5">Demos</h2>
-        </a><a class="nav-item" href="/howto">
-          <h2 class="title is-5">How To</h2>
-        </a><a class="nav-item" href="/tags/news">
-          <h2 class="title is-5">News</h2>
-        </a><a class="nav-item" href="/tutorials">
-          <h2 class="title is-5">Tutorials</h2>
-        </a><a class="nav-item" href="/verilog-lib">
-          <h2 class="title is-5">Verilog Lib</h2>
-        </a></div>
-      
-
-      
-    </nav>
-
-  </div>
-  <script src="/js/navicon-shift.js"></script>
-</section>
-
-<section class="section">
-  <div class="container">
-    <div class="subtitle tags is-6 is-pulled-right">
-      
-      
-<a class="subtitle is-6" href="/tags/tools/">#tools</a>
-
-
-
-  
-  | <a class="subtitle is-6" href="/tags/testing/">#testing</a>
-  
-  | <a class="subtitle is-6" href="/tags/verilator/">#verilator</a>
-  
-
-
-      
-    </div>
-    <h2 class="subtitle is-6">31 December 2020</h2>
-    <h1 class="title">Verilog Lint with Verilator</h1>
-    
-    <div class="content">
-      <p>Hardware design can be unforgiving, so it pays to use any advantage you can get. <strong><a href="https://www.veripool.org/wiki/verilator">Verilator</a></strong> is a Verilog simulator and C++ compiler that also supports linting: statically analysing your designs for issues. Not only can Verilator spot problems your synthesis tool might overlook, but it also runs quickly. Verilator is also great for <a href="/posts/verilog-sim-verilator-sdl/">graphics simulation with SDL</a>. This post was last updated in July 2021.</p>
-<p><em>Get in touch with <a href="https://mastodon.social/@WillFlux">@WillFlux</a> or join me on <a href="https://github.com/projf/projf-explore/discussions">GitHub Discussions</a> and <a href="https://discord.gg/cf869yDbXf">1BitSquared Discord</a>.</em></p>
-<blockquote>
-<p><strong>Sponsor My Work</strong><br>
-If you like what I do, consider <a href="https://github.com/sponsors/WillGreen">sponsoring me</a> on GitHub.<br>
-I love FPGAs and want to help more people discover and use them in their projects.<br>
-My hardware designs are open source, and my blog is advert free.</p>
-</blockquote>
-<h2 id="installing-verilator">Installing Verilator</h2>
-<p>Verilator is available in most Linux distribution repos and will run on <a href="https://docs.microsoft.com/en-us/windows/wsl/install-win10">Windows Subsystem for Linux</a>.</p>
-<p>For <strong>Debian</strong> and <strong>Ubuntu</strong>-based Linux distros, you can use the following, but if your distro is old, you may wish to follow my instructions for <a href="/posts/building-ice40-fpga-toolchain/">compiling Verilator on Linux</a>.</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>apt update
-</span></span><span style="display:flex;"><span>apt install verilator
-</span></span></code></pre></div><p>On macOS, you can install via the <a href="https://brew.sh/">Homebrew</a> package manager:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>brew install verilator
-</span></span></code></pre></div><p>To compile or install on other platforms, such as FreeBSD, see the official <a href="https://www.veripool.org/projects/verilator/wiki/Installing">Verilator install guide</a>.</p>
-<h2 id="basic-linting">Basic Linting</h2>
-<p>For a standalone module, linting is simplicity itself:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>verilator --lint-only -Wall foo.v
-</span></span></code></pre></div><p><code>--lint-only</code> - tells Verilator to lint but not to generate any simulation output<br>
-<code>-Wall</code> - turns on extra stylistic checks</p>
-<p>If all is well, you&rsquo;ll see no messages from Verilator.</p>
-<p>If Verilator finds a potential issue, it provides clear advice, including how to disable the warning. The Verilator manual includes the <a href="https://www.veripool.org/wiki/verilator/Manual-verilator#ERRORS-AND-WARNINGS">list of possible warnings</a>.</p>
-<p>Let&rsquo;s create a simple &ldquo;add&rdquo; module with a couple of problems, then lint it:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">`default_nettype</span> none
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">module</span> add (
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> clk,
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x,
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] y,
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">output</span> <span style="color:#66d9ef">reg</span> z,
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">output</span> <span style="color:#66d9ef">reg</span> c
-</span></span><span style="display:flex;"><span>    );
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>        z <span style="color:#f92672">&lt;=</span> x <span style="color:#f92672">+</span> y;
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
-</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-plaintext" data-lang="plaintext"><span style="display:flex;"><span>$ verilator --lint-only -Wall add.v
-</span></span><span style="display:flex;"><span>%Warning-WIDTH: add.v:12:11: Operator ASSIGNDLY expects 1 bits on the Assign RHS, but Assign RHS&#39;s ADD generates 4 bits.
-</span></span><span style="display:flex;"><span>                           : ... In instance add
-</span></span><span style="display:flex;"><span>   12 |         z &lt;= x + y;
-</span></span><span style="display:flex;"><span>      |           ^~
-</span></span><span style="display:flex;"><span>                ... Use &#34;/* verilator lint_off WIDTH */&#34; and lint_on around source to disable this message.
-</span></span><span style="display:flex;"><span>%Warning-UNDRIVEN: add.v:8:16: Signal is not driven: &#39;c&#39;
-</span></span><span style="display:flex;"><span>                             : ... In instance add
-</span></span><span style="display:flex;"><span>    8 |     output reg c
-</span></span><span style="display:flex;"><span>      |                ^
-</span></span><span style="display:flex;"><span>%Error: Exiting due to 2 warning(s)
-</span></span></code></pre></div><p>The first problem is with widths: <code>x</code> and <code>y</code> are 4 bits wide, but <code>z</code> has no explicit width, so is only 1 bit wide.</p>
-<p>We could ignore the width warning by doing this:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span>    <span style="color:#66d9ef">always</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#75715e">/* verilator lint_off WIDTH */</span>
-</span></span><span style="display:flex;"><span>        z <span style="color:#f92672">&lt;=</span> x <span style="color:#f92672">+</span> y;
-</span></span><span style="display:flex;"><span>        <span style="color:#75715e">/* verilator lint_on WIDTH */</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
-</span></span></code></pre></div><p>But this hides the problem without doing anything about it.</p>
-<p>Instead, we can fix it by setting the width of <code>z</code> to 4 bits:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span>    <span style="color:#66d9ef">output</span> <span style="color:#66d9ef">reg</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] z,
-</span></span></code></pre></div><p>While this removes the Verilator warning, it may not have fixed the problem completely.</p>
-<p>For example, what happens if <code>x</code> and <code>y</code> are both <code>4'b1000</code>? Our addition overflows, leaving <code>z</code> with the value <code>4'b0000</code>. This example illustrates one of the limitations of linting: it can look at the widths of different signals but can&rsquo;t account for all the logic applied to them.</p>
-<p>So, as well as fixing the width of <code>z</code>, we can use <code>c</code> as a carry signal, which also resolves the &ldquo;Signal is not driven&rdquo; warning:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span>    <span style="color:#66d9ef">always</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>        {c,z} <span style="color:#f92672">&lt;=</span> x <span style="color:#f92672">+</span> y;
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
-</span></span></code></pre></div><h2 id="dependencies-and-paths">Dependencies and Paths</h2>
-<p>What happens if a module depends on another? Verilator will search the current path for matching modules. If you want to add additional directories to the module search path, we can use <code>-I</code>. For example, if <code>top.v</code> depends on modules in the <code>../maths</code> directory:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>verilator --lint-only -Wall -I../maths top.v
-</span></span></code></pre></div><p>You can use multiple <code>-I</code> arguments to include multiple directories.</p>
-<h2 id="black-boxes-and-null-modules">Black Boxes and Null Modules</h2>
-<p>Most designs depend on vendor primitives or IP cores for which you don&rsquo;t have the source, for example using a PLL to generate a clock. When you try to lint a module that refers to a vendor primitive, you&rsquo;ll get an error such as this:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-plaintext" data-lang="plaintext"><span style="display:flex;"><span>%Error: clock_pix.sv:29:5: Cannot find file containing module: &#39;MMCME2_BASE&#39;
-</span></span><span style="display:flex;"><span>   29 |     MMCME2_BASE #(
-</span></span><span style="display:flex;"><span>      |     ^~~~~~~~~~~
-</span></span><span style="display:flex;"><span>%Error: clock_pix.sv:29:5: This may be because there&#39;s no search path specified with -I&lt;dir&gt;.
-</span></span><span style="display:flex;"><span>   29 |     MMCME2_BASE #(
-</span></span><span style="display:flex;"><span>      |     ^~~~~~~~~~~
-</span></span><span style="display:flex;"><span>        ... Looked in:
-</span></span><span style="display:flex;"><span>             MMCME2_BASE
-</span></span><span style="display:flex;"><span>             MMCME2_BASE.v
-</span></span><span style="display:flex;"><span>             MMCME2_BASE.sv
-</span></span><span style="display:flex;"><span>             obj_dir/MMCME2_BASE
-</span></span><span style="display:flex;"><span>             obj_dir/MMCME2_BASE.v
-</span></span><span style="display:flex;"><span>             obj_dir/MMCME2_BASE.sv
-</span></span></code></pre></div><p>Your first thought is probably to find a way to exclude <code>MMCME2_BASE</code> from the lint. Alas, Verilog <a href="https://www.veripool.org/boards/2/topics/2241?r=2255">&ldquo;can&rsquo;t be linted without elaboration, which requires the whole design&rdquo;</a>. We can get around this by creating a null module for the primitive. A null module includes the IO but none of the logic.</p>
-<p>For example, I&rsquo;ve created a null module for Xilinx&rsquo;s BUFG primitive:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> BUFG (
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> I,
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> O
-</span></span><span style="display:flex;"><span>    );
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// NULL MODULE
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
-</span></span></code></pre></div><p>Creating null modules is slightly tedious, but lets you lint your entire design. To use the null module ensure it&rsquo;s in Verilator&rsquo;s search path (see the previous section).</p>
-<h2 id="linting-waivers">Linting Waivers</h2>
-<p>If you need to silence linter warnings on larger designs, or those using third-party source, then <code>/* verilator lint_off */</code> comments may be impractical. Starting with Verilator 4.028, you can create waiver files to handle warnings without touching the source. To learn more, see Stefan Wallentowitz&rsquo;s post <a href="https://wallento.cs.hm.edu/post/20200612-verilator-waivers/">Verilator Waivers</a>.</p>
-<h2 id="linting-shell-script">Linting Shell Script</h2>
-<p>If you have many top modules and/or include directories you can automate checking with a Makefile or a simple shell script.</p>
-<p>The following shell script lints all top modules in the same directory as the script:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span><span style="color:#75715e">#!/bin/sh
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
-</span></span><span style="display:flex;"><span>DIR<span style="color:#f92672">=</span><span style="color:#e6db74">`</span>dirname $0<span style="color:#e6db74">`</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>echo <span style="color:#e6db74">&#34;## Linting top modules in </span><span style="color:#e6db74">${</span>DIR<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">for</span> f in <span style="color:#e6db74">${</span>DIR<span style="color:#e6db74">}</span>/top_*<span style="color:#ae81ff">\.</span>*v; <span style="color:#66d9ef">do</span>
-</span></span><span style="display:flex;"><span>    echo <span style="color:#e6db74">&#34;##   Checking </span><span style="color:#e6db74">${</span>f<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>;
-</span></span><span style="display:flex;"><span>    verilator --lint-only -Wall -I<span style="color:#e6db74">${</span>DIR<span style="color:#e6db74">}</span> -I<span style="color:#e6db74">${</span>DIR<span style="color:#e6db74">}</span>/../common $f;
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">done</span>
-</span></span></code></pre></div><p>You can adjust the <code>-I</code> parameters to suit your setup. The glob <code>top_*\.*v</code> capture files with .v and .sv extensions.</p>
-<p><em>Get in touch with <a href="https://mastodon.social/@WillFlux">@WillFlux</a> or join me on <a href="https://github.com/projf/projf-explore/discussions">GitHub Discussions</a> and <a href="https://discord.gg/cf869yDbXf">1BitSquared Discord</a>.</em></p>
-
-      
-    </div>
-    
-  </div>
-</section>
-
-    <script src="/js/copycode.js"></script>
-
-
-
-<section class="section">
-  <div class="container has-text-centered">
-    <p>©2023 Will Green, Project F</p>
-    
-  </div>
-</section>
-
-
-<script src="https://badgers.projectf.io/script.js" data-site="EVCGKVDN" defer></script>
-
-
-
-</body>
-</html>
-
+<!doctype html><html class="not-ready text-sm lg:text-base" style=--bg:#fff lang=en-gb><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><title>Verilog Lint with Verilator - Project F</title><meta name=theme-color><meta name=description content="Hardware design can be unforgiving, so it pays to use any advantage you can get. Verilator is a Verilog simulator and C++ compiler that also supports linting: statically analysing your designs for issues. Not only can Verilator spot problems your synthesis tool might overlook, but it also runs quickly. Verilator is also great for graphics simulation with SDL.
+Get in touch with @WillFlux or join me on GitHub Discussions and 1BitSquared Discord."><meta name=author content="Will Green"><link rel="preload stylesheet" as=style href=https://projectf.io/main.min.css><script defer src=https://projectf.io/highlight.min.js onload=hljs.initHighlightingOnLoad()></script>
+<link rel=preload as=image href=https://projectf.io/theme.png><link rel=preload as=image href=https://projectf.io/github.svg><link rel=preload as=image href=https://projectf.io/mastodon.svg><link rel=preload as=image href=https://projectf.io/rss.svg><link rel=icon href=https://projectf.io/favicon.ico><link rel=apple-touch-icon href=https://projectf.io/apple-touch-icon.png><meta name=generator content="Hugo 0.110.0"><script src=https://badgers.projectf.io/script.js data-site=EVCGKVDN defer></script><meta property="og:title" content="Verilog Lint with Verilator"><meta property="og:description" content="Hardware design can be unforgiving, so it pays to use any advantage you can get. Verilator is a Verilog simulator and C++ compiler that also supports linting: statically analysing your designs for issues. Not only can Verilator spot problems your synthesis tool might overlook, but it also runs quickly. Verilator is also great for graphics simulation with SDL.
+Get in touch with @WillFlux or join me on GitHub Discussions and 1BitSquared Discord."><meta property="og:type" content="article"><meta property="og:url" content="https://projectf.io/posts/verilog-lint-with-verilator/"><meta property="article:section" content="posts"><meta property="article:published_time" content="2020-12-31T00:00:00+00:00"><meta property="article:modified_time" content="2021-07-20T00:00:00+00:00"><meta itemprop=name content="Verilog Lint with Verilator"><meta itemprop=description content="Hardware design can be unforgiving, so it pays to use any advantage you can get. Verilator is a Verilog simulator and C++ compiler that also supports linting: statically analysing your designs for issues. Not only can Verilator spot problems your synthesis tool might overlook, but it also runs quickly. Verilator is also great for graphics simulation with SDL.
+Get in touch with @WillFlux or join me on GitHub Discussions and 1BitSquared Discord."><meta itemprop=datePublished content="2020-12-31T00:00:00+00:00"><meta itemprop=dateModified content="2021-07-20T00:00:00+00:00"><meta itemprop=wordCount content="978"><meta itemprop=keywords content="testing,verilator,"><meta name=twitter:card content="summary"><meta name=twitter:title content="Verilog Lint with Verilator"><meta name=twitter:description content="Hardware design can be unforgiving, so it pays to use any advantage you can get. Verilator is a Verilog simulator and C++ compiler that also supports linting: statically analysing your designs for issues. Not only can Verilator spot problems your synthesis tool might overlook, but it also runs quickly. Verilator is also great for graphics simulation with SDL.
+Get in touch with @WillFlux or join me on GitHub Discussions and 1BitSquared Discord."></head><body class="text-black duration-200 ease-out dark:text-white"><header class="mx-auto flex h-[5rem] max-w-3xl px-8 lg:justify-center"><div class="relative z-50 mr-auto flex items-center"><a class="-translate-x-[1px] -translate-y-0.5 text-3xl font-bold" href=https://projectf.io/>Project F</a>
+<a class="btn-dark ml-6 h-6 w-6 shrink-0 cursor-pointer [background:url(./theme.png)_left_center/_auto_theme('spacing.6')_no-repeat] [transition:_background-position_0.4s_steps(5)] dark:[background-position:right]"></a></div><a class="btn-menu relative z-50 -mr-8 flex h-[5rem] w-[5rem] shrink-0 cursor-pointer flex-col items-center justify-center gap-2.5 lg:hidden"></a>
+<script>const htmlClass=document.documentElement.classList;setTimeout(()=>{htmlClass.remove("not-ready")},10);const btnMenu=document.querySelector(".btn-menu");btnMenu.addEventListener("click",()=>{htmlClass.toggle("open")});const metaTheme=document.querySelector('meta[name="theme-color"]'),lightBg=`"#fff"`.replace(/"/g,""),setDark=e=>{metaTheme.setAttribute("content",e?"#000":lightBg),htmlClass[e?"add":"remove"]("dark"),localStorage.setItem("dark",e)},darkScheme=window.matchMedia("(prefers-color-scheme: dark)");if(htmlClass.contains("dark"))setDark(!0);else{const e=localStorage.getItem("dark");setDark(e?e==="true":darkScheme.matches)}darkScheme.addEventListener("change",e=>{setDark(e.matches)});const btnDark=document.querySelector(".btn-dark");btnDark.addEventListener("click",()=>{setDark(localStorage.getItem("dark")!=="true")})</script><div class="nav-wrapper fixed inset-x-0 top-full z-40 flex h-full select-none flex-col justify-center pb-16 duration-200 dark:bg-black lg:static lg:h-auto lg:flex-row lg:!bg-transparent lg:pb-0 lg:transition-none"><nav class="lg:ml-12 lg:flex lg:flex-row lg:items-center lg:space-x-6"><a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/about/>About</a>
+<a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/demos/>Demos</a>
+<a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/verilog-lib/>Lib</a>
+<a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/tools/>Tools</a>
+<a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/tutorials/>Tutorials</a></nav><nav class="mt-12 flex justify-center space-x-10 dark:invert lg:mt-0 lg:ml-12 lg:items-center lg:space-x-6"><a class="h-8 w-8 [background:var(--url)_center_center/cover_no-repeat] lg:h-6 lg:w-6" style=--url:url(./github.svg) href=https://github.com/projf target=_blank rel=me></a>
+<a class="h-8 w-8 [background:var(--url)_center_center/cover_no-repeat] lg:h-6 lg:w-6" style=--url:url(./mastodon.svg) href=https://mastodon.social/@WillFlux target=_blank rel=me></a>
+<a class="h-8 w-8 [background:var(--url)_center_center/cover_no-repeat] lg:h-6 lg:w-6" style=--url:url(./rss.svg) href=https://projectf.io/index.xml target=_blank></a></nav></div></header><main class="prose prose-neutral relative mx-auto min-h-[calc(100%-10rem)] max-w-3xl px-8 pt-20 pb-1 dark:prose-invert"><article><header class=mb-1><h1 class="!my-0 pb-2.5">Verilog Lint with Verilator</h1><div class="text-sm opacity-60">Published
+<time>31 Dec 2020</time>
+<span class=mx-1>&#183;</span>
+<span>Updated
+<time>20 Jul 2021</time></span></div></header><section><p>Hardware design can be unforgiving, so it pays to use any advantage you can get. <strong><a href=https://www.veripool.org/wiki/verilator>Verilator</a></strong> is a Verilog simulator and C++ compiler that also supports linting: statically analysing your designs for issues. Not only can Verilator spot problems your synthesis tool might overlook, but it also runs quickly. Verilator is also great for <a href=/posts/verilog-sim-verilator-sdl/>graphics simulation with SDL</a>.</p><p><em>Get in touch with <a href=https://mastodon.social/@WillFlux>@WillFlux</a> or join me on <a href=https://github.com/projf/projf-explore/discussions>GitHub Discussions</a> and <a href=https://discord.gg/cf869yDbXf>1BitSquared Discord</a>.</em></p><blockquote><p><strong>Sponsor My Work</strong><br>If you like what I do, consider <a href=https://github.com/sponsors/WillGreen>sponsoring me</a> on GitHub.<br>I love FPGAs and want to help more people discover and use them in their projects.<br>My hardware designs are open source, and my blog is advert free.</p></blockquote><h2 id=installing-verilator>Installing Verilator</h2><p>Verilator is available in most Linux distribution repos and will run on <a href=https://docs.microsoft.com/en-us/windows/wsl/install-win10>Windows Subsystem for Linux</a>.</p><p>For <strong>Debian</strong> and <strong>Ubuntu</strong>-based Linux distros, you can use the following, but if your distro is old, you may wish to follow my instructions for <a href=/posts/building-ice40-fpga-toolchain/>compiling Verilator on Linux</a>.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-shell data-lang=shell><span style=display:flex><span>apt update
+</span></span><span style=display:flex><span>apt install verilator
+</span></span></code></pre></div><p>On macOS, you can install via the <a href=https://brew.sh/>Homebrew</a> package manager:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-shell data-lang=shell><span style=display:flex><span>brew install verilator
+</span></span></code></pre></div><p>To compile or install on other platforms, such as FreeBSD, see the official <a href=https://www.veripool.org/projects/verilator/wiki/Installing>Verilator install guide</a>.</p><h2 id=basic-linting>Basic Linting</h2><p>For a standalone module, linting is simplicity itself:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-shell data-lang=shell><span style=display:flex><span>verilator --lint-only -Wall foo.v
+</span></span></code></pre></div><p><code>--lint-only</code> - tells Verilator to lint but not to generate any simulation output<br><code>-Wall</code> - turns on extra stylistic checks</p><p>If all is well, you&rsquo;ll see no messages from Verilator.</p><p>If Verilator finds a potential issue, it provides clear advice, including how to disable the warning. The Verilator manual includes the <a href=https://www.veripool.org/wiki/verilator/Manual-verilator#ERRORS-AND-WARNINGS>list of possible warnings</a>.</p><p>Let&rsquo;s create a simple &ldquo;add&rdquo; module with a couple of problems, then lint it:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span><span style=color:#66d9ef>`default_nettype</span> none
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>module</span> add (
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>input</span>  <span style=color:#66d9ef>wire</span> clk,
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>input</span>  <span style=color:#66d9ef>wire</span> [<span style=color:#ae81ff>3</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] x,
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>input</span>  <span style=color:#66d9ef>wire</span> [<span style=color:#ae81ff>3</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] y,
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>output</span> <span style=color:#66d9ef>reg</span> z,
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>output</span> <span style=color:#66d9ef>reg</span> c
+</span></span><span style=display:flex><span>    );
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>always</span> @(<span style=color:#66d9ef>posedge</span> clk) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>        z <span style=color:#f92672>&lt;=</span> x <span style=color:#f92672>+</span> y;
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>endmodule</span>
+</span></span></code></pre></div><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-plaintext data-lang=plaintext><span style=display:flex><span>$ verilator --lint-only -Wall add.v
+</span></span><span style=display:flex><span>%Warning-WIDTH: add.v:12:11: Operator ASSIGNDLY expects 1 bits on the Assign RHS, but Assign RHS&#39;s ADD generates 4 bits.
+</span></span><span style=display:flex><span>                           : ... In instance add
+</span></span><span style=display:flex><span>   12 |         z &lt;= x + y;
+</span></span><span style=display:flex><span>      |           ^~
+</span></span><span style=display:flex><span>                ... Use &#34;/* verilator lint_off WIDTH */&#34; and lint_on around source to disable this message.
+</span></span><span style=display:flex><span>%Warning-UNDRIVEN: add.v:8:16: Signal is not driven: &#39;c&#39;
+</span></span><span style=display:flex><span>                             : ... In instance add
+</span></span><span style=display:flex><span>    8 |     output reg c
+</span></span><span style=display:flex><span>      |                ^
+</span></span><span style=display:flex><span>%Error: Exiting due to 2 warning(s)
+</span></span></code></pre></div><p>The first problem is with widths: <code>x</code> and <code>y</code> are 4 bits wide, but <code>z</code> has no explicit width, so is only 1 bit wide.</p><p>We could ignore the width warning by doing this:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span>    <span style=color:#66d9ef>always</span> @(<span style=color:#66d9ef>posedge</span> clk) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>        <span style=color:#75715e>/* verilator lint_off WIDTH */</span>
+</span></span><span style=display:flex><span>        z <span style=color:#f92672>&lt;=</span> x <span style=color:#f92672>+</span> y;
+</span></span><span style=display:flex><span>        <span style=color:#75715e>/* verilator lint_on WIDTH */</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
+</span></span></code></pre></div><p>But this hides the problem without doing anything about it.</p><p>Instead, we can fix it by setting the width of <code>z</code> to 4 bits:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span>    <span style=color:#66d9ef>output</span> <span style=color:#66d9ef>reg</span> [<span style=color:#ae81ff>3</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] z,
+</span></span></code></pre></div><p>While this removes the Verilator warning, it may not have fixed the problem completely.</p><p>For example, what happens if <code>x</code> and <code>y</code> are both <code>4'b1000</code>? Our addition overflows, leaving <code>z</code> with the value <code>4'b0000</code>. This example illustrates one of the limitations of linting: it can look at the widths of different signals but can&rsquo;t account for all the logic applied to them.</p><p>So, as well as fixing the width of <code>z</code>, we can use <code>c</code> as a carry signal, which also resolves the &ldquo;Signal is not driven&rdquo; warning:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span>    <span style=color:#66d9ef>always</span> @(<span style=color:#66d9ef>posedge</span> clk) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>        {c,z} <span style=color:#f92672>&lt;=</span> x <span style=color:#f92672>+</span> y;
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
+</span></span></code></pre></div><h2 id=dependencies-and-paths>Dependencies and Paths</h2><p>What happens if a module depends on another? Verilator will search the current path for matching modules. If you want to add additional directories to the module search path, we can use <code>-I</code>. For example, if <code>top.v</code> depends on modules in the <code>../maths</code> directory:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-shell data-lang=shell><span style=display:flex><span>verilator --lint-only -Wall -I../maths top.v
+</span></span></code></pre></div><p>You can use multiple <code>-I</code> arguments to include multiple directories.</p><h2 id=black-boxes-and-null-modules>Black Boxes and Null Modules</h2><p>Most designs depend on vendor primitives or IP cores for which you don&rsquo;t have the source, for example using a PLL to generate a clock. When you try to lint a module that refers to a vendor primitive, you&rsquo;ll get an error such as this:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-plaintext data-lang=plaintext><span style=display:flex><span>%Error: clock_pix.sv:29:5: Cannot find file containing module: &#39;MMCME2_BASE&#39;
+</span></span><span style=display:flex><span>   29 |     MMCME2_BASE #(
+</span></span><span style=display:flex><span>      |     ^~~~~~~~~~~
+</span></span><span style=display:flex><span>%Error: clock_pix.sv:29:5: This may be because there&#39;s no search path specified with -I&lt;dir&gt;.
+</span></span><span style=display:flex><span>   29 |     MMCME2_BASE #(
+</span></span><span style=display:flex><span>      |     ^~~~~~~~~~~
+</span></span><span style=display:flex><span>        ... Looked in:
+</span></span><span style=display:flex><span>             MMCME2_BASE
+</span></span><span style=display:flex><span>             MMCME2_BASE.v
+</span></span><span style=display:flex><span>             MMCME2_BASE.sv
+</span></span><span style=display:flex><span>             obj_dir/MMCME2_BASE
+</span></span><span style=display:flex><span>             obj_dir/MMCME2_BASE.v
+</span></span><span style=display:flex><span>             obj_dir/MMCME2_BASE.sv
+</span></span></code></pre></div><p>Your first thought is probably to find a way to exclude <code>MMCME2_BASE</code> from the lint. Alas, Verilog <a href="https://www.veripool.org/boards/2/topics/2241?r=2255">&ldquo;can&rsquo;t be linted without elaboration, which requires the whole design&rdquo;</a>. We can get around this by creating a null module for the primitive. A null module includes the IO but none of the logic.</p><p>For example, I&rsquo;ve created a null module for Xilinx&rsquo;s BUFG primitive:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span><span style=color:#66d9ef>module</span> BUFG (
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>input</span>  <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> I,
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>output</span>      <span style=color:#66d9ef>logic</span> O
+</span></span><span style=display:flex><span>    );
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e>// NULL MODULE
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>endmodule</span>
+</span></span></code></pre></div><p>Creating null modules is slightly tedious, but lets you lint your entire design. To use the null module ensure it&rsquo;s in Verilator&rsquo;s search path (see the previous section).</p><h2 id=linting-waivers>Linting Waivers</h2><p>If you need to silence linter warnings on larger designs, or those using third-party source, then <code>/* verilator lint_off */</code> comments may be impractical. Starting with Verilator 4.028, you can create waiver files to handle warnings without touching the source. To learn more, see Stefan Wallentowitz&rsquo;s post <a href=https://wallento.cs.hm.edu/post/20200612-verilator-waivers/>Verilator Waivers</a>.</p><h2 id=linting-shell-script>Linting Shell Script</h2><p>If you have many top modules and/or include directories you can automate checking with a Makefile or a simple shell script.</p><p>The following shell script lints all top modules in the same directory as the script:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-shell data-lang=shell><span style=display:flex><span><span style=color:#75715e>#!/bin/sh
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
+</span></span><span style=display:flex><span>DIR<span style=color:#f92672>=</span><span style=color:#e6db74>`</span>dirname $0<span style=color:#e6db74>`</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>echo <span style=color:#e6db74>&#34;## Linting top modules in </span><span style=color:#e6db74>${</span>DIR<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>for</span> f in <span style=color:#e6db74>${</span>DIR<span style=color:#e6db74>}</span>/top_*<span style=color:#ae81ff>\.</span>*v; <span style=color:#66d9ef>do</span>
+</span></span><span style=display:flex><span>    echo <span style=color:#e6db74>&#34;##   Checking </span><span style=color:#e6db74>${</span>f<span style=color:#e6db74>}</span><span style=color:#e6db74>&#34;</span>;
+</span></span><span style=display:flex><span>    verilator --lint-only -Wall -I<span style=color:#e6db74>${</span>DIR<span style=color:#e6db74>}</span> -I<span style=color:#e6db74>${</span>DIR<span style=color:#e6db74>}</span>/../common $f;
+</span></span><span style=display:flex><span><span style=color:#66d9ef>done</span>
+</span></span></code></pre></div><p>You can adjust the <code>-I</code> parameters to suit your setup. The glob <code>top_*\.*v</code> capture files with .v and .sv extensions.</p><p><em>Get in touch with <a href=https://mastodon.social/@WillFlux>@WillFlux</a> or join me on <a href=https://github.com/projf/projf-explore/discussions>GitHub Discussions</a> and <a href=https://discord.gg/cf869yDbXf>1BitSquared Discord</a>.</em></p></section><footer class="mt-12 flex flex-wrap"><a class="mr-1.5 mb-1.5 rounded-lg bg-black/[3%] px-5 py-2 no-underline dark:bg-white/[8%]" href=https://projectf.io/tags/testing>testing</a>
+<a class="mr-1.5 mb-1.5 rounded-lg bg-black/[3%] px-5 py-2 no-underline dark:bg-white/[8%]" href=https://projectf.io/tags/verilator>verilator</a></footer><nav class="mt-24 flex rounded-lg bg-black/[3%] text-lg dark:bg-white/[8%]"><a class="flex w-1/2 items-center rounded-l-md p-6 pr-3 no-underline hover:bg-black/[2%]" href=https://projectf.io/posts/lines-and-triangles/><span class=mr-1.5>←</span><span>Lines and Triangles</span></a>
+<a class="ml-auto flex w-1/2 items-center justify-end rounded-r-md p-6 pl-3 no-underline hover:bg-black/[2%]" href=https://projectf.io/posts/square-root-in-verilog/><span>Square Root in Verilog</span><span class=ml-1.5>→</span></a></nav></article></main><footer class="opaco mx-auto flex h-[5rem] max-w-3xl items-center px-8 text-[0.9em] opacity-60"><div class=mr-auto><a class=link href=https://projectf.io>Project F</a>
+&copy; 2023 Will Green.</div></footer></body></html>

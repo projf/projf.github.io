@@ -1,343 +1,102 @@
-<!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml"  lang="en-gb">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
-<title>FPGA Memory Types | Project F: FPGA Dev</title>
-
-<meta property='og:title' content='FPGA Memory Types - Project F: FPGA Dev'>
-<meta property='og:description' content='Designing with FPGAs involves many types of memory, some familiar from other devices, but some that are specific to FPGAs. This how to gives a quick overview of the different flavours, together with their strengths and weaknesses, and some sample designs. This guide includes external memory types, such as SRAM and HBM, that are used in CPUs and GPUs, so much of what is said here is generally applicable, but the focus is on FPGAs.'>
-<meta property='og:url' content='https://projectf.io/posts/fpga-memory-types/'>
-<meta property='og:site_name' content='Project F: FPGA Dev'>
-<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/initialize-memory-in-verilog/social-card.jpg'><meta property='article:published_time' content='2020-08-24T00:00:00Z'><meta property='article:modified_time' content='2020-12-22T00:00:00Z'><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
-
-
-<link href="https://projectf.io/index.xml" rel="alternate" type="application/rss+xml" title="Project F: FPGA Dev">
-
-<link rel="stylesheet" href="/css/style.css"><link rel='stylesheet' href='https://projectf.io/css/custom.css'>
-
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-<link rel="manifest" href="/site.webmanifest">
-<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
-<link rel="canonical" href="https://projectf.io/posts/fpga-memory-types/">
-<meta name="msapplication-TileColor" content="#da532c">
-<meta name="theme-color" content="#ffffff">
-</head>
-<body>
-
-<section class="section">
-  <div class="container">
-    <nav id="nav-main" class="nav">
-      <div id="nav-name" class="nav-left">
-        <a id="nav-anchor" class="nav-item" href="https://projectf.io">
-          <h1 id="nav-heading" class="title is-4">Project F: FPGA Dev</h1>
-        </a>
-      </div>
-      <div class="nav-right">
-        <nav id="nav-items" class="nav-item level is-mobile"><a class="level-item" aria-label="github" href='https://github.com/projf/projf-explore'
-            target='_blank' rel='me noopener'>
-            <span class="icon">
-              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
-    
-    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
-    
-  </svg>
-</i>
-            </span>
-          </a><a class="level-item" aria-label="mastodon" href='https://mastodon.social/@WillFlux'
-            target='_blank' rel='me noopener'>
-            <span class="icon">
-              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
-    
-    <path d="M 11.966876,0.80329086 C 9.1123466,0.82665791 6.3664935,1.1367094 4.7662978,1.8737549 c 0,0 -3.1736685,1.4237835 -3.1736685,6.2815982 0,1.1123884 -0.021554,2.4424309 0.013571,3.8529439 0.1152443,4.750677 0.8683725,9.432704 5.2479219,10.595273 2.0193066,0.53604 3.7531218,0.648348 5.1494078,0.571373 2.532141,-0.140797 3.953603,-0.906282 3.953603,-0.906282 l -0.08353,-1.842608 c 0,0 -1.809527,0.572181 -3.841713,0.50245 -2.013417,-0.06922 -4.138986,-0.217713 -4.4646269,-2.696937 -0.030082,-0.217772 -0.045075,-0.450712 -0.045075,-0.695267 0,0 1.9765387,0.484554 4.4813709,0.599656 1.531629,0.07049 2.9679,-0.08996 4.426746,-0.264563 2.797636,-0.335045 5.233581,-2.063856 5.539741,-3.643517 0.482392,-2.488386 0.442651,-6.0725219 0.442651,-6.0725219 0,-4.8578147 -3.173492,-6.2815982 -3.173492,-6.2815982 C 17.639136,1.1367094 14.891579,0.82669685 12.03704,0.80329086 Z"/>
-  <path d="M 6.4286668,14.016701 V 9.1034254 c 0,-1.0041614 0.2549569,-1.8022059 0.7670342,-2.3925638 0.5280486,-0.590366 1.2196579,-0.8929946 2.0781049,-0.8929946 0.9931961,0 1.7452181,0.3828583 2.2425191,1.1486808 L 11.999859,7.7793695 12,11.451148 11.999859,7.7793695 12.483392,6.9665478 C 12.980596,6.2007253 13.732618,5.817867 14.72592,5.817867 c 0.858341,0 1.549951,0.3026286 2.078097,0.8929946 0.511971,0.5903579 0.766887,1.3884024 0.766887,2.3925638 v 4.9132756" />
-    
-  </svg>
-</i>
-            </span>
-          </a><a class="level-item" aria-label="youtube" href='https://youtube.com/@projf'
-            target='_blank' rel='me noopener'>
-            <span class="icon">
-              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
-    
-    <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/>
-    <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/>
-    
-  </svg>
-</i>
-            </span>
-          </a><a class="level-item" aria-label="rss" href='/index.xml'
-            target='_blank' rel='me noopener'>
-            <span class="icon">
-              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
-    
-    <path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle>
-    
-  </svg>
-</i>
-            </span>
-          </a></nav>
-      </div>
-    </nav>
-
-    <nav class="nav">
-      
-      <div class="nav-left"><a class="nav-item" href="/about">
-          <h2 class="title is-5">About</h2>
-        </a><a class="nav-item" href="/demos">
-          <h2 class="title is-5">Demos</h2>
-        </a><a class="nav-item" href="/howto">
-          <h2 class="title is-5">How To</h2>
-        </a><a class="nav-item" href="/tags/news">
-          <h2 class="title is-5">News</h2>
-        </a><a class="nav-item" href="/tutorials">
-          <h2 class="title is-5">Tutorials</h2>
-        </a><a class="nav-item" href="/verilog-lib">
-          <h2 class="title is-5">Verilog Lib</h2>
-        </a></div>
-      
-
-      
-    </nav>
-
-  </div>
-  <script src="/js/navicon-shift.js"></script>
-</section>
-
-<section class="section">
-  <div class="container">
-    <div class="subtitle tags is-6 is-pulled-right">
-      
-      
-<a class="subtitle is-6" href="/tags/memory/">#memory</a>
-
-
-
-
-      
-    </div>
-    <h2 class="subtitle is-6">24 August 2020</h2>
-    <h1 class="title">FPGA Memory Types</h1>
-    
-    <div class="content">
-      <p>Designing with FPGAs involves many types of memory, some familiar from other devices, but some that are specific to FPGAs. This <a href="/howto">how to</a> gives a quick overview of the different flavours, together with their strengths and weaknesses, and some sample designs. This guide includes external memory types, such as SRAM and HBM, that are used in CPUs and GPUs, so much of what is said here is generally applicable, but the focus is on FPGAs. You might also be interested in <a href="/posts/initialize-memory-in-verilog/">Initialize Memory in Verilog</a>. This post was last updated in December 2020.</p>
-<p>To give you a sense of the memory capability of small FPGAs, we include the memory specifications for Lattice iCE40 UP5K and Xilinx Spartan XC7S25.</p>
-<p><strong>This post is a draft. I will be working on a revised version in 2023.</strong></p>
-<p><em>Get in touch with <a href="https://mastodon.social/@WillFlux">@WillFlux</a> or join me on <a href="https://github.com/projf/projf-explore/discussions">GitHub Discussions</a> and <a href="https://discord.gg/cf869yDbXf">1BitSquared Discord</a>.</em></p>
-<h2 id="contents">Contents</h2>
-<ul>
-<li><a href="#memory-terminology">Memory Terminology</a></li>
-<li><a href="#flip-flops">Flip-Flops</a></li>
-<li><a href="#distributed-ram">Distributed RAM</a></li>
-<li><a href="#block-ram">Block RAM</a> and <a href="#ultraram">UltraRAM</a></li>
-<li><a href="#high-bandwidth-memory">High Bandwidth Memory</a></li>
-<li><a href="#static-ram">Static RAM</a></li>
-<li><a href="#dynamic-ram">Dynamic RAM</a></li>
-<li><a href="#pseudo-sram">Pseudo SRAM</a></li>
-</ul>
-<blockquote>
-<p><strong>Sponsor My Work</strong><br>
-If you like what I do, consider <a href="https://github.com/sponsors/WillGreen">sponsoring me</a> on GitHub.<br>
-I love FPGAs and want to help more people discover and use them in their projects.<br>
-My hardware designs are open source, and my blog is advert free.</p>
-</blockquote>
-<h2 id="memory-terminology">Memory Terminology</h2>
-<ul>
-<li><strong>Address Width</strong> - how many bits are needed to address all the elements in the memory array</li>
-<li><strong>Bandwidth</strong> - how much data can be transferred by a memory interface each second</li>
-<li><strong>(Data) Width</strong> - how many bits there are in each element</li>
-<li><strong>Depth</strong> - how many elements there are in the memory array</li>
-<li><strong>Organisation</strong> - <em>depth</em> x <em>width</em> (see below)</li>
-<li><strong>Latency</strong> - how long it takes for a memory interface to start returning data</li>
-</ul>
-<p><em>ProTip: In SystemVerilog you can use <code>$clog2</code> to calculate the address width from the depth.</em></p>
-<h3 id="memory-organisation">Memory Organisation</h3>
-<p>Memory is described by its <em>organisation</em> or depth x width. For example, a 4 Mb SRAM could be described as 512K x 8, which means it has 524,288 (512 x 1024) locations, each of which holds 8 bits. The same memory capacity could also be organised as 256K x 16, which means it has 262,144 (256 x 1024) locations, each of which holds 16 bits.</p>
-<h2 id="flip-flops">Flip-Flops</h2>
-<p>Flip-flops are the state keepers of FPGAs. Each flip-flop holds one bit.</p>
-<p>When you create a simple counter you&rsquo;re using flip-flops:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">15</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;  <span style="color:#75715e">// 16 flip-flops
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>        cnt <span style="color:#f92672">&lt;=</span> cnt <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
-</span></span></code></pre></div><p>Flip-flops are great for saving state, but they&rsquo;re not ideal for all but the smallest memories: their numbers are limited, they&rsquo;re spread throughout the FPGA (making routing larger memories hard), and they don&rsquo;t support multiple ports.</p>
-<p>The Lattice iCE40 UP5K has 5,280 flip-flops, while the Xilinx Spartan 7S25 has 29,200.</p>
-<h2 id="distributed-ram">Distributed RAM</h2>
-<p>Distributed ram is built with LUTs. LUTs are usually used to create the logic of your design, but can also support memory in some FPGAs. Distributed ram is, as its name suggests, distributed throughout the FPGA. A single 6-input LUT can store 64 bits.</p>
-<p>Distributed ram is read asynchronously, but written to synchronously (requires a clock). Writes are limited to a single port, but you can read from up to four ports in some FPGAs. Distributed ram is flexible in the data width it supports, for example, if dealing with 32-level data you use a width of 5 bits.</p>
-<p>Given the asynchronous nature of reads, distributed ram is ideal for fast buffers: you can use a value immediately, rather than waiting for the next clock tick. You can also use distributed ram to create small ROMs. However, distributed ram is not suited to large memories, you&rsquo;ll get better performance (and lower power consumption) for memories larger than about 128 bits (based on Xilinx 7 Series) using block ram (see next section).</p>
-<p>In Xilinx 7 Series FPGAs, only LUTs in SLICEM blocks may be used as memory. A Spartan 7S25 FPGA has 14,600 6-input LUTs, of which 5,000 are SLICEM, so you have a maximum of: 5,000 x 64 bits = 320,000 bits.</p>
-<p>For more on Xilinx distributed ram see <a href="https://www.xilinx.com/support/documentation/user_guides/ug474_7Series_CLB.pdf">UG474: 7 Series FPGAs Configurable Logic Block</a>.</p>
-<p>The following example shows a ROM module using distributed ram (note the lack of a clock):</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> rom_async #(
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>, 
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> DEPTH<span style="color:#f92672">=</span><span style="color:#ae81ff">256</span>, 
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> INIT_F<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;&#34;</span>,
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">localparam</span> ADDRW<span style="color:#f92672">=</span>$clog2(DEPTH)
-</span></span><span style="display:flex;"><span>    ) (
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] addr,
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] data
-</span></span><span style="display:flex;"><span>    );
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] memory [DEPTH];
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">initial</span> <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (INIT_F <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>            $display(<span style="color:#e6db74">&#34;Creating rom_async from init file &#39;%s&#39;.&#34;</span>, INIT_F);
-</span></span><span style="display:flex;"><span>            $readmemh(INIT_F, memory);
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always_comb</span> data <span style="color:#f92672">=</span> memory[addr];
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
-</span></span></code></pre></div><p>To learn more about loading memory with <code>$readmemh</code> and <code>$readmemb</code> see <a href="/posts/initialize-memory-in-verilog/">Initialize Memory in Verilog</a>.</p>
-<h2 id="block-ram">Block RAM</h2>
-<p>Block ram (BRAM) is implemented using dedicated ram circuitry within the FPGA and is ideal for memories from a few hundred bits up to hundreds of kilobits. But BRAM is not just better than distributed ram for larger memories: I&rsquo;d go so far as to say that block RAM is one of the great things about developing hardware with FPGAs.</p>
-<p><em>Being written&hellip;</em></p>
-<h3 id="xilinx-bram">Xilinx BRAM</h3>
-<p>Xilinx 7 series FPGAs have 36 Kb BRAM blocks with two ports and up to 72 bit data width. Each port has an independent clock, so you can share data across clock domains. For example, you could have a RISC-V CPU accessing a block ram at 180 MHz, while your custom hardware accesses the same block at 133.3 MHz.</p>
-<p>BRAMs are quite flexible in organisation; with two read/write ports (true dual-port BRAM) you can have data widths of 1, 2, 4, 9, 18, and 36 bits. The reasons the latter widths are multiples of 9 is because of ECC (error correction) support. For example, if you have 4-bit data then the organisation would be 8K x 4 (only 32 of the 36 Kb are used in this case). If you restrict yourself to one read and one write port (simple dual-port BRAM) then you can have 72-bit wide data.</p>
-<p>Each 36 Kb block may also be split into two independent 18 Kb BRAMs, though the maximum data width of each is reduced.</p>
-<ul>
-<li>Inference vs Primitives</li>
-<li>Larger memories with multiple blocks&hellip;</li>
-<li>Byte-level writes&hellip;</li>
-<li>Block ram columns&hellip;</li>
-<li>Collisions occur when both ports access the same address&hellip;</li>
-<li>Output registers for higher clock speeds&hellip;</li>
-</ul>
-<p>For more details on Xilinx BRAM see <a href="https://www.xilinx.com/support/documentation/user_guides/ug473_7Series_Memory_Resources.pdf">UG473: 7 Series FPGAs Memory Resources</a>.</p>
-<blockquote>
-<p><strong>BRAM Data Sheet Capacity</strong><br>
-Be careful when interpreting the headline BRAM capacity on FPGA data sheets. For example, if you look at Xilinx&rsquo;s <a href="https://www.xilinx.com/support/documentation/data_sheets/ds180_7Series_Overview.pdf">7 Series Overview</a>, you&rsquo;ll see that the Spartan S25 has 1,620 Kb of block ram. However, you shouldn&rsquo;t think of this as having ~200 KiB of ram like you would on a microcontroller. This figure includes the 9th bit usually used for error correction; for 32-bit data the capacity is 1,440 Kb. More importantly, BRAM is composed of many small blocks spread across the FPGA: you can&rsquo;t expect to combine them all together into one big memory and get good performance.</p>
-</blockquote>
-<h3 id="ice40-bram">iCE40 BRAM</h3>
-<p>iCE40 5UP has 4 Kb BRAMs&hellip;</p>
-<p><em>Being written&hellip;</em></p>
-<p>For more details on Lattice BRAM see <a href="http://www.latticesemi.com/dynamic/view_document.cfm?document_id=47775">Memory Usage Guide for iCE40 Devices</a>.</p>
-<h3 id="fifos">FIFOs</h3>
-<p>First in, first out&hellip;</p>
-<h3 id="example-modules">Example Modules</h3>
-<p>The following example shows a dual-por block ram module for iCE40 (a port can only be read or write on this FPGA):</p>
-<p><em>New example to be added</em></p>
-<p>The following example shows a simple Xilinx block ram module using a single read and a single write port (ports may be both read and write):</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> bram_basic_xc7 #(
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>, 
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> DEPTH<span style="color:#f92672">=</span><span style="color:#ae81ff">256</span>, 
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> INIT_F<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;&#34;</span>,
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">localparam</span> ADDRW<span style="color:#f92672">=</span>$clog2(DEPTH)
-</span></span><span style="display:flex;"><span>    ) (
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,                       <span style="color:#75715e">// clock (port a &amp; b)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> we,                        <span style="color:#75715e">// write enable (port a)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] addr_write,    <span style="color:#75715e">// write address (port a)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] addr_read,     <span style="color:#75715e">// read address (port b)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] data_in,       <span style="color:#75715e">// data in (port a)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] data_out       <span style="color:#75715e">// data out (port b)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    );
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* verilator lint_off MULTIDRIVEN */</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] memory [DEPTH];
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* verilator lint_on MULTIDRIVEN */</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">initial</span> <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (INIT_F <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>            $display(<span style="color:#e6db74">&#34;Loading memory init file &#39;%s&#39; into bram_basic.&#34;</span>, INIT_F);
-</span></span><span style="display:flex;"><span>            $readmemh(INIT_F, memory);
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// Port A: Sync Write
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (we) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>            memory[addr_write] <span style="color:#f92672">&lt;=</span> data_in;
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// Port B: Sync Read
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>        data_out <span style="color:#f92672">&lt;=</span> memory[addr_read];
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
-</span></span></code></pre></div><p>The following example shows a synchronous ROM module that should work with both Xilinx and Lattice BRAM:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> rom_sync #(
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>, 
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> DEPTH<span style="color:#f92672">=</span><span style="color:#ae81ff">512</span>, 
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> INIT_F<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;&#34;</span>,
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">localparam</span> ADDRW<span style="color:#f92672">=</span>$clog2(DEPTH)
-</span></span><span style="display:flex;"><span>    ) (
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] addr,
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] data
-</span></span><span style="display:flex;"><span>    );
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] memory [DEPTH];
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">initial</span> <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (INIT_F <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>            $display(<span style="color:#e6db74">&#34;Creating rom_sync from init file &#39;%s&#39;.&#34;</span>, INIT_F);
-</span></span><span style="display:flex;"><span>            $readmemh(INIT_F, memory);
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>        data <span style="color:#f92672">&lt;=</span> memory[addr];
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
-</span></span></code></pre></div><h3 id="ultraram">UltraRAM</h3>
-<p>UltraRAM is a type of memory available in Xilinx UltraScale and UltraScale+ FPGAs. UltraRAM is like block ram on steroids: bigger but less agile. The blocks are 288 Kb in size (8x regular BRAM): combining all the blocks in a column gives you up to 36 Mb of memory to play with. However, while UltraRAM is dual-ported, it does not support independent clocks on each port, and is a fixed 72 bits wide.</p>
-<h2 id="high-bandwidth-memory">High Bandwidth Memory</h2>
-<p><em>Being written&hellip;</em></p>
-<p>Better known as <strong>HBM</strong> - Bandwidth, bandwidth and more bandwidth&hellip;</p>
-<p>Found only on high-end FPGAs and graphics cards&hellip;</p>
-<h2 id="static-ram">Static RAM</h2>
-<p><em>Being written&hellip;</em></p>
-<p>If you were to imagine a memory chip, you&rsquo;d probably imagine something like static ram (<strong>SRAM</strong>). You provide the address of a the element you want on the address bus, wait some nanoseconds and the data is returned on the data bus.</p>
-<p>SRAM&rsquo;s big issue is cost, which also limits the capacities its available in.</p>
-<p>Few recent FPGA dev boards include SRAM, which is a shame, as this ram is ideal for beginners and low-latency hardware designs. One that does is the Digilent <a href="https://reference.digilentinc.com/reference/programmable-logic/cmod-a7/reference-manual">Cmod A7</a>, which features 4 Mb (512K x 8) of 8ns SRAM.</p>
-<p>Static RAM is available in both synchronous and asynchronous types&hellip;</p>
-<h3 id="asynchronous-sram">Asynchronous SRAM</h3>
-<p>Async SRAM doesn&rsquo;t use a clock&hellip; speed in nanoseconds</p>
-<p>Async SRAM is most commonly ~3V, which work well with current FPGA designs.</p>
-<p>4 Mb asynchronous SRAMs ICs are cheap (for SRAM) and widely available at speeds of 10 ns with a 8 or 16-bit data bus. A 4Mb (512 KiB) 10ns SRAM costs around $2 in small quantities. A 4 Mb (512K x 8) SRAM has 8 data pins and 19 address pins, and typically three control pins: write enable, output enable, and chip select.</p>
-<h3 id="synchronous-sram">Synchronous SRAM</h3>
-<p>Faster SRAM is clocked&hellip; speed in megahertz&hellip; not always full random I/O&hellip; pipelined vs flow-through&hellip;</p>
-<p>The iCE40 UP FPGAs include Synchronous SRAM, see <a href="/posts/spram-ice40-fpga/">SPRAM on iCE40 FPGA</a>.</p>
-<h2 id="dynamic-ram">Dynamic RAM</h2>
-<p><em>Being written&hellip;</em></p>
-<p><strong>DRAM</strong> is the everyday memory that forms the main memory in your PC. Dynamic ram needs to be refreshed periodically, otherwise the data is lost. It&rsquo;s cheap and offers plenty of bandwidth, but DRAM is complex to interface with: you&rsquo;re almost certainly going to have to use vendor IP blocks and a cache to make DRAM usable. If you&rsquo;re accessing data sequentially, or interfacing with a CPU via a cache, then DRAM works well, but for random I/O the high latency is a significant issue.</p>
-<h2 id="pseudo-sram">Pseudo SRAM</h2>
-<p><em>Being written&hellip;</em></p>
-<p>SRAM is expensive, and DRAM is complex, and both use a significant number of I/O pins. By using a self-refreshing circuit <em>and</em> a simplified interface, similar to SPI flash, a new type of ram can be created. This type of ram is usually referred to as <strong>Pseudo SRAM</strong>.</p>
-<p>The two interfaces you&rsquo;ll come across are <strong>HyperRAM</strong>, created by <a href="https://www.cypress.com/products/hyperram-memory">Cypress</a>, and <strong>xSPI (OctalSPI)</strong>, standardised by <a href="https://www.jedec.org/standards-documents/docs/jesd251a">JEDEC</a> in early 2020. In both cases you only need 11 or 12 FPGA pins to interface with the ram. As of summer 2020 this ram is available in capacities up to 256 Mb (32 MiB) in 1.8V and 3V. 64 Mb (8 MiB) parts costs around $3 in small quantities.</p>
-<p>We haven&rsquo;t seen this ram on many FPGA dev boards, but Kevin Hubbard&rsquo;s open source <a href="https://github.com/blackmesalabs/hyperram">HyperRAM Pmod</a> has proved popular, and is available pre-assembled from <a href="https://1bitsquared.com/products/pmod-hyperram">1BitSquared</a>. I hope we&rsquo;ll see an updated version with faster xSPI ram in due course.</p>
-<p><em>PS. The wonderful image of the Micron MT4C1024 DRAM used in the social media card for this post comes from <a href="https://zeptobars.com/en/read/Micron-MT4C1024-dram">Zeptobars</a> and is licensed under a <a href="https://creativecommons.org/licenses/by/3.0/">Creative Commons licence</a>.</em></p>
-<p><em>Get in touch with <a href="https://mastodon.social/@WillFlux">@WillFlux</a> or join me on <a href="https://github.com/projf/projf-explore/discussions">GitHub Discussions</a> and <a href="https://discord.gg/cf869yDbXf">1BitSquared Discord</a>.</em></p>
-
-      
-    </div>
-    
-  </div>
-</section>
-
-    <script src="/js/copycode.js"></script>
-
-
-
-<section class="section">
-  <div class="container has-text-centered">
-    <p>©2023 Will Green, Project F</p>
-    
-  </div>
-</section>
-
-
-<script src="https://badgers.projectf.io/script.js" data-site="EVCGKVDN" defer></script>
-
-
-
-</body>
-</html>
-
+<!doctype html><html class="not-ready text-sm lg:text-base" style=--bg:#fff lang=en-gb><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><title>FPGA Memory Types - Project F</title><meta name=theme-color><meta name=description content="Designing with FPGAs involves many types of memory, some familiar from other devices, but some that are specific to FPGAs. This how to gives a quick overview of the different flavours, together with their strengths and weaknesses, and some sample designs. This guide includes external memory types, such as SRAM and HBM, that are used in CPUs and GPUs, so much of what is said here is generally applicable, but the focus is on FPGAs."><meta name=author content="Will Green"><link rel="preload stylesheet" as=style href=https://projectf.io/main.min.css><script defer src=https://projectf.io/highlight.min.js onload=hljs.initHighlightingOnLoad()></script>
+<link rel=preload as=image href=https://projectf.io/theme.png><link rel=preload as=image href=https://projectf.io/github.svg><link rel=preload as=image href=https://projectf.io/mastodon.svg><link rel=preload as=image href=https://projectf.io/rss.svg><link rel=icon href=https://projectf.io/favicon.ico><link rel=apple-touch-icon href=https://projectf.io/apple-touch-icon.png><meta name=generator content="Hugo 0.110.0"><script src=https://badgers.projectf.io/script.js data-site=EVCGKVDN defer></script><meta property="og:title" content="FPGA Memory Types"><meta property="og:description" content="Designing with FPGAs involves many types of memory, some familiar from other devices, but some that are specific to FPGAs. This how to gives a quick overview of the different flavours, together with their strengths and weaknesses, and some sample designs. This guide includes external memory types, such as SRAM and HBM, that are used in CPUs and GPUs, so much of what is said here is generally applicable, but the focus is on FPGAs."><meta property="og:type" content="article"><meta property="og:url" content="https://projectf.io/posts/fpga-memory-types/"><meta property="article:section" content="posts"><meta property="article:published_time" content="2020-08-24T00:00:00+00:00"><meta property="article:modified_time" content="2020-12-22T00:00:00+00:00"><meta itemprop=name content="FPGA Memory Types"><meta itemprop=description content="Designing with FPGAs involves many types of memory, some familiar from other devices, but some that are specific to FPGAs. This how to gives a quick overview of the different flavours, together with their strengths and weaknesses, and some sample designs. This guide includes external memory types, such as SRAM and HBM, that are used in CPUs and GPUs, so much of what is said here is generally applicable, but the focus is on FPGAs."><meta itemprop=datePublished content="2020-08-24T00:00:00+00:00"><meta itemprop=dateModified content="2020-12-22T00:00:00+00:00"><meta itemprop=wordCount content="2047"><meta itemprop=keywords content="memory,"><meta name=twitter:card content="summary"><meta name=twitter:title content="FPGA Memory Types"><meta name=twitter:description content="Designing with FPGAs involves many types of memory, some familiar from other devices, but some that are specific to FPGAs. This how to gives a quick overview of the different flavours, together with their strengths and weaknesses, and some sample designs. This guide includes external memory types, such as SRAM and HBM, that are used in CPUs and GPUs, so much of what is said here is generally applicable, but the focus is on FPGAs."></head><body class="text-black duration-200 ease-out dark:text-white"><header class="mx-auto flex h-[5rem] max-w-3xl px-8 lg:justify-center"><div class="relative z-50 mr-auto flex items-center"><a class="-translate-x-[1px] -translate-y-0.5 text-3xl font-bold" href=https://projectf.io/>Project F</a>
+<a class="btn-dark ml-6 h-6 w-6 shrink-0 cursor-pointer [background:url(./theme.png)_left_center/_auto_theme('spacing.6')_no-repeat] [transition:_background-position_0.4s_steps(5)] dark:[background-position:right]"></a></div><a class="btn-menu relative z-50 -mr-8 flex h-[5rem] w-[5rem] shrink-0 cursor-pointer flex-col items-center justify-center gap-2.5 lg:hidden"></a>
+<script>const htmlClass=document.documentElement.classList;setTimeout(()=>{htmlClass.remove("not-ready")},10);const btnMenu=document.querySelector(".btn-menu");btnMenu.addEventListener("click",()=>{htmlClass.toggle("open")});const metaTheme=document.querySelector('meta[name="theme-color"]'),lightBg=`"#fff"`.replace(/"/g,""),setDark=e=>{metaTheme.setAttribute("content",e?"#000":lightBg),htmlClass[e?"add":"remove"]("dark"),localStorage.setItem("dark",e)},darkScheme=window.matchMedia("(prefers-color-scheme: dark)");if(htmlClass.contains("dark"))setDark(!0);else{const e=localStorage.getItem("dark");setDark(e?e==="true":darkScheme.matches)}darkScheme.addEventListener("change",e=>{setDark(e.matches)});const btnDark=document.querySelector(".btn-dark");btnDark.addEventListener("click",()=>{setDark(localStorage.getItem("dark")!=="true")})</script><div class="nav-wrapper fixed inset-x-0 top-full z-40 flex h-full select-none flex-col justify-center pb-16 duration-200 dark:bg-black lg:static lg:h-auto lg:flex-row lg:!bg-transparent lg:pb-0 lg:transition-none"><nav class="lg:ml-12 lg:flex lg:flex-row lg:items-center lg:space-x-6"><a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/about/>About</a>
+<a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/demos/>Demos</a>
+<a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/verilog-lib/>Lib</a>
+<a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/tools/>Tools</a>
+<a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/tutorials/>Tutorials</a></nav><nav class="mt-12 flex justify-center space-x-10 dark:invert lg:mt-0 lg:ml-12 lg:items-center lg:space-x-6"><a class="h-8 w-8 [background:var(--url)_center_center/cover_no-repeat] lg:h-6 lg:w-6" style=--url:url(./github.svg) href=https://github.com/projf target=_blank rel=me></a>
+<a class="h-8 w-8 [background:var(--url)_center_center/cover_no-repeat] lg:h-6 lg:w-6" style=--url:url(./mastodon.svg) href=https://mastodon.social/@WillFlux target=_blank rel=me></a>
+<a class="h-8 w-8 [background:var(--url)_center_center/cover_no-repeat] lg:h-6 lg:w-6" style=--url:url(./rss.svg) href=https://projectf.io/index.xml target=_blank></a></nav></div></header><main class="prose prose-neutral relative mx-auto min-h-[calc(100%-10rem)] max-w-3xl px-8 pt-20 pb-1 dark:prose-invert"><article><header class=mb-1><h1 class="!my-0 pb-2.5">FPGA Memory Types</h1><div class="text-sm opacity-60">Published
+<time>24 Aug 2020</time>
+<span class=mx-1>&#183;</span>
+<span>Updated
+<time>22 Dec 2020</time></span></div></header><section><p>Designing with FPGAs involves many types of memory, some familiar from other devices, but some that are specific to FPGAs. This <a href=/tutorials/#how-to>how to</a> gives a quick overview of the different flavours, together with their strengths and weaknesses, and some sample designs. This guide includes external memory types, such as SRAM and HBM, that are used in CPUs and GPUs, so much of what is said here is generally applicable, but the focus is on FPGAs. You might also be interested in <a href=/posts/initialize-memory-in-verilog/>Initialize Memory in Verilog</a>.</p><p>To give you a sense of the memory capability of small FPGAs, we include the memory specifications for Lattice iCE40 UP5K and Xilinx Spartan XC7S25.</p><p><strong>This post is a draft. I will be working on a revised version in 2023.</strong></p><p><em>Get in touch with <a href=https://mastodon.social/@WillFlux>@WillFlux</a> or join me on <a href=https://github.com/projf/projf-explore/discussions>GitHub Discussions</a> and <a href=https://discord.gg/cf869yDbXf>1BitSquared Discord</a>.</em></p><h2 id=contents>Contents</h2><ul><li><a href=#memory-terminology>Memory Terminology</a></li><li><a href=#flip-flops>Flip-Flops</a></li><li><a href=#distributed-ram>Distributed RAM</a></li><li><a href=#block-ram>Block RAM</a> and <a href=#ultraram>UltraRAM</a></li><li><a href=#high-bandwidth-memory>High Bandwidth Memory</a></li><li><a href=#static-ram>Static RAM</a></li><li><a href=#dynamic-ram>Dynamic RAM</a></li><li><a href=#pseudo-sram>Pseudo SRAM</a></li></ul><blockquote><p><strong>Sponsor My Work</strong><br>If you like what I do, consider <a href=https://github.com/sponsors/WillGreen>sponsoring me</a> on GitHub.<br>I love FPGAs and want to help more people discover and use them in their projects.<br>My hardware designs are open source, and my blog is advert free.</p></blockquote><h2 id=memory-terminology>Memory Terminology</h2><ul><li><strong>Address Width</strong> - how many bits are needed to address all the elements in the memory array</li><li><strong>Bandwidth</strong> - how much data can be transferred by a memory interface each second</li><li><strong>(Data) Width</strong> - how many bits there are in each element</li><li><strong>Depth</strong> - how many elements there are in the memory array</li><li><strong>Organisation</strong> - <em>depth</em> x <em>width</em> (see below)</li><li><strong>Latency</strong> - how long it takes for a memory interface to start returning data</li></ul><p><em>ProTip: In SystemVerilog you can use <code>$clog2</code> to calculate the address width from the depth.</em></p><h3 id=memory-organisation>Memory Organisation</h3><p>Memory is described by its <em>organisation</em> or depth x width. For example, a 4 Mb SRAM could be described as 512K x 8, which means it has 524,288 (512 x 1024) locations, each of which holds 8 bits. The same memory capacity could also be organised as 256K x 16, which means it has 262,144 (256 x 1024) locations, each of which holds 16 bits.</p><h2 id=flip-flops>Flip-Flops</h2><p>Flip-flops are the state keepers of FPGAs. Each flip-flop holds one bit.</p><p>When you create a simple counter you&rsquo;re using flip-flops:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span>    <span style=color:#66d9ef>logic</span> [<span style=color:#ae81ff>15</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] cnt <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span>;  <span style=color:#75715e>// 16 flip-flops
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>always_ff</span> @(<span style=color:#66d9ef>posedge</span> clk) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>        cnt <span style=color:#f92672>&lt;=</span> cnt <span style=color:#f92672>+</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
+</span></span></code></pre></div><p>Flip-flops are great for saving state, but they&rsquo;re not ideal for all but the smallest memories: their numbers are limited, they&rsquo;re spread throughout the FPGA (making routing larger memories hard), and they don&rsquo;t support multiple ports.</p><p>The Lattice iCE40 UP5K has 5,280 flip-flops, while the Xilinx Spartan 7S25 has 29,200.</p><h2 id=distributed-ram>Distributed RAM</h2><p>Distributed ram is built with LUTs. LUTs are usually used to create the logic of your design, but can also support memory in some FPGAs. Distributed ram is, as its name suggests, distributed throughout the FPGA. A single 6-input LUT can store 64 bits.</p><p>Distributed ram is read asynchronously, but written to synchronously (requires a clock). Writes are limited to a single port, but you can read from up to four ports in some FPGAs. Distributed ram is flexible in the data width it supports, for example, if dealing with 32-level data you use a width of 5 bits.</p><p>Given the asynchronous nature of reads, distributed ram is ideal for fast buffers: you can use a value immediately, rather than waiting for the next clock tick. You can also use distributed ram to create small ROMs. However, distributed ram is not suited to large memories, you&rsquo;ll get better performance (and lower power consumption) for memories larger than about 128 bits (based on Xilinx 7 Series) using block ram (see next section).</p><p>In Xilinx 7 Series FPGAs, only LUTs in SLICEM blocks may be used as memory. A Spartan 7S25 FPGA has 14,600 6-input LUTs, of which 5,000 are SLICEM, so you have a maximum of: 5,000 x 64 bits = 320,000 bits.</p><p>For more on Xilinx distributed ram see <a href=https://www.xilinx.com/support/documentation/user_guides/ug474_7Series_CLB.pdf>UG474: 7 Series FPGAs Configurable Logic Block</a>.</p><p>The following example shows a ROM module using distributed ram (note the lack of a clock):</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span><span style=color:#66d9ef>module</span> rom_async #(
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>parameter</span> WIDTH<span style=color:#f92672>=</span><span style=color:#ae81ff>8</span>, 
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>parameter</span> DEPTH<span style=color:#f92672>=</span><span style=color:#ae81ff>256</span>, 
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>parameter</span> INIT_F<span style=color:#f92672>=</span><span style=color:#e6db74>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>localparam</span> ADDRW<span style=color:#f92672>=</span>$clog2(DEPTH)
+</span></span><span style=display:flex><span>    ) (
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>input</span> <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> [ADDRW<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] addr,
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>output</span>     <span style=color:#66d9ef>logic</span> [WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] data
+</span></span><span style=display:flex><span>    );
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>logic</span> [WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] memory [DEPTH];
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>initial</span> <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> (INIT_F <span style=color:#f92672>!=</span> <span style=color:#ae81ff>0</span>) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>            $display(<span style=color:#e6db74>&#34;Creating rom_async from init file &#39;%s&#39;.&#34;</span>, INIT_F);
+</span></span><span style=display:flex><span>            $readmemh(INIT_F, memory);
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>always_comb</span> data <span style=color:#f92672>=</span> memory[addr];
+</span></span><span style=display:flex><span><span style=color:#66d9ef>endmodule</span>
+</span></span></code></pre></div><p>To learn more about loading memory with <code>$readmemh</code> and <code>$readmemb</code> see <a href=/posts/initialize-memory-in-verilog/>Initialize Memory in Verilog</a>.</p><h2 id=block-ram>Block RAM</h2><p>Block ram (BRAM) is implemented using dedicated ram circuitry within the FPGA and is ideal for memories from a few hundred bits up to hundreds of kilobits. But BRAM is not just better than distributed ram for larger memories: I&rsquo;d go so far as to say that block RAM is one of the great things about developing hardware with FPGAs.</p><p><em>Being written&mldr;</em></p><h3 id=xilinx-bram>Xilinx BRAM</h3><p>Xilinx 7 series FPGAs have 36 Kb BRAM blocks with two ports and up to 72 bit data width. Each port has an independent clock, so you can share data across clock domains. For example, you could have a RISC-V CPU accessing a block ram at 180 MHz, while your custom hardware accesses the same block at 133.3 MHz.</p><p>BRAMs are quite flexible in organisation; with two read/write ports (true dual-port BRAM) you can have data widths of 1, 2, 4, 9, 18, and 36 bits. The reasons the latter widths are multiples of 9 is because of ECC (error correction) support. For example, if you have 4-bit data then the organisation would be 8K x 4 (only 32 of the 36 Kb are used in this case). If you restrict yourself to one read and one write port (simple dual-port BRAM) then you can have 72-bit wide data.</p><p>Each 36 Kb block may also be split into two independent 18 Kb BRAMs, though the maximum data width of each is reduced.</p><ul><li>Inference vs Primitives</li><li>Larger memories with multiple blocks&mldr;</li><li>Byte-level writes&mldr;</li><li>Block ram columns&mldr;</li><li>Collisions occur when both ports access the same address&mldr;</li><li>Output registers for higher clock speeds&mldr;</li></ul><p>For more details on Xilinx BRAM see <a href=https://www.xilinx.com/support/documentation/user_guides/ug473_7Series_Memory_Resources.pdf>UG473: 7 Series FPGAs Memory Resources</a>.</p><blockquote><p><strong>BRAM Data Sheet Capacity</strong><br>Be careful when interpreting the headline BRAM capacity on FPGA data sheets. For example, if you look at Xilinx&rsquo;s <a href=https://www.xilinx.com/support/documentation/data_sheets/ds180_7Series_Overview.pdf>7 Series Overview</a>, you&rsquo;ll see that the Spartan S25 has 1,620 Kb of block ram. However, you shouldn&rsquo;t think of this as having ~200 KiB of ram like you would on a microcontroller. This figure includes the 9th bit usually used for error correction; for 32-bit data the capacity is 1,440 Kb. More importantly, BRAM is composed of many small blocks spread across the FPGA: you can&rsquo;t expect to combine them all together into one big memory and get good performance.</p></blockquote><h3 id=ice40-bram>iCE40 BRAM</h3><p>iCE40 5UP has 4 Kb BRAMs&mldr;</p><p><em>Being written&mldr;</em></p><p>For more details on Lattice BRAM see <a href="http://www.latticesemi.com/dynamic/view_document.cfm?document_id=47775">Memory Usage Guide for iCE40 Devices</a>.</p><h3 id=fifos>FIFOs</h3><p>First in, first out&mldr;</p><h3 id=example-modules>Example Modules</h3><p>The following example shows a dual-por block ram module for iCE40 (a port can only be read or write on this FPGA):</p><p><em>New example to be added</em></p><p>The following example shows a simple Xilinx block ram module using a single read and a single write port (ports may be both read and write):</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span><span style=color:#66d9ef>module</span> bram_basic_xc7 #(
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>parameter</span> WIDTH<span style=color:#f92672>=</span><span style=color:#ae81ff>8</span>, 
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>parameter</span> DEPTH<span style=color:#f92672>=</span><span style=color:#ae81ff>256</span>, 
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>parameter</span> INIT_F<span style=color:#f92672>=</span><span style=color:#e6db74>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>localparam</span> ADDRW<span style=color:#f92672>=</span>$clog2(DEPTH)
+</span></span><span style=display:flex><span>    ) (
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>input</span> <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> clk,                       <span style=color:#75715e>// clock (port a &amp; b)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>input</span> <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> we,                        <span style=color:#75715e>// write enable (port a)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>input</span> <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> [ADDRW<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] addr_write,    <span style=color:#75715e>// write address (port a)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>input</span> <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> [ADDRW<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] addr_read,     <span style=color:#75715e>// read address (port b)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>input</span> <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> [WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] data_in,       <span style=color:#75715e>// data in (port a)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>     <span style=color:#66d9ef>logic</span> [WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] data_out       <span style=color:#75715e>// data out (port b)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    );
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e>/* verilator lint_off MULTIDRIVEN */</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>logic</span> [WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] memory [DEPTH];
+</span></span><span style=display:flex><span>    <span style=color:#75715e>/* verilator lint_on MULTIDRIVEN */</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>initial</span> <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> (INIT_F <span style=color:#f92672>!=</span> <span style=color:#ae81ff>0</span>) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>            $display(<span style=color:#e6db74>&#34;Loading memory init file &#39;%s&#39; into bram_basic.&#34;</span>, INIT_F);
+</span></span><span style=display:flex><span>            $readmemh(INIT_F, memory);
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e>// Port A: Sync Write
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>always_ff</span> @(<span style=color:#66d9ef>posedge</span> clk) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> (we) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>            memory[addr_write] <span style=color:#f92672>&lt;=</span> data_in;
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e>// Port B: Sync Read
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>always_ff</span> @(<span style=color:#66d9ef>posedge</span> clk) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>        data_out <span style=color:#f92672>&lt;=</span> memory[addr_read];
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>endmodule</span>
+</span></span></code></pre></div><p>The following example shows a synchronous ROM module that should work with both Xilinx and Lattice BRAM:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span><span style=color:#66d9ef>module</span> rom_sync #(
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>parameter</span> WIDTH<span style=color:#f92672>=</span><span style=color:#ae81ff>8</span>, 
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>parameter</span> DEPTH<span style=color:#f92672>=</span><span style=color:#ae81ff>512</span>, 
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>parameter</span> INIT_F<span style=color:#f92672>=</span><span style=color:#e6db74>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>localparam</span> ADDRW<span style=color:#f92672>=</span>$clog2(DEPTH)
+</span></span><span style=display:flex><span>    ) (
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>input</span> <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> clk,
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>input</span> <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> [ADDRW<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] addr,
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>output</span>     <span style=color:#66d9ef>logic</span> [WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] data
+</span></span><span style=display:flex><span>    );
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>logic</span> [WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] memory [DEPTH];
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>initial</span> <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> (INIT_F <span style=color:#f92672>!=</span> <span style=color:#ae81ff>0</span>) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>            $display(<span style=color:#e6db74>&#34;Creating rom_sync from init file &#39;%s&#39;.&#34;</span>, INIT_F);
+</span></span><span style=display:flex><span>            $readmemh(INIT_F, memory);
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>always_ff</span> @(<span style=color:#66d9ef>posedge</span> clk) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>        data <span style=color:#f92672>&lt;=</span> memory[addr];
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>endmodule</span>
+</span></span></code></pre></div><h3 id=ultraram>UltraRAM</h3><p>UltraRAM is a type of memory available in Xilinx UltraScale and UltraScale+ FPGAs. UltraRAM is like block ram on steroids: bigger but less agile. The blocks are 288 Kb in size (8x regular BRAM): combining all the blocks in a column gives you up to 36 Mb of memory to play with. However, while UltraRAM is dual-ported, it does not support independent clocks on each port, and is a fixed 72 bits wide.</p><h2 id=high-bandwidth-memory>High Bandwidth Memory</h2><p><em>Being written&mldr;</em></p><p>Better known as <strong>HBM</strong> - Bandwidth, bandwidth and more bandwidth&mldr;</p><p>Found only on high-end FPGAs and graphics cards&mldr;</p><h2 id=static-ram>Static RAM</h2><p><em>Being written&mldr;</em></p><p>If you were to imagine a memory chip, you&rsquo;d probably imagine something like static ram (<strong>SRAM</strong>). You provide the address of a the element you want on the address bus, wait some nanoseconds and the data is returned on the data bus.</p><p>SRAM&rsquo;s big issue is cost, which also limits the capacities its available in.</p><p>Few recent FPGA dev boards include SRAM, which is a shame, as this ram is ideal for beginners and low-latency hardware designs. One that does is the Digilent <a href=https://reference.digilentinc.com/reference/programmable-logic/cmod-a7/reference-manual>Cmod A7</a>, which features 4 Mb (512K x 8) of 8ns SRAM.</p><p>Static RAM is available in both synchronous and asynchronous types&mldr;</p><h3 id=asynchronous-sram>Asynchronous SRAM</h3><p>Async SRAM doesn&rsquo;t use a clock&mldr; speed in nanoseconds</p><p>Async SRAM is most commonly ~3V, which work well with current FPGA designs.</p><p>4 Mb asynchronous SRAMs ICs are cheap (for SRAM) and widely available at speeds of 10 ns with a 8 or 16-bit data bus. A 4Mb (512 KiB) 10ns SRAM costs around $2 in small quantities. A 4 Mb (512K x 8) SRAM has 8 data pins and 19 address pins, and typically three control pins: write enable, output enable, and chip select.</p><h3 id=synchronous-sram>Synchronous SRAM</h3><p>Faster SRAM is clocked&mldr; speed in megahertz&mldr; not always full random I/O&mldr; pipelined vs flow-through&mldr;</p><p>The iCE40 UP FPGAs include Synchronous SRAM, see <a href=/posts/spram-ice40-fpga/>SPRAM on iCE40 FPGA</a>.</p><h2 id=dynamic-ram>Dynamic RAM</h2><p><em>Being written&mldr;</em></p><p><strong>DRAM</strong> is the everyday memory that forms the main memory in your PC. Dynamic ram needs to be refreshed periodically, otherwise the data is lost. It&rsquo;s cheap and offers plenty of bandwidth, but DRAM is complex to interface with: you&rsquo;re almost certainly going to have to use vendor IP blocks and a cache to make DRAM usable. If you&rsquo;re accessing data sequentially, or interfacing with a CPU via a cache, then DRAM works well, but for random I/O the high latency is a significant issue.</p><h2 id=pseudo-sram>Pseudo SRAM</h2><p><em>Being written&mldr;</em></p><p>SRAM is expensive, and DRAM is complex, and both use a significant number of I/O pins. By using a self-refreshing circuit <em>and</em> a simplified interface, similar to SPI flash, a new type of ram can be created. This type of ram is usually referred to as <strong>Pseudo SRAM</strong>.</p><p>The two interfaces you&rsquo;ll come across are <strong>HyperRAM</strong>, created by <a href=https://www.cypress.com/products/hyperram-memory>Cypress</a>, and <strong>xSPI (OctalSPI)</strong>, standardised by <a href=https://www.jedec.org/standards-documents/docs/jesd251a>JEDEC</a> in early 2020. In both cases you only need 11 or 12 FPGA pins to interface with the ram. As of summer 2020 this ram is available in capacities up to 256 Mb (32 MiB) in 1.8V and 3V. 64 Mb (8 MiB) parts costs around $3 in small quantities.</p><p>We haven&rsquo;t seen this ram on many FPGA dev boards, but Kevin Hubbard&rsquo;s open source <a href=https://github.com/blackmesalabs/hyperram>HyperRAM Pmod</a> has proved popular, and is available pre-assembled from <a href=https://1bitsquared.com/products/pmod-hyperram>1BitSquared</a>. I hope we&rsquo;ll see an updated version with faster xSPI ram in due course.</p><p><em>PS. The wonderful image of the Micron MT4C1024 DRAM used in the social media card for this post comes from <a href=https://zeptobars.com/en/read/Micron-MT4C1024-dram>Zeptobars</a> and is licensed under a <a href=https://creativecommons.org/licenses/by/3.0/>Creative Commons licence</a>.</em></p><p><em>Get in touch with <a href=https://mastodon.social/@WillFlux>@WillFlux</a> or join me on <a href=https://github.com/projf/projf-explore/discussions>GitHub Discussions</a> and <a href=https://discord.gg/cf869yDbXf>1BitSquared Discord</a>.</em></p></section><footer class="mt-12 flex flex-wrap"><a class="mr-1.5 mb-1.5 rounded-lg bg-black/[3%] px-5 py-2 no-underline dark:bg-white/[8%]" href=https://projectf.io/tags/memory>memory</a></footer><nav class="mt-24 flex rounded-lg bg-black/[3%] text-lg dark:bg-white/[8%]"><a class="flex w-1/2 items-center rounded-l-md p-6 pr-3 no-underline hover:bg-black/[2%]" href=https://projectf.io/posts/life-on-screen/><span class=mr-1.5>←</span><span>Life on Screen</span></a>
+<a class="ml-auto flex w-1/2 items-center justify-end rounded-r-md p-6 pl-3 no-underline hover:bg-black/[2%]" href=https://projectf.io/posts/fpga-pong/><span>FPGA Pong</span><span class=ml-1.5>→</span></a></nav></article></main><footer class="opaco mx-auto flex h-[5rem] max-w-3xl items-center px-8 text-[0.9em] opacity-60"><div class=mr-auto><a class=link href=https://projectf.io>Project F</a>
+&copy; 2023 Will Green.</div></footer></body></html>

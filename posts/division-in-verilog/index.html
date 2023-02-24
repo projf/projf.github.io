@@ -1,624 +1,385 @@
-<!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml"  lang="en-gb">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
-<title>Division in Verilog | Project F: FPGA Dev</title>
-
-<meta property='og:title' content='Division in Verilog - Project F: FPGA Dev'>
-<meta property='og:description' content='Division is a fundamental arithmetic operation we take for granted. FPGAs include dedicated hardware to perform addition, subtraction, and multiplication and will infer the necessary logic. Division is different: we need to do it ourselves. This post looks at a straightforward division algorithm for positive integers before extending it to cover fixed-point numbers and signed numbers.
+<!doctype html><html class="not-ready text-sm lg:text-base" style=--bg:#fff lang=en-gb><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><title>Division in Verilog - Project F</title><meta name=theme-color><meta name=description content="Division is a fundamental arithmetic operation we take for granted. FPGAs include dedicated hardware to perform addition, subtraction, and multiplication and will infer the necessary logic. Division is different: we need to do it ourselves. This post looks at a straightforward division algorithm for positive integers before extending it to cover fixed-point numbers and signed numbers.
 New to Verilog maths? Check out my introduction to Numbers in Verilog.
-This post was completely revised in January 2023.'>
-<meta property='og:url' content='https://projectf.io/posts/division-in-verilog/'>
-<meta property='og:site_name' content='Project F: FPGA Dev'>
-<meta property='og:type' content='article'><meta property='og:image' content='https://projectf.io/img/posts/division-in-verilog/social-card.png'><meta property='article:published_time' content='2020-07-01T00:00:00Z'><meta property='article:modified_time' content='2023-01-30T00:00:00Z'><meta name='twitter:card' content='summary_large_image'><meta name='twitter:site' content='@WillFlux'><meta name='twitter:creator' content='@WillFlux'>
-
-
-<link href="https://projectf.io/index.xml" rel="alternate" type="application/rss+xml" title="Project F: FPGA Dev">
-
-<link rel="stylesheet" href="/css/style.css"><link rel='stylesheet' href='https://projectf.io/css/custom.css'>
-
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-<link rel="manifest" href="/site.webmanifest">
-<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
-<link rel="canonical" href="https://projectf.io/posts/division-in-verilog/">
-<meta name="msapplication-TileColor" content="#da532c">
-<meta name="theme-color" content="#ffffff">
-</head>
-<body>
-
-<section class="section">
-  <div class="container">
-    <nav id="nav-main" class="nav">
-      <div id="nav-name" class="nav-left">
-        <a id="nav-anchor" class="nav-item" href="https://projectf.io">
-          <h1 id="nav-heading" class="title is-4">Project F: FPGA Dev</h1>
-        </a>
-      </div>
-      <div class="nav-right">
-        <nav id="nav-items" class="nav-item level is-mobile"><a class="level-item" aria-label="github" href='https://github.com/projf/projf-explore'
-            target='_blank' rel='me noopener'>
-            <span class="icon">
-              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
-    
-    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
-    
-  </svg>
-</i>
-            </span>
-          </a><a class="level-item" aria-label="mastodon" href='https://mastodon.social/@WillFlux'
-            target='_blank' rel='me noopener'>
-            <span class="icon">
-              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
-    
-    <path d="M 11.966876,0.80329086 C 9.1123466,0.82665791 6.3664935,1.1367094 4.7662978,1.8737549 c 0,0 -3.1736685,1.4237835 -3.1736685,6.2815982 0,1.1123884 -0.021554,2.4424309 0.013571,3.8529439 0.1152443,4.750677 0.8683725,9.432704 5.2479219,10.595273 2.0193066,0.53604 3.7531218,0.648348 5.1494078,0.571373 2.532141,-0.140797 3.953603,-0.906282 3.953603,-0.906282 l -0.08353,-1.842608 c 0,0 -1.809527,0.572181 -3.841713,0.50245 -2.013417,-0.06922 -4.138986,-0.217713 -4.4646269,-2.696937 -0.030082,-0.217772 -0.045075,-0.450712 -0.045075,-0.695267 0,0 1.9765387,0.484554 4.4813709,0.599656 1.531629,0.07049 2.9679,-0.08996 4.426746,-0.264563 2.797636,-0.335045 5.233581,-2.063856 5.539741,-3.643517 0.482392,-2.488386 0.442651,-6.0725219 0.442651,-6.0725219 0,-4.8578147 -3.173492,-6.2815982 -3.173492,-6.2815982 C 17.639136,1.1367094 14.891579,0.82669685 12.03704,0.80329086 Z"/>
-  <path d="M 6.4286668,14.016701 V 9.1034254 c 0,-1.0041614 0.2549569,-1.8022059 0.7670342,-2.3925638 0.5280486,-0.590366 1.2196579,-0.8929946 2.0781049,-0.8929946 0.9931961,0 1.7452181,0.3828583 2.2425191,1.1486808 L 11.999859,7.7793695 12,11.451148 11.999859,7.7793695 12.483392,6.9665478 C 12.980596,6.2007253 13.732618,5.817867 14.72592,5.817867 c 0.858341,0 1.549951,0.3026286 2.078097,0.8929946 0.511971,0.5903579 0.766887,1.3884024 0.766887,2.3925638 v 4.9132756" />
-    
-  </svg>
-</i>
-            </span>
-          </a><a class="level-item" aria-label="youtube" href='https://youtube.com/@projf'
-            target='_blank' rel='me noopener'>
-            <span class="icon">
-              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
-    
-    <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/>
-    <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/>
-    
-  </svg>
-</i>
-            </span>
-          </a><a class="level-item" aria-label="rss" href='/index.xml'
-            target='_blank' rel='me noopener'>
-            <span class="icon">
-              <i class><svg viewbox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' aria-hidden='true'>
-    
-    <path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle>
-    
-  </svg>
-</i>
-            </span>
-          </a></nav>
-      </div>
-    </nav>
-
-    <nav class="nav">
-      
-      <div class="nav-left"><a class="nav-item" href="/about">
-          <h2 class="title is-5">About</h2>
-        </a><a class="nav-item" href="/demos">
-          <h2 class="title is-5">Demos</h2>
-        </a><a class="nav-item" href="/howto">
-          <h2 class="title is-5">How To</h2>
-        </a><a class="nav-item" href="/tags/news">
-          <h2 class="title is-5">News</h2>
-        </a><a class="nav-item" href="/tutorials">
-          <h2 class="title is-5">Tutorials</h2>
-        </a><a class="nav-item" href="/verilog-lib">
-          <h2 class="title is-5">Verilog Lib</h2>
-        </a></div>
-      
-
-      
-    </nav>
-
-  </div>
-  <script src="/js/navicon-shift.js"></script>
-</section>
-
-<section class="section">
-  <div class="container">
-    <div class="subtitle tags is-6 is-pulled-right">
-      
-      
-<a class="subtitle is-6" href="/tags/maths/">#maths</a>
-
-
-
-
-      
-    </div>
-    <h2 class="subtitle is-6">1 July 2020</h2>
-    <h1 class="title">Division in Verilog</h1>
-    
-    <div class="content">
-      <p>Division is a fundamental arithmetic operation we take for granted. FPGAs include dedicated hardware to perform addition, subtraction, and multiplication and will infer the necessary logic. Division is different: we need to do it ourselves. This post looks at a straightforward division algorithm for positive integers before extending it to cover fixed-point numbers and signed numbers.</p>
-<p>New to Verilog maths? Check out my introduction to <a href="/posts/numbers-in-verilog">Numbers in Verilog</a>.</p>
-<p><strong>This post was completely revised in January 2023.</strong></p>
-<p><em>Get in touch with <a href="https://mastodon.social/@WillFlux">@WillFlux</a> or join me on <a href="https://github.com/projf/projf-explore/discussions">GitHub Discussions</a> and <a href="https://discord.gg/cf869yDbXf">1BitSquared Discord</a>.</em></p>
-<p><img src="/img/posts/division-in-verilog/banner.jpeg" alt="" title=""></p>
-<h3 id="series-outline">Series Outline</h3>
-<ul>
-<li><a href="/posts/numbers-in-verilog">Numbers in Verilog</a> - introduction to numbers in Verilog</li>
-<li><a href="/posts/verilog-vectors-arrays">Vectors and Arrays</a> - working with Verilog vectors and arrays</li>
-<li><a href="/posts/multiplication-fpga-dsps">Multiplication with FPGA DSPs</a> - efficient multiplication with DSPs</li>
-<li><a href="/posts/fixed-point-numbers-in-verilog/">Fixed-Point Numbers in Verilog</a> - precision without complexity</li>
-<li>Division in Verilog (this post) - divided we stand</li>
-<li><em>More maths throughout 2023</em></li>
-</ul>
-<blockquote>
-<p><strong>Sponsor My Work</strong><br>
-If you like what I do, consider <a href="https://github.com/sponsors/WillGreen">sponsoring me</a> on GitHub.<br>
-I love FPGAs and want to help more people discover and use them in their projects.<br>
-My hardware designs are open source, and my blog is advert free.</p>
-</blockquote>
-<h2 id="division-defined">Division Defined</h2>
-<p>Before we get to the design, it helps be familiar with some terminology.</p>
-<p>When you divide <strong>dividend</strong> <code>A</code> by <strong>divisor</strong> <code>B</code> you get <strong>quotient</strong> <code>Q</code> and <strong>remainder</strong> <code>R</code>:</p>
-<p><code>A = B*Q + R</code></p>
-<p>Consider a trivial example: you have seven slices of apple pie to divide equally amongst three people. Each person gets two slices of pie, and one slice remains.</p>
-<p>Less deliciously: given <code>A=7</code> and <code>B=3</code>, then <code>Q=2</code> and <code>R=1</code> because <code>7 = 3*2 + 1</code>.</p>
-<h2 id="long-division">Long Division</h2>
-<p>The traditional way to divide numbers with pen and paper is <a href="https://en.wikipedia.org/wiki/Long_division">long division</a>. We move from left to right, trying to divide the shortest sequence of digits in the dividend by the divisor.</p>
-<p>For example, let&rsquo;s divide <code>512</code> by <code>12</code>. We find that <code>12</code> is larger <code>5</code> (the first digit of the dividend), so we next consider <code>51</code>, which <code>12</code> divides <code>4</code> times, with <code>3</code> left over. So, the first digit of our answer is 4.</p>
-<p>Next, we take the leftover <code>3</code> and bring down the <code>2</code> from <code>512</code> to make <code>32</code>. <code>12</code> fits into <code>32</code> twice, so the second digit of our answer is <code>2</code> with <code>8</code> left over. We&rsquo;ve considered all the digits of the dividend, so the quotient is <code>42</code> and the remainder is <code>8</code>.</p>
-<p>This is easier to see when laid out as a calculation in columns:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-plaintext" data-lang="plaintext"><span style="display:flex;"><span>    A=512  B=12
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>         42    Quotient
-</span></span><span style="display:flex;"><span>       ————
-</span></span><span style="display:flex;"><span>    12 )512
-</span></span><span style="display:flex;"><span>        48     51: 12x4=48 + 3
-</span></span><span style="display:flex;"><span>        ——
-</span></span><span style="display:flex;"><span>         32    Take the 3 and bring down the 2 down from 512
-</span></span><span style="display:flex;"><span>         24    32: 12x2=24 + 8
-</span></span><span style="display:flex;"><span>         ——
-</span></span><span style="display:flex;"><span>          8    Remainder
-</span></span></code></pre></div><p>If this doesn&rsquo;t seem clear, check out the Wikipedia page on <a href="https://en.wikipedia.org/wiki/Long_division">long division</a> and try doing a few calculations yourself. Nothing beats doing hands-on examples when it comes to maths. On the other hand, you don&rsquo;t need to be able to do long division to use these designs, so feel free to move on. :)</p>
-<h3 id="in-binary">In Binary</h3>
-<p>For binary, we can follow the same long division process. For example, let&rsquo;s divide <code>1110</code> by <code>11</code> (in decimal: 14 divided by 3).</p>
-<p>Our divisor <code>11</code> is two digits long, so we can start by considering the first two digits of the dividend, which is also <code>11</code>: we record a <code>1</code> for the first digit of the quotient and move on.</p>
-<p>The remaining digits are <code>10</code>, which is smaller than <code>11</code>, so we stop. We have a quotient of <code>100</code> and a remainder of <code>10</code>. This is easier to see when laid out in columns:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-plaintext" data-lang="plaintext"><span style="display:flex;"><span>    A=1110  B=11
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>         100    Quotient
-</span></span><span style="display:flex;"><span>        ————
-</span></span><span style="display:flex;"><span>    11 )1110
-</span></span><span style="display:flex;"><span>        11      11x1=11 + 0
-</span></span><span style="display:flex;"><span>        ——
-</span></span><span style="display:flex;"><span>         010    Bring the third 1 down from 1110
-</span></span><span style="display:flex;"><span>         000    11 doesn&#39;t divide 10, so it&#39;s the remainder
-</span></span><span style="display:flex;"><span>         ———
-</span></span><span style="display:flex;"><span>          10    Remainder
-</span></span></code></pre></div><p>Doing binary division by hand is painful: each step is simple, but even moderately-sized numbers have many digits, all of which are 1 and 0, so it&rsquo;s easy to make a mistake. However, the very simplicity of the approach makes it straightforward to implement in Verilog.</p>
-<blockquote>
-<p><strong>Slow Divide</strong><br>
-Even contemporary CPUs take their time with division. Intel Skylake has a latency of 42-95 cycles for signed 64-bit integer division but only 3 cycles for multiplication. Source: <a href="https://www.agner.org/optimize/instruction_tables.pdf">agner.org</a>.</p>
-</blockquote>
-<h2 id="algorithm-implementation">Algorithm Implementation</h2>
-<p>We&rsquo;ll take our example from above: <code>A=1110</code> and <code>B=0011</code>. We also need a register to accumulate (store) the intermediate calculations and a register to record the quotient: we name them <code>ACC</code> and <code>QUO</code>, respectively.</p>
-<p>There are four digits in the inputs, so we need four steps. For each step, we shift the left-most digit of the dividend <code>A</code> into <code>ACC</code>, then compare it with the divisor <code>B</code>. If <code>ACC</code> is greater or equal to <code>B</code>, then we subtract <code>B</code> from <code>ACC</code> and add 1 to the quotient <code>QUO</code>.</p>
-<p>This is easiest to see by working through the example:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-plaintext" data-lang="plaintext"><span style="display:flex;"><span>Inputs: A=1110  B=0011
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>Step    ACC     A       QUO     Description
-</span></span><span style="display:flex;"><span>——————————————————————————————————————————————————————————————————————
-</span></span><span style="display:flex;"><span>        0000    1110    0000    Starting values.
-</span></span><span style="display:flex;"><span>1       0001    1100    0000    Left shift A into ACC. Left shift QUO.
-</span></span><span style="display:flex;"><span>                                Is ACC≥B? No. Next digit...
-</span></span><span style="display:flex;"><span>2       0011    1000    0000    Left shift A into ACC. Left shift QUO.
-</span></span><span style="display:flex;"><span>                                Is ACC≥B? Yes. Update quotient...
-</span></span><span style="display:flex;"><span>        0000    1000    0001    Subtract B from ACC. Set QUO[0]=1.
-</span></span><span style="display:flex;"><span>3       0001    0000    0010    Left shift A into ACC. Left shift QUO.
-</span></span><span style="display:flex;"><span>                                Is ACC≥B? No. Next digit...
-</span></span><span style="display:flex;"><span>4       0010    0000    0100    Left shift A into ACC. Left shift QUO.
-</span></span><span style="display:flex;"><span>                                Is ACC≥B? No. Done.
-</span></span><span style="display:flex;"><span>——————————————————————————————————————————————————————————————————————
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>The resulting quotient is 0100, and the remainder is 0010.
-</span></span></code></pre></div><p>With this algorithm, the divisor <code>B</code> can only ever fit into the accumulator <code>ACC</code> once at most, which is why we can simply subtract <code>B</code> from <code>ACC</code> when <code>ACC≥B</code>.</p>
-<p>We never use the same digit in <code>A</code> and <code>QUO</code> simultaneously, so it&rsquo;s possible to combine those registers. As a digit of the dividend is shifted out, a digit of the quotient is shifted in. We&rsquo;ll do this in our Verilog module.</p>
-<h2 id="verilog-module">Verilog Module</h2>
-<p>Our first Verilog design uses the above algorithm but adds a check for dividing by zero and allows the width of the numbers to be configured. This method takes one cycle per bit: 32 cycles for 32-bit numbers.</p>
-<p>Unsigned integer division - <strong><a href="https://github.com/projf/projf-explore/tree/main/lib/maths/divu_int.sv">divu_int.sv</a></strong>:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> divu_int #(<span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">5</span>) ( <span style="color:#75715e">// width of numbers in bits
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,              <span style="color:#75715e">// clock
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst,              <span style="color:#75715e">// reset
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> start,            <span style="color:#75715e">// start calculation
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> busy,             <span style="color:#75715e">// calculation in progress
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> done,             <span style="color:#75715e">// calculation is complete (high for one tick)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> valid,            <span style="color:#75715e">// result is valid
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> dbz,              <span style="color:#75715e">// divide by zero
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] a,    <span style="color:#75715e">// dividend (numerator)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] b,    <span style="color:#75715e">// divisor (denominator)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] val,  <span style="color:#75715e">// result value: quotient
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] rem   <span style="color:#75715e">// result: remainder
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    );
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] b1;             <span style="color:#75715e">// copy of divisor
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] quo, quo_next;  <span style="color:#75715e">// intermediate quotient
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [WIDTH:<span style="color:#ae81ff">0</span>] acc, acc_next;    <span style="color:#75715e">// accumulator (1 bit wider)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(WIDTH)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] i;      <span style="color:#75715e">// iteration counter
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// division algorithm iteration
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (acc <span style="color:#f92672">&gt;=</span> {<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>, b1}) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>            acc_next <span style="color:#f92672">=</span> acc <span style="color:#f92672">-</span> b1;
-</span></span><span style="display:flex;"><span>            {acc_next, quo_next} <span style="color:#f92672">=</span> {acc_next[WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>], quo, <span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b1</span>};
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>            {acc_next, quo_next} <span style="color:#f92672">=</span> {acc, quo} <span style="color:#f92672">&lt;&lt;</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// calculation control
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>        done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (start) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>            valid <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>            i <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> (b <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// catch divide by zero
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                busy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>                done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>                dbz <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>                busy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>                dbz <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>                b1 <span style="color:#f92672">&lt;=</span> b;
-</span></span><span style="display:flex;"><span>                {acc, quo} <span style="color:#f92672">&lt;=</span> {{WIDTH{<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>}}, a, <span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>};  <span style="color:#75715e">// initialize calculation
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (busy) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> (i <span style="color:#f92672">==</span> WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// we&#39;re done
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                busy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>                done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>                valid <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>                val <span style="color:#f92672">&lt;=</span> quo_next;
-</span></span><span style="display:flex;"><span>                rem <span style="color:#f92672">&lt;=</span> acc_next[WIDTH:<span style="color:#ae81ff">1</span>];  <span style="color:#75715e">// undo final shift
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// next iteration
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                i <span style="color:#f92672">&lt;=</span> i <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>                acc <span style="color:#f92672">&lt;=</span> acc_next;
-</span></span><span style="display:flex;"><span>                quo <span style="color:#f92672">&lt;=</span> quo_next;
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (rst) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>            busy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>            done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>            valid <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>            dbz <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>            val <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>            rem <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
-</span></span></code></pre></div><p>To use the module, set <code>WIDTH</code> to the correct number of bits and the inputs <code>a</code> and <code>b</code> to dividend and divisor, respectively. To begin the calculation set <code>start</code> high for one clock.</p>
-<p>The <code>valid</code> signal indicates when the output data is valid; you can then read the results from <code>val</code> and <code>r</code>. If you divide by zero, then <code>valid</code> will be zero, and the <code>dbz</code> flag signal will be high. The <code>busy</code> signal is high during calculation.</p>
-<p>The Verilog itself is straightforward. The algorithm iteration is in the <code>always_comb</code> block. The <code>always_ff</code> block tests for division by zero, sets up the initial values, and then runs the algorithm for the same number of iterations as the width of the numbers.</p>
-<p>Division might seem slow at one cycle per bit, but it uses little logic, so you can quickly improve throughput by adding additional instances.</p>
-<blockquote>
-<p><strong>Accumulator Width</strong><br>
-The accumulator needs to be 1 bit wider than the dividend because the remainder comes from unshifting the final <code>acc_next</code>. For example, if we divide eight by nine using four-bit numbers, the remainder should be eight <code>4'b1000</code>, but without the wider accumulator, the left-most digit would be lost, and the remainder would appear to be <code>4'b0000</code>.</p>
-</blockquote>
-<h3 id="testing-division">Testing Division</h3>
-<p>For 2023, I&rsquo;ve started testing my Verilog library modules with cocotb and Icarus Verilog. You can find tests for maths lib modules in <a href="https://github.com/projf/projf-explore/tree/main/lib/maths/test">lib/maths/test</a>. I plan to write up my experience with cocotb, but for now, you can run these tests by installing:</p>
-<ul>
-<li><a href="https://www.cocotb.org">cocotb</a> - Test bench tool for Verilog and VHDL written in Python</li>
-<li><a href="http://iverilog.icarus.com">Icarus Verilog</a> - Verilog simulation tool</li>
-<li><a href="https://pypi.org/project/spfpm/">spfpm</a> - fixed-point Python module</li>
-<li><a href="https://docs.pytest.org/">pytest</a> - Python test framework (optional)</li>
-<li><a href="https://github.com/gtkwave/gtkwave">GTKWave</a> - waveform viewer (optional)</li>
-</ul>
-<p>On <strong>Debian &amp; Ubuntu</strong>:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>apt install make python3 python3-pip iverilog gtkwave
-</span></span><span style="display:flex;"><span>pip install cocotb pytest spfpm
-</span></span></code></pre></div><p>On <strong>macOS</strong> with <a href="https://brew.sh">brew</a>:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>brew install python icarus-verilog gtkwave
-</span></span><span style="display:flex;"><span>pip3 install cocotb pytest spfpm
-</span></span></code></pre></div><p>Once you have the tools installed, you can <strong>run tests</strong> with the included Makefile:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>cd lib/maths/test
-</span></span><span style="display:flex;"><span>make divu_int
-</span></span></code></pre></div><p>Example output for <code>97/13</code> (test 8 of 14):</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>   111.01ns INFO     cocotb.regression      running rem_3 <span style="color:#f92672">(</span>8/14<span style="color:#f92672">)</span>
-</span></span><span style="display:flex;"><span>                                              Test 97/13
-</span></span><span style="display:flex;"><span>   126.01ns INFO     cocotb.divu_int        dut a:     <span style="color:#ae81ff">01100001</span>
-</span></span><span style="display:flex;"><span>   126.01ns INFO     cocotb.divu_int        dut b:     <span style="color:#ae81ff">00001101</span>
-</span></span><span style="display:flex;"><span>   126.01ns INFO     cocotb.divu_int        dut val:   <span style="color:#ae81ff">00000111</span>
-</span></span><span style="display:flex;"><span>   126.01ns INFO     cocotb.divu_int        dut rem:   <span style="color:#ae81ff">00000110</span>
-</span></span><span style="display:flex;"><span>   126.01ns INFO     cocotb.divu_int        model val: <span style="color:#ae81ff">00000111</span>
-</span></span><span style="display:flex;"><span>   126.01ns INFO     cocotb.divu_int        model rem: <span style="color:#ae81ff">00000110</span>
-</span></span><span style="display:flex;"><span>   127.01ns INFO     cocotb.regression      rem_3 passed
-</span></span></code></pre></div><p><em>&lsquo;dut&rsquo; is from the device under test (our Verilog module). &lsquo;model&rsquo; is from Python.</em></p>
-<p>Our test bench exercises our maths by comparing it with the same calculation performed in Python. We use <strong>spfpm</strong> to convert the Python result into fixed-point with the correct precision (eight bits for this example). The test bench also tests for the correct operation of flags, such as <code>done</code> and <code>dbz</code> (divide by zero).</p>
-<p>It&rsquo;s straightforward to add and edit tests in the Python module <a href="https://github.com/projf/projf-explore/blob/main/lib/maths/test/divu_int.py">test/divu_int.py</a>.</p>
-<h2 id="fixed-point-support">Fixed-Point Support</h2>
-<p>In a previous part, we looked at <a href="/posts/fixed-point-numbers-in-verilog/">Fixed Point Numbers in Verilog</a>, but didn&rsquo;t cover division, so let&rsquo;s do that now. We have two changes to make to our division module:</p>
-<ol>
-<li>Divide the Remainder</li>
-<li>Handle overflow</li>
-</ol>
-<p>Accounting for the fractional part of the number, we need to increase the number of iterations to divide the remainder. For example, if we have an 8-bit number with 4 fractional bits, we must perform 12 iterations. We pass the number of fractional bits as a new parameter: <code>FBITS</code>.</p>
-<p>By supporting fixed-point numbers, we can divide by numbers less than one, which means our result can overflow. For example, if you divide 6 by 0.25, the result is 24, which requires five bits to store: <code>11000</code>; if we only have four integer bits, we can&rsquo;t handle this. We check for overflow and report it with the <code>ovf</code> signal.</p>
-<p>Unsigned fixed-point division - <strong><a href="https://github.com/projf/projf-explore/tree/main/lib/maths/divu.sv">divu.sv</a></strong>:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> divu #(
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,  <span style="color:#75715e">// width of numbers in bits (integer and fractional)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> FBITS<span style="color:#f92672">=</span><span style="color:#ae81ff">4</span>   <span style="color:#75715e">// fractional bits within WIDTH
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    ) (
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,    <span style="color:#75715e">// clock
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst,    <span style="color:#75715e">// reset
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> start,  <span style="color:#75715e">// start calculation
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> busy,   <span style="color:#75715e">// calculation in progress
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> done,   <span style="color:#75715e">// calculation is complete (high for one tick)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> valid,  <span style="color:#75715e">// result is valid
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> dbz,    <span style="color:#75715e">// divide by zero
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> ovf,    <span style="color:#75715e">// overflow
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] a,   <span style="color:#75715e">// dividend (numerator)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] b,   <span style="color:#75715e">// divisor (denominator)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] val  <span style="color:#75715e">// result value: quotient
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    );
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">localparam</span> FBITSW <span style="color:#f92672">=</span> (FBITS <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) <span style="color:#f92672">?</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> FBITS;  <span style="color:#75715e">// avoid negative vector width when FBITS=0
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] b1;             <span style="color:#75715e">// copy of divisor
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] quo, quo_next;  <span style="color:#75715e">// intermediate quotient
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [WIDTH:<span style="color:#ae81ff">0</span>] acc, acc_next;    <span style="color:#75715e">// accumulator (1 bit wider)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">localparam</span> ITER <span style="color:#f92672">=</span> WIDTH <span style="color:#f92672">+</span> FBITS;  <span style="color:#75715e">// iteration count: unsigned input width + fractional bits
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(ITER)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] i;       <span style="color:#75715e">// iteration counter
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// division algorithm iteration
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (acc <span style="color:#f92672">&gt;=</span> {<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>, b1}) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>            acc_next <span style="color:#f92672">=</span> acc <span style="color:#f92672">-</span> b1;
-</span></span><span style="display:flex;"><span>            {acc_next, quo_next} <span style="color:#f92672">=</span> {acc_next[WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>], quo, <span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b1</span>};
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>            {acc_next, quo_next} <span style="color:#f92672">=</span> {acc, quo} <span style="color:#f92672">&lt;&lt;</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// calculation control
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>        done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (start) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>            valid <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>            ovf <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>            i <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> (b <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// catch divide by zero
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                busy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>                done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>                dbz <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>                busy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>                dbz <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>                b1 <span style="color:#f92672">&lt;=</span> b;
-</span></span><span style="display:flex;"><span>                {acc, quo} <span style="color:#f92672">&lt;=</span> {{WIDTH{<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>}}, a, <span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>};  <span style="color:#75715e">// initialize calculation
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (busy) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> (i <span style="color:#f92672">==</span> ITER<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// done
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                busy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>                done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>                valid <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>                val <span style="color:#f92672">&lt;=</span> quo_next;
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (i <span style="color:#f92672">==</span> WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span> <span style="color:#f92672">&amp;&amp;</span> quo_next[WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span>WIDTH<span style="color:#f92672">-</span>FBITSW] <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// overflow?
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                busy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>                done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>                ovf <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>                val <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// next iteration
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                i <span style="color:#f92672">&lt;=</span> i <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>                acc <span style="color:#f92672">&lt;=</span> acc_next;
-</span></span><span style="display:flex;"><span>                quo <span style="color:#f92672">&lt;=</span> quo_next;
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (rst) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>            busy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>            done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>            valid <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>            dbz <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>            ovf <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>            val <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
-</span></span></code></pre></div><p>Notice how the <em>division algorithm iteration</em> remains unchanged from the integer version.</p>
-<h3 id="fractional-testing">Fractional Testing</h3>
-<p>Naturally, we have a test bench for fixed-point division:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>cd lib/maths/test
-</span></span><span style="display:flex;"><span>make divu
-</span></span></code></pre></div><p>Example output for <code>8/9</code> (test 6 of 22):</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>    99.00ns INFO     cocotb.regression      running simple_6 <span style="color:#f92672">(</span>6/22<span style="color:#f92672">)</span>
-</span></span><span style="display:flex;"><span>                                              Test 8/9
-</span></span><span style="display:flex;"><span>   118.00ns INFO     cocotb.divu            dut a:     <span style="color:#ae81ff">10000000</span>
-</span></span><span style="display:flex;"><span>   118.00ns INFO     cocotb.divu            dut b:     <span style="color:#ae81ff">10010000</span>
-</span></span><span style="display:flex;"><span>   118.00ns INFO     cocotb.divu            dut val:   <span style="color:#ae81ff">00001110</span>
-</span></span><span style="display:flex;"><span>   118.00ns INFO     cocotb.divu                       0.875
-</span></span><span style="display:flex;"><span>   118.00ns INFO     cocotb.divu            model val: 00000.1110
-</span></span><span style="display:flex;"><span>   118.00ns INFO     cocotb.divu                       0.875
-</span></span><span style="display:flex;"><span>   119.01ns INFO     cocotb.regression      simple_6 passed
-</span></span></code></pre></div><p>Our test bench includes tests for overflow and dividing by zero.</p>
-<p>You&rsquo;ll see some tests &ldquo;failed as expected&rdquo; because <code>divu</code> doesn&rsquo;t handle rounding in the same way as Python. We&rsquo;ll fix this in the next section.</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>   197.01ns INFO     cocotb.regression      running round_5 <span style="color:#f92672">(</span>11/22<span style="color:#f92672">)</span>
-</span></span><span style="display:flex;"><span>                                              Test 13/7
-</span></span><span style="display:flex;"><span>   216.01ns INFO     cocotb.divu            dut a:     <span style="color:#ae81ff">11010000</span>
-</span></span><span style="display:flex;"><span>   216.01ns INFO     cocotb.divu            dut b:     <span style="color:#ae81ff">01110000</span>
-</span></span><span style="display:flex;"><span>   216.01ns INFO     cocotb.divu            dut val:   <span style="color:#ae81ff">00011101</span>
-</span></span><span style="display:flex;"><span>   216.01ns INFO     cocotb.divu                       1.8125
-</span></span><span style="display:flex;"><span>   216.01ns INFO     cocotb.divu            model val: 00001.1110
-</span></span><span style="display:flex;"><span>   216.01ns INFO     cocotb.divu                       1.875
-</span></span><span style="display:flex;"><span>   216.01ns INFO     cocotb.regression      round_5 passed: failed as expected...
-</span></span></code></pre></div><h2 id="signed-numbers">Signed Numbers</h2>
-<p>Our division algorithm doesn&rsquo;t work with signed numbers, but the solution is straightforward: perform the division on the inputs&rsquo; absolute value, then adjust the sign afterwards. Because we now have more steps, we switch to a finite state machine (FSM) to control the calculation.</p>
-<p>Signed division with Gaussian rounding - <strong><a href="https://github.com/projf/projf-explore/tree/main/lib/maths/div.sv">div.sv</a></strong>:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> div #(
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>,  <span style="color:#75715e">// width of numbers in bits (integer and fractional)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> FBITS<span style="color:#f92672">=</span><span style="color:#ae81ff">4</span>   <span style="color:#75715e">// fractional bits within WIDTH
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    ) (
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,    <span style="color:#75715e">// clock
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst,    <span style="color:#75715e">// reset
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> start,  <span style="color:#75715e">// start calculation
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> busy,   <span style="color:#75715e">// calculation in progress
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> done,   <span style="color:#75715e">// calculation is complete (high for one tick)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> valid,  <span style="color:#75715e">// result is valid
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> dbz,    <span style="color:#75715e">// divide by zero
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> ovf,    <span style="color:#75715e">// overflow
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] a,   <span style="color:#75715e">// dividend (numerator)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span> <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] b,   <span style="color:#75715e">// divisor (denominator)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>     <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] val  <span style="color:#75715e">// result value: quotient
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    );
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">localparam</span> WIDTHU <span style="color:#f92672">=</span> WIDTH <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;                 <span style="color:#75715e">// unsigned widths are 1 bit narrower
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> FBITSW <span style="color:#f92672">=</span> (FBITS <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) <span style="color:#f92672">?</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> FBITS;  <span style="color:#75715e">// avoid negative vector width when FBITS=0
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> SMALLEST <span style="color:#f92672">=</span> {<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b1</span>, {WIDTHU{<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>}}};  <span style="color:#75715e">// smallest negative number
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">localparam</span> ITER <span style="color:#f92672">=</span> WIDTHU <span style="color:#f92672">+</span> FBITS;  <span style="color:#75715e">// iteration count: unsigned input width + fractional bits
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(ITER)<span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] i;          <span style="color:#75715e">// iteration counter (allow ITER+1 iterations for rounding)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> a_sig, b_sig, sig_diff;      <span style="color:#75715e">// signs of inputs and whether different
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [WIDTHU<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] au, bu;         <span style="color:#75715e">// absolute version of inputs (unsigned)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [WIDTHU<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] quo, quo_next;  <span style="color:#75715e">// intermediate quotients (unsigned)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [WIDTHU:<span style="color:#ae81ff">0</span>] acc, acc_next;    <span style="color:#75715e">// accumulator (unsigned but 1 bit wider)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// input signs
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>        a_sig <span style="color:#f92672">=</span> a[WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">+:</span><span style="color:#ae81ff">1</span>];
-</span></span><span style="display:flex;"><span>        b_sig <span style="color:#f92672">=</span> b[WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">+:</span><span style="color:#ae81ff">1</span>];
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// division algorithm iteration
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (acc <span style="color:#f92672">&gt;=</span> {<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>, bu}) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>            acc_next <span style="color:#f92672">=</span> acc <span style="color:#f92672">-</span> bu;
-</span></span><span style="display:flex;"><span>            {acc_next, quo_next} <span style="color:#f92672">=</span> {acc_next[WIDTHU<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>], quo, <span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b1</span>};
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>            {acc_next, quo_next} <span style="color:#f92672">=</span> {acc, quo} <span style="color:#f92672">&lt;&lt;</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// calculation state machine
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">enum</span> {IDLE, INIT, CALC, ROUND, SIGN} state;
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>        done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">case</span> (state)
-</span></span><span style="display:flex;"><span>            INIT: <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>                state <span style="color:#f92672">&lt;=</span> CALC;
-</span></span><span style="display:flex;"><span>                ovf <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>                i <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>                {acc, quo} <span style="color:#f92672">&lt;=</span> {{WIDTHU{<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>}}, au, <span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>};  <span style="color:#75715e">// initialize calculation
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>            CALC: <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">if</span> (i <span style="color:#f92672">==</span> WIDTHU<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span> <span style="color:#f92672">&amp;&amp;</span> quo_next[WIDTHU<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span>WIDTHU<span style="color:#f92672">-</span>FBITSW] <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// overflow
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                    state <span style="color:#f92672">&lt;=</span> IDLE;
-</span></span><span style="display:flex;"><span>                    busy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>                    done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>                    ovf <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>                    <span style="color:#66d9ef">if</span> (i <span style="color:#f92672">==</span> ITER<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) state <span style="color:#f92672">&lt;=</span> ROUND;  <span style="color:#75715e">// calculation complete after next iteration
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                    i <span style="color:#f92672">&lt;=</span> i <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>                    acc <span style="color:#f92672">&lt;=</span> acc_next;
-</span></span><span style="display:flex;"><span>                    quo <span style="color:#f92672">&lt;=</span> quo_next;
-</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>            ROUND: <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// Gaussian rounding
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                state <span style="color:#f92672">&lt;=</span> SIGN;
-</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">if</span> (quo_next[<span style="color:#ae81ff">0</span>] <span style="color:#f92672">==</span> <span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b1</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// next digit is 1, so consider rounding
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                    <span style="color:#75715e">// round up if quotient is odd or remainder is non-zero
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">if</span> (quo[<span style="color:#ae81ff">0</span>] <span style="color:#f92672">==</span> <span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b1</span> <span style="color:#f92672">||</span> acc_next[WIDTHU:<span style="color:#ae81ff">1</span>] <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>) quo <span style="color:#f92672">&lt;=</span> quo <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>            SIGN: <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// adjust quotient sign if non-zero and input signs differ
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                state <span style="color:#f92672">&lt;=</span> IDLE;
-</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">if</span> (quo <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>) val <span style="color:#f92672">&lt;=</span> (sig_diff) <span style="color:#f92672">?</span> {<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b1</span>, <span style="color:#f92672">-</span>quo} <span style="color:#f92672">:</span> {<span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b0</span>, quo};
-</span></span><span style="display:flex;"><span>                busy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>                done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>                valid <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// IDLE
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                <span style="color:#66d9ef">if</span> (start) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>                    valid <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>                    <span style="color:#66d9ef">if</span> (b <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// divide by zero
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                        state <span style="color:#f92672">&lt;=</span> IDLE;
-</span></span><span style="display:flex;"><span>                        busy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>                        done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>                        dbz <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>                        ovf <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>                    <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (a <span style="color:#f92672">==</span> SMALLEST <span style="color:#f92672">||</span> b <span style="color:#f92672">==</span> SMALLEST) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// overflow
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                        state <span style="color:#f92672">&lt;=</span> IDLE;
-</span></span><span style="display:flex;"><span>                        busy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>                        done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>                        dbz <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>                        ovf <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>                    <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>                        state <span style="color:#f92672">&lt;=</span> INIT;
-</span></span><span style="display:flex;"><span>                        au <span style="color:#f92672">&lt;=</span> (a_sig) <span style="color:#f92672">?</span> <span style="color:#f92672">-</span>a[WIDTHU<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] <span style="color:#f92672">:</span> a[WIDTHU<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>];  <span style="color:#75715e">// register abs(a)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                        bu <span style="color:#f92672">&lt;=</span> (b_sig) <span style="color:#f92672">?</span> <span style="color:#f92672">-</span>b[WIDTHU<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] <span style="color:#f92672">:</span> b[WIDTHU<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>];  <span style="color:#75715e">// register abs(b)
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                        sig_diff <span style="color:#f92672">&lt;=</span> (a_sig <span style="color:#f92672">^</span> b_sig);  <span style="color:#75715e">// register input sign difference
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                        busy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>                        dbz <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>                        ovf <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>                    <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">endcase</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (rst) <span style="color:#66d9ef">begin</span>
-</span></span><span style="display:flex;"><span>            state <span style="color:#f92672">&lt;=</span> IDLE;
-</span></span><span style="display:flex;"><span>            busy <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>            done <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>            valid <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>            dbz <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>            ovf <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>            val <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
-</span></span></code></pre></div><p>We create unsigned versions of the inputs as <code>au</code> and <code>bu</code> and register the difference in signs as <code>sig_diff</code>. After the calculation, we use <code>sig_diff</code> to set the correct sign for the result, being careful not to change zero.</p>
-<h3 id="rounding">Rounding</h3>
-<p>When working with fixed-point numbers, we need to consider rounding. For example, the square root of two is: <code>√2 ≈ 1.41421...</code> with a finite number of bits, we need to decide how to approximate it.</p>
-<p>The <code>divu</code> module truncates its answers, which is simple to implement, but doesn&rsquo;t produce the nearest number to the actual value. For example, <code>13/7 ≈  1.85714...</code> but <code>divu</code> produces <code>1.8125</code> rather than <code>1.875</code>.</p>
-<p>Alas, there is not one-true-way to round numbers, but the default for IEEE 754 floating point numbers (also used in Python) is <strong>Gaussian rounding</strong>, also known as bankers&rsquo; rounding or &ldquo;rounding half to even&rdquo;. In this system, 1.5 is rounded up to 2 and 2.5 is rounded down to 2, while 3.5 is rounded up to 4 etc. Gaussian rounding avoids the positive bias that would occur if we always rounded half up.</p>
-<p>To implement Gaussian rounding, we need to calculate the next bit of the result and look at the remainder, which is what we do in the ROUND step:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span>    ROUND: <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// Gaussian rounding
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        state <span style="color:#f92672">&lt;=</span> SIGN;
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (quo_next[<span style="color:#ae81ff">0</span>] <span style="color:#f92672">==</span> <span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b1</span>) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// next digit is 1, so consider rounding
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#75715e">// round up if quotient is odd or remainder is non-zero
-</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#66d9ef">if</span> (quo[<span style="color:#ae81ff">0</span>] <span style="color:#f92672">==</span> <span style="color:#ae81ff">1</span><span style="color:#ae81ff">&#39;b1</span> <span style="color:#f92672">||</span> acc_next[WIDTHU:<span style="color:#ae81ff">1</span>] <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>) quo <span style="color:#f92672">&lt;=</span> quo <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
-</span></span></code></pre></div><p>With the addition of this rounding step, our module now matches the Python model.</p>
-<h3 id="testing-the-final-design">Testing the Final Design</h3>
-<p>Test bench for signed fixed-point division:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>cd lib/maths/test
-</span></span><span style="display:flex;"><span>make div
-</span></span></code></pre></div><p>Example output for <code>-7.0625/2</code> (test 17 of 32):</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>   367.02ns INFO     cocotb.regression      running round_8 <span style="color:#f92672">(</span>17/32<span style="color:#f92672">)</span>
-</span></span><span style="display:flex;"><span>                                              Test -7.0625/2
-</span></span><span style="display:flex;"><span>   389.02ns INFO     cocotb.div             dut a:     <span style="color:#ae81ff">110001111</span>
-</span></span><span style="display:flex;"><span>   389.02ns INFO     cocotb.div             dut b:     <span style="color:#ae81ff">000100000</span>
-</span></span><span style="display:flex;"><span>   389.02ns INFO     cocotb.div             dut val:   <span style="color:#ae81ff">111001000</span>
-</span></span><span style="display:flex;"><span>   389.02ns INFO     cocotb.div                        -3.5
-</span></span><span style="display:flex;"><span>   389.02ns INFO     cocotb.div             model val: 111100.1000
-</span></span><span style="display:flex;"><span>   389.02ns INFO     cocotb.div                        -3.5
-</span></span><span style="display:flex;"><span>   390.02ns INFO     cocotb.regression      round_8 passed
-</span></span></code></pre></div><blockquote>
-<p><strong>Hardware Testing and Timing Analysis</strong><br>
-I&rsquo;ll be using these division modules in hardware designs during 2023. Real-world testing may lead me to tweak the designs to improve timing or logic usage.</p>
-</blockquote>
-<h2 id="whats-next">What&rsquo;s Next?</h2>
-<p>The next part of the maths tutorial series, which includes a demo of fixed-point maths, is under development. In the meantime, check out some other maths posts: <a href="/posts/square-root-in-verilog/">square root</a> and <a href="/posts/fpga-sine-table/">sine &amp; cosine</a>.</p>
-<p><em>Apple Pie photo by <a href="https://commons.wikimedia.org/wiki/File:Small_apple_pie_8.jpg">Shisma</a> under Creative Commons <a href="https://creativecommons.org/licenses/by/4.0/deed.en">Attribution</a> licence.</em></p>
-<p><em>Get in touch with <a href="https://mastodon.social/@WillFlux">@WillFlux</a> or join me on <a href="https://github.com/projf/projf-explore/discussions">GitHub Discussions</a> and <a href="https://discord.gg/cf869yDbXf">1BitSquared Discord</a>.</em></p>
-
-      
-    </div>
-    
-  </div>
-</section>
-
-    <script src="/js/copycode.js"></script>
-
-
-
-<section class="section">
-  <div class="container has-text-centered">
-    <p>©2023 Will Green, Project F</p>
-    
-  </div>
-</section>
-
-
-<script src="https://badgers.projectf.io/script.js" data-site="EVCGKVDN" defer></script>
-
-
-
-</body>
-</html>
-
+This post was completely revised in January 2023."><meta name=author content="Will Green"><link rel="preload stylesheet" as=style href=https://projectf.io/main.min.css><script defer src=https://projectf.io/highlight.min.js onload=hljs.initHighlightingOnLoad()></script>
+<link rel=preload as=image href=https://projectf.io/theme.png><link rel=preload as=image href=https://projectf.io/github.svg><link rel=preload as=image href=https://projectf.io/mastodon.svg><link rel=preload as=image href=https://projectf.io/rss.svg><link rel=icon href=https://projectf.io/favicon.ico><link rel=apple-touch-icon href=https://projectf.io/apple-touch-icon.png><meta name=generator content="Hugo 0.110.0"><script src=https://badgers.projectf.io/script.js data-site=EVCGKVDN defer></script><meta property="og:title" content="Division in Verilog"><meta property="og:description" content="Division is a fundamental arithmetic operation we take for granted. FPGAs include dedicated hardware to perform addition, subtraction, and multiplication and will infer the necessary logic. Division is different: we need to do it ourselves. This post looks at a straightforward division algorithm for positive integers before extending it to cover fixed-point numbers and signed numbers.
+New to Verilog maths? Check out my introduction to Numbers in Verilog.
+This post was completely revised in January 2023."><meta property="og:type" content="article"><meta property="og:url" content="https://projectf.io/posts/division-in-verilog/"><meta property="article:section" content="posts"><meta property="article:published_time" content="2020-07-01T00:00:00+00:00"><meta property="article:modified_time" content="2023-01-30T00:00:00+00:00"><meta itemprop=name content="Division in Verilog"><meta itemprop=description content="Division is a fundamental arithmetic operation we take for granted. FPGAs include dedicated hardware to perform addition, subtraction, and multiplication and will infer the necessary logic. Division is different: we need to do it ourselves. This post looks at a straightforward division algorithm for positive integers before extending it to cover fixed-point numbers and signed numbers.
+New to Verilog maths? Check out my introduction to Numbers in Verilog.
+This post was completely revised in January 2023."><meta itemprop=datePublished content="2020-07-01T00:00:00+00:00"><meta itemprop=dateModified content="2023-01-30T00:00:00+00:00"><meta itemprop=wordCount content="3502"><meta itemprop=keywords content="maths,"><meta name=twitter:card content="summary"><meta name=twitter:title content="Division in Verilog"><meta name=twitter:description content="Division is a fundamental arithmetic operation we take for granted. FPGAs include dedicated hardware to perform addition, subtraction, and multiplication and will infer the necessary logic. Division is different: we need to do it ourselves. This post looks at a straightforward division algorithm for positive integers before extending it to cover fixed-point numbers and signed numbers.
+New to Verilog maths? Check out my introduction to Numbers in Verilog.
+This post was completely revised in January 2023."></head><body class="text-black duration-200 ease-out dark:text-white"><header class="mx-auto flex h-[5rem] max-w-3xl px-8 lg:justify-center"><div class="relative z-50 mr-auto flex items-center"><a class="-translate-x-[1px] -translate-y-0.5 text-3xl font-bold" href=https://projectf.io/>Project F</a>
+<a class="btn-dark ml-6 h-6 w-6 shrink-0 cursor-pointer [background:url(./theme.png)_left_center/_auto_theme('spacing.6')_no-repeat] [transition:_background-position_0.4s_steps(5)] dark:[background-position:right]"></a></div><a class="btn-menu relative z-50 -mr-8 flex h-[5rem] w-[5rem] shrink-0 cursor-pointer flex-col items-center justify-center gap-2.5 lg:hidden"></a>
+<script>const htmlClass=document.documentElement.classList;setTimeout(()=>{htmlClass.remove("not-ready")},10);const btnMenu=document.querySelector(".btn-menu");btnMenu.addEventListener("click",()=>{htmlClass.toggle("open")});const metaTheme=document.querySelector('meta[name="theme-color"]'),lightBg=`"#fff"`.replace(/"/g,""),setDark=e=>{metaTheme.setAttribute("content",e?"#000":lightBg),htmlClass[e?"add":"remove"]("dark"),localStorage.setItem("dark",e)},darkScheme=window.matchMedia("(prefers-color-scheme: dark)");if(htmlClass.contains("dark"))setDark(!0);else{const e=localStorage.getItem("dark");setDark(e?e==="true":darkScheme.matches)}darkScheme.addEventListener("change",e=>{setDark(e.matches)});const btnDark=document.querySelector(".btn-dark");btnDark.addEventListener("click",()=>{setDark(localStorage.getItem("dark")!=="true")})</script><div class="nav-wrapper fixed inset-x-0 top-full z-40 flex h-full select-none flex-col justify-center pb-16 duration-200 dark:bg-black lg:static lg:h-auto lg:flex-row lg:!bg-transparent lg:pb-0 lg:transition-none"><nav class="lg:ml-12 lg:flex lg:flex-row lg:items-center lg:space-x-6"><a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/about/>About</a>
+<a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/demos/>Demos</a>
+<a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/verilog-lib/>Lib</a>
+<a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/tools/>Tools</a>
+<a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/tutorials/>Tutorials</a></nav><nav class="mt-12 flex justify-center space-x-10 dark:invert lg:mt-0 lg:ml-12 lg:items-center lg:space-x-6"><a class="h-8 w-8 [background:var(--url)_center_center/cover_no-repeat] lg:h-6 lg:w-6" style=--url:url(./github.svg) href=https://github.com/projf target=_blank rel=me></a>
+<a class="h-8 w-8 [background:var(--url)_center_center/cover_no-repeat] lg:h-6 lg:w-6" style=--url:url(./mastodon.svg) href=https://mastodon.social/@WillFlux target=_blank rel=me></a>
+<a class="h-8 w-8 [background:var(--url)_center_center/cover_no-repeat] lg:h-6 lg:w-6" style=--url:url(./rss.svg) href=https://projectf.io/index.xml target=_blank></a></nav></div></header><main class="prose prose-neutral relative mx-auto min-h-[calc(100%-10rem)] max-w-3xl px-8 pt-20 pb-1 dark:prose-invert"><article><header class=mb-1><h1 class="!my-0 pb-2.5">Division in Verilog</h1><div class="text-sm opacity-60">Published
+<time>01 Jul 2020</time>
+<span class=mx-1>&#183;</span>
+<span>Updated
+<time>30 Jan 2023</time></span></div></header><section><p>Division is a fundamental arithmetic operation we take for granted. FPGAs include dedicated hardware to perform addition, subtraction, and multiplication and will infer the necessary logic. Division is different: we need to do it ourselves. This post looks at a straightforward division algorithm for positive integers before extending it to cover fixed-point numbers and signed numbers.</p><p>New to Verilog maths? Check out my introduction to <a href=/posts/numbers-in-verilog>Numbers in Verilog</a>.</p><p><strong>This post was completely revised in January 2023.</strong></p><p><em>Get in touch with <a href=https://mastodon.social/@WillFlux>@WillFlux</a> or join me on <a href=https://github.com/projf/projf-explore/discussions>GitHub Discussions</a> and <a href=https://discord.gg/cf869yDbXf>1BitSquared Discord</a>.</em></p><p><img src=/img/posts/division-in-verilog/banner.jpeg alt title></p><h3 id=series-outline>Series Outline</h3><ul><li><a href=/posts/numbers-in-verilog>Numbers in Verilog</a> - introduction to numbers in Verilog</li><li><a href=/posts/verilog-vectors-arrays>Vectors and Arrays</a> - working with Verilog vectors and arrays</li><li><a href=/posts/multiplication-fpga-dsps>Multiplication with FPGA DSPs</a> - efficient multiplication with DSPs</li><li><a href=/posts/fixed-point-numbers-in-verilog/>Fixed-Point Numbers in Verilog</a> - precision without complexity</li><li>Division in Verilog (this post) - divided we stand</li><li><em>More maths soon</em></li></ul><blockquote><p><strong>Sponsor My Work</strong><br>If you like what I do, consider <a href=https://github.com/sponsors/WillGreen>sponsoring me</a> on GitHub.<br>I love FPGAs and want to help more people discover and use them in their projects.<br>My hardware designs are open source, and my blog is advert free.</p></blockquote><h2 id=division-defined>Division Defined</h2><p>Before we get to the design, it helps be familiar with some terminology.</p><p>When you divide <strong>dividend</strong> <code>A</code> by <strong>divisor</strong> <code>B</code> you get <strong>quotient</strong> <code>Q</code> and <strong>remainder</strong> <code>R</code>:</p><p><code>A = B*Q + R</code></p><p>Consider a trivial example: you have seven slices of apple pie to divide equally amongst three people. Each person gets two slices of pie, and one slice remains.</p><p>Less deliciously: given <code>A=7</code> and <code>B=3</code>, then <code>Q=2</code> and <code>R=1</code> because <code>7 = 3*2 + 1</code>.</p><h2 id=long-division>Long Division</h2><p>The traditional way to divide numbers with pen and paper is <a href=https://en.wikipedia.org/wiki/Long_division>long division</a>. We move from left to right, trying to divide the shortest sequence of digits in the dividend by the divisor.</p><p>For example, let&rsquo;s divide <code>512</code> by <code>12</code>. We find that <code>12</code> is larger <code>5</code> (the first digit of the dividend), so we next consider <code>51</code>, which <code>12</code> divides <code>4</code> times, with <code>3</code> left over. So, the first digit of our answer is 4.</p><p>Next, we take the leftover <code>3</code> and bring down the <code>2</code> from <code>512</code> to make <code>32</code>. <code>12</code> fits into <code>32</code> twice, so the second digit of our answer is <code>2</code> with <code>8</code> left over. We&rsquo;ve considered all the digits of the dividend, so the quotient is <code>42</code> and the remainder is <code>8</code>.</p><p>This is easier to see when laid out as a calculation in columns:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-plaintext data-lang=plaintext><span style=display:flex><span>    A=512  B=12
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>         42    Quotient
+</span></span><span style=display:flex><span>       ————
+</span></span><span style=display:flex><span>    12 )512
+</span></span><span style=display:flex><span>        48     51: 12x4=48 + 3
+</span></span><span style=display:flex><span>        ——
+</span></span><span style=display:flex><span>         32    Take the 3 and bring down the 2 down from 512
+</span></span><span style=display:flex><span>         24    32: 12x2=24 + 8
+</span></span><span style=display:flex><span>         ——
+</span></span><span style=display:flex><span>          8    Remainder
+</span></span></code></pre></div><p>If this doesn&rsquo;t seem clear, check out the Wikipedia page on <a href=https://en.wikipedia.org/wiki/Long_division>long division</a> and try doing a few calculations yourself. Nothing beats doing hands-on examples when it comes to maths. On the other hand, you don&rsquo;t need to be able to do long division to use these designs, so feel free to move on. :)</p><h3 id=in-binary>In Binary</h3><p>For binary, we can follow the same long division process. For example, let&rsquo;s divide <code>1110</code> by <code>11</code> (in decimal: 14 divided by 3).</p><p>Our divisor <code>11</code> is two digits long, so we can start by considering the first two digits of the dividend, which is also <code>11</code>: we record a <code>1</code> for the first digit of the quotient and move on.</p><p>The remaining digits are <code>10</code>, which is smaller than <code>11</code>, so we stop. We have a quotient of <code>100</code> and a remainder of <code>10</code>. This is easier to see when laid out in columns:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-plaintext data-lang=plaintext><span style=display:flex><span>    A=1110  B=11
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>         100    Quotient
+</span></span><span style=display:flex><span>        ————
+</span></span><span style=display:flex><span>    11 )1110
+</span></span><span style=display:flex><span>        11      11x1=11 + 0
+</span></span><span style=display:flex><span>        ——
+</span></span><span style=display:flex><span>         010    Bring the third 1 down from 1110
+</span></span><span style=display:flex><span>         000    11 doesn&#39;t divide 10, so it&#39;s the remainder
+</span></span><span style=display:flex><span>         ———
+</span></span><span style=display:flex><span>          10    Remainder
+</span></span></code></pre></div><p>Doing binary division by hand is painful: each step is simple, but even moderately-sized numbers have many digits, all of which are 1 and 0, so it&rsquo;s easy to make a mistake. However, the very simplicity of the approach makes it straightforward to implement in Verilog.</p><blockquote><p><strong>Slow Divide</strong><br>Even contemporary CPUs take their time with division. Intel Skylake has a latency of 42-95 cycles for signed 64-bit integer division but only 3 cycles for multiplication. Source: <a href=https://www.agner.org/optimize/instruction_tables.pdf>agner.org</a>.</p></blockquote><h2 id=algorithm-implementation>Algorithm Implementation</h2><p>We&rsquo;ll take our example from above: <code>A=1110</code> and <code>B=0011</code>. We also need a register to accumulate (store) the intermediate calculations and a register to record the quotient: we name them <code>ACC</code> and <code>QUO</code>, respectively.</p><p>There are four digits in the inputs, so we need four steps. For each step, we shift the left-most digit of the dividend <code>A</code> into <code>ACC</code>, then compare it with the divisor <code>B</code>. If <code>ACC</code> is greater or equal to <code>B</code>, then we subtract <code>B</code> from <code>ACC</code> and add 1 to the quotient <code>QUO</code>.</p><p>This is easiest to see by working through the example:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-plaintext data-lang=plaintext><span style=display:flex><span>Inputs: A=1110  B=0011
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Step    ACC     A       QUO     Description
+</span></span><span style=display:flex><span>——————————————————————————————————————————————————————————————————————
+</span></span><span style=display:flex><span>        0000    1110    0000    Starting values.
+</span></span><span style=display:flex><span>1       0001    1100    0000    Left shift A into ACC. Left shift QUO.
+</span></span><span style=display:flex><span>                                Is ACC≥B? No. Next digit...
+</span></span><span style=display:flex><span>2       0011    1000    0000    Left shift A into ACC. Left shift QUO.
+</span></span><span style=display:flex><span>                                Is ACC≥B? Yes. Update quotient...
+</span></span><span style=display:flex><span>        0000    1000    0001    Subtract B from ACC. Set QUO[0]=1.
+</span></span><span style=display:flex><span>3       0001    0000    0010    Left shift A into ACC. Left shift QUO.
+</span></span><span style=display:flex><span>                                Is ACC≥B? No. Next digit...
+</span></span><span style=display:flex><span>4       0010    0000    0100    Left shift A into ACC. Left shift QUO.
+</span></span><span style=display:flex><span>                                Is ACC≥B? No. Done.
+</span></span><span style=display:flex><span>——————————————————————————————————————————————————————————————————————
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>The resulting quotient is 0100, and the remainder is 0010.
+</span></span></code></pre></div><p>With this algorithm, the divisor <code>B</code> can only ever fit into the accumulator <code>ACC</code> once at most, which is why we can simply subtract <code>B</code> from <code>ACC</code> when <code>ACC≥B</code>.</p><p>We never use the same digit in <code>A</code> and <code>QUO</code> simultaneously, so it&rsquo;s possible to combine those registers. As a digit of the dividend is shifted out, a digit of the quotient is shifted in. We&rsquo;ll do this in our Verilog module.</p><h2 id=verilog-module>Verilog Module</h2><p>Our first Verilog design uses the above algorithm but adds a check for dividing by zero and allows the width of the numbers to be configured. This method takes one cycle per bit: 32 cycles for 32-bit numbers.</p><p>Unsigned integer division - <strong><a href=https://github.com/projf/projf-explore/tree/main/lib/maths/divu_int.sv>divu_int.sv</a></strong>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span><span style=color:#66d9ef>module</span> divu_int #(<span style=color:#66d9ef>parameter</span> WIDTH<span style=color:#f92672>=</span><span style=color:#ae81ff>5</span>) ( <span style=color:#75715e>// width of numbers in bits
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>input</span> <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> clk,              <span style=color:#75715e>// clock
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>input</span> <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> rst,              <span style=color:#75715e>// reset
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>input</span> <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> start,            <span style=color:#75715e>// start calculation
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>     <span style=color:#66d9ef>logic</span> busy,             <span style=color:#75715e>// calculation in progress
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>     <span style=color:#66d9ef>logic</span> done,             <span style=color:#75715e>// calculation is complete (high for one tick)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>     <span style=color:#66d9ef>logic</span> valid,            <span style=color:#75715e>// result is valid
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>     <span style=color:#66d9ef>logic</span> dbz,              <span style=color:#75715e>// divide by zero
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>input</span> <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> [WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] a,    <span style=color:#75715e>// dividend (numerator)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>input</span> <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> [WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] b,    <span style=color:#75715e>// divisor (denominator)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>     <span style=color:#66d9ef>logic</span> [WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] val,  <span style=color:#75715e>// result value: quotient
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>     <span style=color:#66d9ef>logic</span> [WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] rem   <span style=color:#75715e>// result: remainder
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    );
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>logic</span> [WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] b1;             <span style=color:#75715e>// copy of divisor
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> [WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] quo, quo_next;  <span style=color:#75715e>// intermediate quotient
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> [WIDTH:<span style=color:#ae81ff>0</span>] acc, acc_next;    <span style=color:#75715e>// accumulator (1 bit wider)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> [$clog2(WIDTH)<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] i;      <span style=color:#75715e>// iteration counter
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e>// division algorithm iteration
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>always_comb</span> <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> (acc <span style=color:#f92672>&gt;=</span> {<span style=color:#ae81ff>1</span><span style=color:#ae81ff>&#39;b0</span>, b1}) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>            acc_next <span style=color:#f92672>=</span> acc <span style=color:#f92672>-</span> b1;
+</span></span><span style=display:flex><span>            {acc_next, quo_next} <span style=color:#f92672>=</span> {acc_next[WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>], quo, <span style=color:#ae81ff>1</span><span style=color:#ae81ff>&#39;b1</span>};
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>end</span> <span style=color:#66d9ef>else</span> <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>            {acc_next, quo_next} <span style=color:#f92672>=</span> {acc, quo} <span style=color:#f92672>&lt;&lt;</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e>// calculation control
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>always_ff</span> @(<span style=color:#66d9ef>posedge</span> clk) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>        done <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> (start) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>            valid <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>            i <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>if</span> (b <span style=color:#f92672>==</span> <span style=color:#ae81ff>0</span>) <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// catch divide by zero
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                busy <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>                done <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>                dbz <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>end</span> <span style=color:#66d9ef>else</span> <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>                busy <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>                dbz <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>                b1 <span style=color:#f92672>&lt;=</span> b;
+</span></span><span style=display:flex><span>                {acc, quo} <span style=color:#f92672>&lt;=</span> {{WIDTH{<span style=color:#ae81ff>1</span><span style=color:#ae81ff>&#39;b0</span>}}, a, <span style=color:#ae81ff>1</span><span style=color:#ae81ff>&#39;b0</span>};  <span style=color:#75715e>// initialize calculation
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>            <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>end</span> <span style=color:#66d9ef>else</span> <span style=color:#66d9ef>if</span> (busy) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>if</span> (i <span style=color:#f92672>==</span> WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span>) <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// we&#39;re done
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                busy <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>                done <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>                valid <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>                val <span style=color:#f92672>&lt;=</span> quo_next;
+</span></span><span style=display:flex><span>                rem <span style=color:#f92672>&lt;=</span> acc_next[WIDTH:<span style=color:#ae81ff>1</span>];  <span style=color:#75715e>// undo final shift
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>            <span style=color:#66d9ef>end</span> <span style=color:#66d9ef>else</span> <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// next iteration
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                i <span style=color:#f92672>&lt;=</span> i <span style=color:#f92672>+</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>                acc <span style=color:#f92672>&lt;=</span> acc_next;
+</span></span><span style=display:flex><span>                quo <span style=color:#f92672>&lt;=</span> quo_next;
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> (rst) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>            busy <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>            done <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>            valid <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>            dbz <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>            val <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>            rem <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>endmodule</span>
+</span></span></code></pre></div><p>To use the module, set <code>WIDTH</code> to the correct number of bits and the inputs <code>a</code> and <code>b</code> to dividend and divisor, respectively. To begin the calculation set <code>start</code> high for one clock.</p><p>The <code>valid</code> signal indicates when the output data is valid; you can then read the results from <code>val</code> and <code>r</code>. If you divide by zero, then <code>valid</code> will be zero, and the <code>dbz</code> flag signal will be high. The <code>busy</code> signal is high during calculation.</p><p>The Verilog itself is straightforward. The algorithm iteration is in the <code>always_comb</code> block. The <code>always_ff</code> block tests for division by zero, sets up the initial values, and then runs the algorithm for the same number of iterations as the width of the numbers.</p><p>Division might seem slow at one cycle per bit, but it uses little logic, so you can quickly improve throughput by adding additional instances.</p><blockquote><p><strong>Accumulator Width</strong><br>The accumulator needs to be 1 bit wider than the dividend because the remainder comes from unshifting the final <code>acc_next</code>. For example, if we divide eight by nine using four-bit numbers, the remainder should be eight <code>4'b1000</code>, but without the wider accumulator, the left-most digit would be lost, and the remainder would appear to be <code>4'b0000</code>.</p></blockquote><h3 id=testing-division>Testing Division</h3><p>For 2023, I&rsquo;ve started testing my Verilog library modules with cocotb and Icarus Verilog. You can find tests for maths lib modules in <a href=https://github.com/projf/projf-explore/tree/main/lib/maths/test>lib/maths/test</a>. I plan to write up my experience with cocotb, but for now, you can run these tests by installing:</p><ul><li><a href=https://www.cocotb.org>cocotb</a> - Test bench tool for Verilog and VHDL written in Python</li><li><a href=http://iverilog.icarus.com>Icarus Verilog</a> - Verilog simulation tool</li><li><a href=https://pypi.org/project/spfpm/>spfpm</a> - fixed-point Python module</li><li><a href=https://docs.pytest.org/>pytest</a> - Python test framework (optional)</li><li><a href=https://github.com/gtkwave/gtkwave>GTKWave</a> - waveform viewer (optional)</li></ul><p>On <strong>Debian & Ubuntu</strong>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-shell data-lang=shell><span style=display:flex><span>apt install make python3 python3-pip iverilog gtkwave
+</span></span><span style=display:flex><span>pip install cocotb pytest spfpm
+</span></span></code></pre></div><p>On <strong>macOS</strong> with <a href=https://brew.sh>brew</a>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-shell data-lang=shell><span style=display:flex><span>brew install python icarus-verilog gtkwave
+</span></span><span style=display:flex><span>pip3 install cocotb pytest spfpm
+</span></span></code></pre></div><p>Once you have the tools installed, you can <strong>run tests</strong> with the included Makefile:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-shell data-lang=shell><span style=display:flex><span>cd lib/maths/test
+</span></span><span style=display:flex><span>make divu_int
+</span></span></code></pre></div><p>Example output for <code>97/13</code> (test 8 of 14):</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-shell data-lang=shell><span style=display:flex><span>   111.01ns INFO     cocotb.regression      running rem_3 <span style=color:#f92672>(</span>8/14<span style=color:#f92672>)</span>
+</span></span><span style=display:flex><span>                                              Test 97/13
+</span></span><span style=display:flex><span>   126.01ns INFO     cocotb.divu_int        dut a:     <span style=color:#ae81ff>01100001</span>
+</span></span><span style=display:flex><span>   126.01ns INFO     cocotb.divu_int        dut b:     <span style=color:#ae81ff>00001101</span>
+</span></span><span style=display:flex><span>   126.01ns INFO     cocotb.divu_int        dut val:   <span style=color:#ae81ff>00000111</span>
+</span></span><span style=display:flex><span>   126.01ns INFO     cocotb.divu_int        dut rem:   <span style=color:#ae81ff>00000110</span>
+</span></span><span style=display:flex><span>   126.01ns INFO     cocotb.divu_int        model val: <span style=color:#ae81ff>00000111</span>
+</span></span><span style=display:flex><span>   126.01ns INFO     cocotb.divu_int        model rem: <span style=color:#ae81ff>00000110</span>
+</span></span><span style=display:flex><span>   127.01ns INFO     cocotb.regression      rem_3 passed
+</span></span></code></pre></div><p><em>&lsquo;dut&rsquo; is from the device under test (our Verilog module). &lsquo;model&rsquo; is from Python.</em></p><p>Our test bench exercises our maths by comparing it with the same calculation performed in Python. We use <strong>spfpm</strong> to convert the Python result into fixed-point with the correct precision (eight bits for this example). The test bench also tests for the correct operation of flags, such as <code>done</code> and <code>dbz</code> (divide by zero).</p><p>It&rsquo;s straightforward to add and edit tests in the Python module <a href=https://github.com/projf/projf-explore/blob/main/lib/maths/test/divu_int.py>test/divu_int.py</a>.</p><h2 id=fixed-point-support>Fixed-Point Support</h2><p>In a previous part, we looked at <a href=/posts/fixed-point-numbers-in-verilog/>Fixed Point Numbers in Verilog</a>, but didn&rsquo;t cover division, so let&rsquo;s do that now. We have two changes to make to our division module:</p><ol><li>Divide the Remainder</li><li>Handle overflow</li></ol><p>Accounting for the fractional part of the number, we need to increase the number of iterations to divide the remainder. For example, if we have an 8-bit number with 4 fractional bits, we must perform 12 iterations. We pass the number of fractional bits as a new parameter: <code>FBITS</code>.</p><p>By supporting fixed-point numbers, we can divide by numbers less than one, which means our result can overflow. For example, if you divide 6 by 0.25, the result is 24, which requires five bits to store: <code>11000</code>; if we only have four integer bits, we can&rsquo;t handle this. We check for overflow and report it with the <code>ovf</code> signal.</p><p>Unsigned fixed-point division - <strong><a href=https://github.com/projf/projf-explore/tree/main/lib/maths/divu.sv>divu.sv</a></strong>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span><span style=color:#66d9ef>module</span> divu #(
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>parameter</span> WIDTH<span style=color:#f92672>=</span><span style=color:#ae81ff>8</span>,  <span style=color:#75715e>// width of numbers in bits (integer and fractional)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>parameter</span> FBITS<span style=color:#f92672>=</span><span style=color:#ae81ff>4</span>   <span style=color:#75715e>// fractional bits within WIDTH
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    ) (
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>input</span> <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> clk,    <span style=color:#75715e>// clock
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>input</span> <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> rst,    <span style=color:#75715e>// reset
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>input</span> <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> start,  <span style=color:#75715e>// start calculation
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>     <span style=color:#66d9ef>logic</span> busy,   <span style=color:#75715e>// calculation in progress
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>     <span style=color:#66d9ef>logic</span> done,   <span style=color:#75715e>// calculation is complete (high for one tick)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>     <span style=color:#66d9ef>logic</span> valid,  <span style=color:#75715e>// result is valid
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>     <span style=color:#66d9ef>logic</span> dbz,    <span style=color:#75715e>// divide by zero
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>     <span style=color:#66d9ef>logic</span> ovf,    <span style=color:#75715e>// overflow
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>input</span> <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> [WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] a,   <span style=color:#75715e>// dividend (numerator)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>input</span> <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> [WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] b,   <span style=color:#75715e>// divisor (denominator)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>     <span style=color:#66d9ef>logic</span> [WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] val  <span style=color:#75715e>// result value: quotient
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    );
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>localparam</span> FBITSW <span style=color:#f92672>=</span> (FBITS <span style=color:#f92672>==</span> <span style=color:#ae81ff>0</span>) <span style=color:#f92672>?</span> <span style=color:#ae81ff>1</span> <span style=color:#f92672>:</span> FBITS;  <span style=color:#75715e>// avoid negative vector width when FBITS=0
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>logic</span> [WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] b1;             <span style=color:#75715e>// copy of divisor
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> [WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] quo, quo_next;  <span style=color:#75715e>// intermediate quotient
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> [WIDTH:<span style=color:#ae81ff>0</span>] acc, acc_next;    <span style=color:#75715e>// accumulator (1 bit wider)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>localparam</span> ITER <span style=color:#f92672>=</span> WIDTH <span style=color:#f92672>+</span> FBITS;  <span style=color:#75715e>// iteration count: unsigned input width + fractional bits
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> [$clog2(ITER)<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] i;       <span style=color:#75715e>// iteration counter
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e>// division algorithm iteration
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>always_comb</span> <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> (acc <span style=color:#f92672>&gt;=</span> {<span style=color:#ae81ff>1</span><span style=color:#ae81ff>&#39;b0</span>, b1}) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>            acc_next <span style=color:#f92672>=</span> acc <span style=color:#f92672>-</span> b1;
+</span></span><span style=display:flex><span>            {acc_next, quo_next} <span style=color:#f92672>=</span> {acc_next[WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>], quo, <span style=color:#ae81ff>1</span><span style=color:#ae81ff>&#39;b1</span>};
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>end</span> <span style=color:#66d9ef>else</span> <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>            {acc_next, quo_next} <span style=color:#f92672>=</span> {acc, quo} <span style=color:#f92672>&lt;&lt;</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e>// calculation control
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>always_ff</span> @(<span style=color:#66d9ef>posedge</span> clk) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>        done <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> (start) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>            valid <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>            ovf <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>            i <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>if</span> (b <span style=color:#f92672>==</span> <span style=color:#ae81ff>0</span>) <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// catch divide by zero
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                busy <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>                done <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>                dbz <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>end</span> <span style=color:#66d9ef>else</span> <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>                busy <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>                dbz <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>                b1 <span style=color:#f92672>&lt;=</span> b;
+</span></span><span style=display:flex><span>                {acc, quo} <span style=color:#f92672>&lt;=</span> {{WIDTH{<span style=color:#ae81ff>1</span><span style=color:#ae81ff>&#39;b0</span>}}, a, <span style=color:#ae81ff>1</span><span style=color:#ae81ff>&#39;b0</span>};  <span style=color:#75715e>// initialize calculation
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>            <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>end</span> <span style=color:#66d9ef>else</span> <span style=color:#66d9ef>if</span> (busy) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>if</span> (i <span style=color:#f92672>==</span> ITER<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span>) <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// done
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                busy <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>                done <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>                valid <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>                val <span style=color:#f92672>&lt;=</span> quo_next;
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>end</span> <span style=color:#66d9ef>else</span> <span style=color:#66d9ef>if</span> (i <span style=color:#f92672>==</span> WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span> <span style=color:#f92672>&amp;&amp;</span> quo_next[WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span>WIDTH<span style=color:#f92672>-</span>FBITSW] <span style=color:#f92672>!=</span> <span style=color:#ae81ff>0</span>) <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// overflow?
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                busy <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>                done <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>                ovf <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>                val <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>end</span> <span style=color:#66d9ef>else</span> <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// next iteration
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                i <span style=color:#f92672>&lt;=</span> i <span style=color:#f92672>+</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>                acc <span style=color:#f92672>&lt;=</span> acc_next;
+</span></span><span style=display:flex><span>                quo <span style=color:#f92672>&lt;=</span> quo_next;
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> (rst) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>            busy <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>            done <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>            valid <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>            dbz <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>            ovf <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>            val <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>endmodule</span>
+</span></span></code></pre></div><p>Notice how the <em>division algorithm iteration</em> remains unchanged from the integer version.</p><h3 id=fractional-testing>Fractional Testing</h3><p>Naturally, we have a test bench for fixed-point division:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-shell data-lang=shell><span style=display:flex><span>cd lib/maths/test
+</span></span><span style=display:flex><span>make divu
+</span></span></code></pre></div><p>Example output for <code>8/9</code> (test 6 of 22):</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-shell data-lang=shell><span style=display:flex><span>    99.00ns INFO     cocotb.regression      running simple_6 <span style=color:#f92672>(</span>6/22<span style=color:#f92672>)</span>
+</span></span><span style=display:flex><span>                                              Test 8/9
+</span></span><span style=display:flex><span>   118.00ns INFO     cocotb.divu            dut a:     <span style=color:#ae81ff>10000000</span>
+</span></span><span style=display:flex><span>   118.00ns INFO     cocotb.divu            dut b:     <span style=color:#ae81ff>10010000</span>
+</span></span><span style=display:flex><span>   118.00ns INFO     cocotb.divu            dut val:   <span style=color:#ae81ff>00001110</span>
+</span></span><span style=display:flex><span>   118.00ns INFO     cocotb.divu                       0.875
+</span></span><span style=display:flex><span>   118.00ns INFO     cocotb.divu            model val: 00000.1110
+</span></span><span style=display:flex><span>   118.00ns INFO     cocotb.divu                       0.875
+</span></span><span style=display:flex><span>   119.01ns INFO     cocotb.regression      simple_6 passed
+</span></span></code></pre></div><p>Our test bench includes tests for overflow and dividing by zero.</p><p>You&rsquo;ll see some tests &ldquo;failed as expected&rdquo; because <code>divu</code> doesn&rsquo;t handle rounding in the same way as Python. We&rsquo;ll fix this in the next section.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-shell data-lang=shell><span style=display:flex><span>   197.01ns INFO     cocotb.regression      running round_5 <span style=color:#f92672>(</span>11/22<span style=color:#f92672>)</span>
+</span></span><span style=display:flex><span>                                              Test 13/7
+</span></span><span style=display:flex><span>   216.01ns INFO     cocotb.divu            dut a:     <span style=color:#ae81ff>11010000</span>
+</span></span><span style=display:flex><span>   216.01ns INFO     cocotb.divu            dut b:     <span style=color:#ae81ff>01110000</span>
+</span></span><span style=display:flex><span>   216.01ns INFO     cocotb.divu            dut val:   <span style=color:#ae81ff>00011101</span>
+</span></span><span style=display:flex><span>   216.01ns INFO     cocotb.divu                       1.8125
+</span></span><span style=display:flex><span>   216.01ns INFO     cocotb.divu            model val: 00001.1110
+</span></span><span style=display:flex><span>   216.01ns INFO     cocotb.divu                       1.875
+</span></span><span style=display:flex><span>   216.01ns INFO     cocotb.regression      round_5 passed: failed as expected...
+</span></span></code></pre></div><h2 id=signed-numbers>Signed Numbers</h2><p>Our division algorithm doesn&rsquo;t work with signed numbers, but the solution is straightforward: perform the division on the inputs&rsquo; absolute value, then adjust the sign afterwards. Because we now have more steps, we switch to a finite state machine (FSM) to control the calculation.</p><p>Signed division with Gaussian rounding - <strong><a href=https://github.com/projf/projf-explore/tree/main/lib/maths/div.sv>div.sv</a></strong>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span><span style=color:#66d9ef>module</span> div #(
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>parameter</span> WIDTH<span style=color:#f92672>=</span><span style=color:#ae81ff>8</span>,  <span style=color:#75715e>// width of numbers in bits (integer and fractional)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>parameter</span> FBITS<span style=color:#f92672>=</span><span style=color:#ae81ff>4</span>   <span style=color:#75715e>// fractional bits within WIDTH
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    ) (
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>input</span> <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> clk,    <span style=color:#75715e>// clock
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>input</span> <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> rst,    <span style=color:#75715e>// reset
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>input</span> <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> start,  <span style=color:#75715e>// start calculation
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>     <span style=color:#66d9ef>logic</span> busy,   <span style=color:#75715e>// calculation in progress
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>     <span style=color:#66d9ef>logic</span> done,   <span style=color:#75715e>// calculation is complete (high for one tick)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>     <span style=color:#66d9ef>logic</span> valid,  <span style=color:#75715e>// result is valid
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>     <span style=color:#66d9ef>logic</span> dbz,    <span style=color:#75715e>// divide by zero
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>     <span style=color:#66d9ef>logic</span> ovf,    <span style=color:#75715e>// overflow
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>input</span> <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> <span style=color:#66d9ef>signed</span> [WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] a,   <span style=color:#75715e>// dividend (numerator)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>input</span> <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> <span style=color:#66d9ef>signed</span> [WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] b,   <span style=color:#75715e>// divisor (denominator)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>     <span style=color:#66d9ef>logic</span> <span style=color:#66d9ef>signed</span> [WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] val  <span style=color:#75715e>// result value: quotient
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    );
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>localparam</span> WIDTHU <span style=color:#f92672>=</span> WIDTH <span style=color:#f92672>-</span> <span style=color:#ae81ff>1</span>;                 <span style=color:#75715e>// unsigned widths are 1 bit narrower
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>localparam</span> FBITSW <span style=color:#f92672>=</span> (FBITS <span style=color:#f92672>==</span> <span style=color:#ae81ff>0</span>) <span style=color:#f92672>?</span> <span style=color:#ae81ff>1</span> <span style=color:#f92672>:</span> FBITS;  <span style=color:#75715e>// avoid negative vector width when FBITS=0
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>localparam</span> SMALLEST <span style=color:#f92672>=</span> {<span style=color:#ae81ff>1</span><span style=color:#ae81ff>&#39;b1</span>, {WIDTHU{<span style=color:#ae81ff>1</span><span style=color:#ae81ff>&#39;b0</span>}}};  <span style=color:#75715e>// smallest negative number
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>localparam</span> ITER <span style=color:#f92672>=</span> WIDTHU <span style=color:#f92672>+</span> FBITS;  <span style=color:#75715e>// iteration count: unsigned input width + fractional bits
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> [$clog2(ITER)<span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] i;          <span style=color:#75715e>// iteration counter (allow ITER+1 iterations for rounding)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>logic</span> a_sig, b_sig, sig_diff;      <span style=color:#75715e>// signs of inputs and whether different
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> [WIDTHU<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] au, bu;         <span style=color:#75715e>// absolute version of inputs (unsigned)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> [WIDTHU<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] quo, quo_next;  <span style=color:#75715e>// intermediate quotients (unsigned)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> [WIDTHU:<span style=color:#ae81ff>0</span>] acc, acc_next;    <span style=color:#75715e>// accumulator (unsigned but 1 bit wider)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e>// input signs
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>always_comb</span> <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>        a_sig <span style=color:#f92672>=</span> a[WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>+:</span><span style=color:#ae81ff>1</span>];
+</span></span><span style=display:flex><span>        b_sig <span style=color:#f92672>=</span> b[WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>+:</span><span style=color:#ae81ff>1</span>];
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e>// division algorithm iteration
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>always_comb</span> <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> (acc <span style=color:#f92672>&gt;=</span> {<span style=color:#ae81ff>1</span><span style=color:#ae81ff>&#39;b0</span>, bu}) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>            acc_next <span style=color:#f92672>=</span> acc <span style=color:#f92672>-</span> bu;
+</span></span><span style=display:flex><span>            {acc_next, quo_next} <span style=color:#f92672>=</span> {acc_next[WIDTHU<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>], quo, <span style=color:#ae81ff>1</span><span style=color:#ae81ff>&#39;b1</span>};
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>end</span> <span style=color:#66d9ef>else</span> <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>            {acc_next, quo_next} <span style=color:#f92672>=</span> {acc, quo} <span style=color:#f92672>&lt;&lt;</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e>// calculation state machine
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>enum</span> {IDLE, INIT, CALC, ROUND, SIGN} state;
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>always_ff</span> @(<span style=color:#66d9ef>posedge</span> clk) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>        done <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>case</span> (state)
+</span></span><span style=display:flex><span>            INIT: <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>                state <span style=color:#f92672>&lt;=</span> CALC;
+</span></span><span style=display:flex><span>                ovf <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>                i <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>                {acc, quo} <span style=color:#f92672>&lt;=</span> {{WIDTHU{<span style=color:#ae81ff>1</span><span style=color:#ae81ff>&#39;b0</span>}}, au, <span style=color:#ae81ff>1</span><span style=color:#ae81ff>&#39;b0</span>};  <span style=color:#75715e>// initialize calculation
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>            <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>            CALC: <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>                <span style=color:#66d9ef>if</span> (i <span style=color:#f92672>==</span> WIDTHU<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span> <span style=color:#f92672>&amp;&amp;</span> quo_next[WIDTHU<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span>WIDTHU<span style=color:#f92672>-</span>FBITSW] <span style=color:#f92672>!=</span> <span style=color:#ae81ff>0</span>) <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// overflow
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                    state <span style=color:#f92672>&lt;=</span> IDLE;
+</span></span><span style=display:flex><span>                    busy <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>                    done <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>                    ovf <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>                <span style=color:#66d9ef>end</span> <span style=color:#66d9ef>else</span> <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>                    <span style=color:#66d9ef>if</span> (i <span style=color:#f92672>==</span> ITER<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span>) state <span style=color:#f92672>&lt;=</span> ROUND;  <span style=color:#75715e>// calculation complete after next iteration
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                    i <span style=color:#f92672>&lt;=</span> i <span style=color:#f92672>+</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>                    acc <span style=color:#f92672>&lt;=</span> acc_next;
+</span></span><span style=display:flex><span>                    quo <span style=color:#f92672>&lt;=</span> quo_next;
+</span></span><span style=display:flex><span>                <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>            ROUND: <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// Gaussian rounding
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                state <span style=color:#f92672>&lt;=</span> SIGN;
+</span></span><span style=display:flex><span>                <span style=color:#66d9ef>if</span> (quo_next[<span style=color:#ae81ff>0</span>] <span style=color:#f92672>==</span> <span style=color:#ae81ff>1</span><span style=color:#ae81ff>&#39;b1</span>) <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// next digit is 1, so consider rounding
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                    <span style=color:#75715e>// round up if quotient is odd or remainder is non-zero
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                    <span style=color:#66d9ef>if</span> (quo[<span style=color:#ae81ff>0</span>] <span style=color:#f92672>==</span> <span style=color:#ae81ff>1</span><span style=color:#ae81ff>&#39;b1</span> <span style=color:#f92672>||</span> acc_next[WIDTHU:<span style=color:#ae81ff>1</span>] <span style=color:#f92672>!=</span> <span style=color:#ae81ff>0</span>) quo <span style=color:#f92672>&lt;=</span> quo <span style=color:#f92672>+</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>                <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>            SIGN: <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// adjust quotient sign if non-zero and input signs differ
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                state <span style=color:#f92672>&lt;=</span> IDLE;
+</span></span><span style=display:flex><span>                <span style=color:#66d9ef>if</span> (quo <span style=color:#f92672>!=</span> <span style=color:#ae81ff>0</span>) val <span style=color:#f92672>&lt;=</span> (sig_diff) <span style=color:#f92672>?</span> {<span style=color:#ae81ff>1</span><span style=color:#ae81ff>&#39;b1</span>, <span style=color:#f92672>-</span>quo} <span style=color:#f92672>:</span> {<span style=color:#ae81ff>1</span><span style=color:#ae81ff>&#39;b0</span>, quo};
+</span></span><span style=display:flex><span>                busy <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>                done <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>                valid <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>default</span><span style=color:#f92672>:</span> <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// IDLE
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                <span style=color:#66d9ef>if</span> (start) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>                    valid <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>                    <span style=color:#66d9ef>if</span> (b <span style=color:#f92672>==</span> <span style=color:#ae81ff>0</span>) <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// divide by zero
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                        state <span style=color:#f92672>&lt;=</span> IDLE;
+</span></span><span style=display:flex><span>                        busy <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>                        done <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>                        dbz <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>                        ovf <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>                    <span style=color:#66d9ef>end</span> <span style=color:#66d9ef>else</span> <span style=color:#66d9ef>if</span> (a <span style=color:#f92672>==</span> SMALLEST <span style=color:#f92672>||</span> b <span style=color:#f92672>==</span> SMALLEST) <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// overflow
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                        state <span style=color:#f92672>&lt;=</span> IDLE;
+</span></span><span style=display:flex><span>                        busy <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>                        done <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>                        dbz <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>                        ovf <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>                    <span style=color:#66d9ef>end</span> <span style=color:#66d9ef>else</span> <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>                        state <span style=color:#f92672>&lt;=</span> INIT;
+</span></span><span style=display:flex><span>                        au <span style=color:#f92672>&lt;=</span> (a_sig) <span style=color:#f92672>?</span> <span style=color:#f92672>-</span>a[WIDTHU<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] <span style=color:#f92672>:</span> a[WIDTHU<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>];  <span style=color:#75715e>// register abs(a)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                        bu <span style=color:#f92672>&lt;=</span> (b_sig) <span style=color:#f92672>?</span> <span style=color:#f92672>-</span>b[WIDTHU<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] <span style=color:#f92672>:</span> b[WIDTHU<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>];  <span style=color:#75715e>// register abs(b)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                        sig_diff <span style=color:#f92672>&lt;=</span> (a_sig <span style=color:#f92672>^</span> b_sig);  <span style=color:#75715e>// register input sign difference
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                        busy <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>                        dbz <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>                        ovf <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>                    <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>                <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>endcase</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> (rst) <span style=color:#66d9ef>begin</span>
+</span></span><span style=display:flex><span>            state <span style=color:#f92672>&lt;=</span> IDLE;
+</span></span><span style=display:flex><span>            busy <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>            done <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>            valid <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>            dbz <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>            ovf <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>            val <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>endmodule</span>
+</span></span></code></pre></div><p>We create unsigned versions of the inputs as <code>au</code> and <code>bu</code> and register the difference in signs as <code>sig_diff</code>. After the calculation, we use <code>sig_diff</code> to set the correct sign for the result, being careful not to change zero.</p><h3 id=rounding>Rounding</h3><p>When working with fixed-point numbers, we need to consider rounding. For example, the square root of two is: <code>√2 ≈ 1.41421...</code> with a finite number of bits, we need to decide how to approximate it.</p><p>The <code>divu</code> module truncates its answers, which is simple to implement, but doesn&rsquo;t produce the nearest number to the actual value. For example, <code>13/7 ≈ 1.85714...</code> but <code>divu</code> produces <code>1.8125</code> rather than <code>1.875</code>.</p><p>Alas, there is not one-true-way to round numbers, but the default for IEEE 754 floating point numbers (also used in Python) is <strong>Gaussian rounding</strong>, also known as bankers&rsquo; rounding or &ldquo;rounding half to even&rdquo;. In this system, 1.5 is rounded up to 2 and 2.5 is rounded down to 2, while 3.5 is rounded up to 4 etc. Gaussian rounding avoids the positive bias that would occur if we always rounded half up.</p><p>To implement Gaussian rounding, we need to calculate the next bit of the result and look at the remainder, which is what we do in the ROUND step:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span>    ROUND: <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// Gaussian rounding
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>        state <span style=color:#f92672>&lt;=</span> SIGN;
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> (quo_next[<span style=color:#ae81ff>0</span>] <span style=color:#f92672>==</span> <span style=color:#ae81ff>1</span><span style=color:#ae81ff>&#39;b1</span>) <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// next digit is 1, so consider rounding
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>            <span style=color:#75715e>// round up if quotient is odd or remainder is non-zero
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>            <span style=color:#66d9ef>if</span> (quo[<span style=color:#ae81ff>0</span>] <span style=color:#f92672>==</span> <span style=color:#ae81ff>1</span><span style=color:#ae81ff>&#39;b1</span> <span style=color:#f92672>||</span> acc_next[WIDTHU:<span style=color:#ae81ff>1</span>] <span style=color:#f92672>!=</span> <span style=color:#ae81ff>0</span>) quo <span style=color:#f92672>&lt;=</span> quo <span style=color:#f92672>+</span> <span style=color:#ae81ff>1</span>;
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>end</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
+</span></span></code></pre></div><p>With the addition of this rounding step, our module now matches the Python model.</p><h3 id=testing-the-final-design>Testing the Final Design</h3><p>Test bench for signed fixed-point division:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-shell data-lang=shell><span style=display:flex><span>cd lib/maths/test
+</span></span><span style=display:flex><span>make div
+</span></span></code></pre></div><p>Example output for <code>-7.0625/2</code> (test 17 of 32):</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-shell data-lang=shell><span style=display:flex><span>   367.02ns INFO     cocotb.regression      running round_8 <span style=color:#f92672>(</span>17/32<span style=color:#f92672>)</span>
+</span></span><span style=display:flex><span>                                              Test -7.0625/2
+</span></span><span style=display:flex><span>   389.02ns INFO     cocotb.div             dut a:     <span style=color:#ae81ff>110001111</span>
+</span></span><span style=display:flex><span>   389.02ns INFO     cocotb.div             dut b:     <span style=color:#ae81ff>000100000</span>
+</span></span><span style=display:flex><span>   389.02ns INFO     cocotb.div             dut val:   <span style=color:#ae81ff>111001000</span>
+</span></span><span style=display:flex><span>   389.02ns INFO     cocotb.div                        -3.5
+</span></span><span style=display:flex><span>   389.02ns INFO     cocotb.div             model val: 111100.1000
+</span></span><span style=display:flex><span>   389.02ns INFO     cocotb.div                        -3.5
+</span></span><span style=display:flex><span>   390.02ns INFO     cocotb.regression      round_8 passed
+</span></span></code></pre></div><blockquote><p><strong>Hardware Testing and Timing Analysis</strong><br>I&rsquo;ll be using these division modules in hardware designs during 2023. Real-world testing may lead me to tweak the designs to improve timing or logic usage.</p></blockquote><h2 id=whats-next>What&rsquo;s Next?</h2><p>The next part of the maths tutorial series, which includes a demo of fixed-point maths, is under development. In the meantime, check out some other maths posts: <a href=/posts/square-root-in-verilog/>square root</a> and <a href=/posts/fpga-sine-table/>sine & cosine</a>.</p><p><em>Apple Pie photo by <a href=https://commons.wikimedia.org/wiki/File:Small_apple_pie_8.jpg>Shisma</a> under Creative Commons <a href=https://creativecommons.org/licenses/by/4.0/deed.en>Attribution</a> licence.</em></p><p><em>Get in touch with <a href=https://mastodon.social/@WillFlux>@WillFlux</a> or join me on <a href=https://github.com/projf/projf-explore/discussions>GitHub Discussions</a> and <a href=https://discord.gg/cf869yDbXf>1BitSquared Discord</a>.</em></p></section><footer class="mt-12 flex flex-wrap"><a class="mr-1.5 mb-1.5 rounded-lg bg-black/[3%] px-5 py-2 no-underline dark:bg-white/[8%]" href=https://projectf.io/tags/maths>maths</a></footer><nav class="mt-24 flex rounded-lg bg-black/[3%] text-lg dark:bg-white/[8%]"><a class="flex w-1/2 items-center rounded-l-md p-6 pr-3 no-underline hover:bg-black/[2%]" href=https://projectf.io/posts/fpga-pong/><span class=mr-1.5>←</span><span>FPGA Pong</span></a>
+<a class="ml-auto flex w-1/2 items-center justify-end rounded-r-md p-6 pl-3 no-underline hover:bg-black/[2%]" href=https://projectf.io/posts/video-timings-vga-720p-1080p/><span>Video Timings: VGA, SVGA, 720p, 1080p</span><span class=ml-1.5>→</span></a></nav></article></main><footer class="opaco mx-auto flex h-[5rem] max-w-3xl items-center px-8 text-[0.9em] opacity-60"><div class=mr-auto><a class=link href=https://projectf.io>Project F</a>
+&copy; 2023 Will Green.</div></footer></body></html>
