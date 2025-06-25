@@ -1,172 +1,552 @@
-<!doctype html><html class="not-ready lg:text-base" style=--bg:#fff lang=en-gb><head><meta charset=utf-8><meta http-equiv=X-UA-Compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><title>Sine Scroller - Project F</title>
-<meta name=theme-color><meta name=description content="This FPGA demo effect renders a horizontally scrolling message along a sine wave. I created this effect with benjamin.computer for All You Need, a Chapterhouse prod released at Revision 2022."><meta name=author content="Will Green"><link rel="preload stylesheet" as=style href=https://projectf.io/main.min.css><link rel=preload as=image href=https://projectf.io/theme.svg><script defer src=https://projectf.io/highlight.min.js onload=hljs.initHighlightingOnLoad()></script><link rel=icon href=https://projectf.io/favicon.ico><link rel=apple-touch-icon href=https://projectf.io/apple-touch-icon.png><meta name=generator content="Hugo 0.128.2"><meta itemprop=name content="Sine Scroller"><meta itemprop=description content="This FPGA demo effect renders a horizontally scrolling message along a sine wave. I created this effect with benjamin.computer for All You Need, a Chapterhouse prod released at Revision 2022."><meta itemprop=datePublished content="2022-10-24T00:00:00+00:00"><meta itemprop=dateModified content="2022-11-23T00:00:00+00:00"><meta itemprop=wordCount content="1044"><meta itemprop=image content="https://projectf.io/img/posts/sinescroll/social-card.png"><meta itemprop=keywords content="Graphics,Arty-A7,Verilator"><meta property="og:url" content="https://projectf.io/posts/sinescroll/"><meta property="og:site_name" content="Project F"><meta property="og:title" content="Sine Scroller"><meta property="og:description" content="This FPGA demo effect renders a horizontally scrolling message along a sine wave. I created this effect with benjamin.computer for All You Need, a Chapterhouse prod released at Revision 2022."><meta property="og:locale" content="en_gb"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2022-10-24T00:00:00+00:00"><meta property="article:modified_time" content="2022-11-23T00:00:00+00:00"><meta property="article:tag" content="Graphics"><meta property="article:tag" content="Arty-A7"><meta property="article:tag" content="Verilator"><meta property="og:image" content="https://projectf.io/img/posts/sinescroll/social-card.png"><meta name=twitter:card content="summary_large_image"><meta name=twitter:image content="https://projectf.io/img/posts/sinescroll/social-card.png"><meta name=twitter:title content="Sine Scroller"><meta name=twitter:description content="This FPGA demo effect renders a horizontally scrolling message along a sine wave. I created this effect with benjamin.computer for All You Need, a Chapterhouse prod released at Revision 2022."><link rel=canonical href=https://projectf.io/posts/sinescroll/></head><body class="text-black duration-200 ease-out dark:text-white"><header class="mx-auto flex h-[4.5rem] max-w-4xl px-8 lg:justify-center"><div class="relative z-50 mr-auto flex items-center"><a class="-translate-x-[1px] -translate-y-[1px] text-2xl font-semibold" href=https://projectf.io/>Project F</a><div class="btn-dark text-[0] ml-4 h-6 w-6 shrink-0 cursor-pointer [background:url(./theme.svg)_left_center/cover_no-repeat] dark:invert dark:[background-position:right]" role=button aria-label=Dark></div></div><div class="btn-menu relative z-50 -mr-8 flex h-[4.5rem] w-[5rem] shrink-0 cursor-pointer flex-col items-center justify-center gap-2.5 lg:hidden" role=button aria-label=Menu></div><script>const htmlClass=document.documentElement.classList;setTimeout(()=>{htmlClass.remove("not-ready")},10);const btnMenu=document.querySelector(".btn-menu");btnMenu.addEventListener("click",()=>{htmlClass.toggle("open")});const metaTheme=document.querySelector('meta[name="theme-color"]'),lightBg="#fff".replace(/"/g,""),setDark=e=>{metaTheme.setAttribute("content",e?"#000":lightBg),htmlClass[e?"add":"remove"]("dark"),localStorage.setItem("dark",e)},darkScheme=window.matchMedia("(prefers-color-scheme: dark)");if(htmlClass.contains("dark"))setDark(!0);else{const e=localStorage.getItem("dark");setDark(e?e==="true":darkScheme.matches)}darkScheme.addEventListener("change",e=>{setDark(e.matches)});const btnDark=document.querySelector(".btn-dark");btnDark.addEventListener("click",()=>{setDark(localStorage.getItem("dark")!=="true")})</script><div class="nav-wrapper fixed inset-x-0 top-full z-40 flex h-full select-none flex-col justify-center pb-16 duration-200 dark:bg-black lg:static lg:h-auto lg:flex-row lg:!bg-transparent lg:pb-0 lg:transition-none"><nav class="lg:ml-12 lg:flex lg:flex-row lg:items-center lg:space-x-6"><a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/>Home</a>
-<a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/about/>About</a>
-<a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/contact/>Contact</a>
-<a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/sponsor/>Sponsor</a></nav></div></header><main class="prose prose-neutral relative mx-auto min-h-[calc(100%-9rem)] max-w-4xl px-8 pb-4 pt-4 dark:prose-invert"><article><header class=mb-4><h1 class="!my-0 pb-2.5">Sine Scroller</h1><div class="text-sm antialiased opacity-60">Published
-<time>24 Oct 2022</time>
-<span class=mx-1>&#183;</span>
-<span>Updated
-<time>23 Nov 2022</time></span></div></header><section><p>This <a href=/#fpga-demos>FPGA demo</a> effect renders a horizontally scrolling message along a sine wave. I created this effect with <a href=https://benjamin.computer/posts/2022-05-18-fpga-demoscene-demo.html>benjamin.computer</a> for <em>All You Need</em>, a Chapterhouse prod released at <a href=https://www.revision-party.net>Revision 2022</a>.</p><p>The design was originally for a custom Artix-7 dev board, but this version runs on the Digilent Arty A7 or as a Verilator/SDL simulation on your computer.</p><h2 id=what-is-a-sine-scroller>What is a Sine Scroller?</h2><p>A sine scroller is a classic demoscene effect where the scrolling text moves up and down in a sine wave. You can see an excellent example in the <a href="https://www.youtube.com/watch?v=mi9M8h6JrQU">SkidRow Lemmings Cracktro</a> (YouTube).</p><p>Our implementation is less sophisticated, only moving each letter up and down rather than distorting each character, but the effect does at least run at a smooth 60 FPS.</p><p><img src=/img/posts/sinescroll/fpga-demo.png alt="FPGA Demo" title></p><h2 id=building-the-demo>Building the Demo</h2><p>Find the Verilog source and build instructions in the <strong>projf-explore</strong> git repo:<br><a href=https://github.com/projf/projf-explore/tree/main/demos/sinescroll/>https://github.com/projf/projf-explore/tree/main/demos/sinescroll/</a></p><p>New to FPGA graphics design? Start with <a href=/posts/fpga-graphics/>Beginning FPGA Graphics</a>.</p><h3 id=demo-structure>Demo Structure</h3><ul><li>Top module with display interfaces<ul><li>Arty (XC7): <a href=https://github.com/projf/projf-explore/blob/main/demos/sinescroll/xc7/top_sinescroll.sv>xc7/top_sinescroll.sv</a></li><li>Verilator/SDL: <a href=https://github.com/projf/projf-explore/blob/main/demos/sinescroll/sim/top_sinescroll.sv>sim/top_sinescroll.sv</a></li></ul></li><li>Scroller render module: <a href=https://github.com/projf/projf-explore/blob/main/demos/sinescroll/render_sinescroll.sv>render_sinescroll.sv</a> (see below)</li><li>Project F library modules<ul><li><a href=https://github.com/projf/projf-explore/blob/main/lib/graphics/draw_char.sv>lib/graphics/draw_char.sv</a></li><li><a href=https://github.com/projf/projf-explore/blob/main/lib/maths/sine_table.sv>lib/maths/sine_table.sv</a></li></ul></li><li>Resources<ul><li>Outline font: <a href=https://github.com/projf/projf-explore/blob/main/demos/sinescroll/res/fonts/outline-font-32x32.mem>fonts/outline-font-32x32.mem</a></li><li>Greetings text: <a href=https://github.com/projf/projf-explore/blob/main/demos/sinescroll/res/text/greet.mem>text/greet.mem</a></li></ul></li></ul><p>I&rsquo;ve written a separate post on the workings of the <a href=/posts/fpga-sine-table/>FPGA Sine Lookup Table</a>.</p><h3 id=resources>Resources</h3><p>The font is based on <a href=https://github.com/ianhan/BitmapFonts/blob/main/32X32-FL.png>32X32-FL.png</a> from <a href=https://twitter.com/furan>Ian Hanschen&rsquo;s</a> demoscene collection. I removed the colours and tweaked a few pixels. The final font bitmap was converted to <code>$readmemh</code> format with <a href=https://github.com/projf/fpgatools/tree/master/img2fmem>img2fmem</a>.</p><p><img src=/img/posts/sinescroll/32X32-FL.png alt="32x32 pixel outline font" title></p><p>Our font includes 64 characters (codepoints U+0020 to U+005F), so an 8-bit value suffices for each character. The first part of the message is &ldquo;ALL YOU NEED&rdquo;, which is stored as follows (20 represents space):</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-plaintext data-lang=plaintext><span style=display:flex><span>41 4C 4C 20 59 4F 55 20 4E 45 45 44
-</span></span></code></pre></div><h2 id=scroller-rendering>Scroller Rendering</h2><p>A finite state machine (but of course) drives the renderer:</p><ul><li>Load character code point from <code>greet.mem</code> stored in ROM</li><li>Calculate character glyph position (includes sine table lookup)</li><li>Check if glyph is visible; if not jump to next character</li><li>Draw glyph with <code>draw_char</code> module loaded with our font</li><li>Once all glyphs are drawn, update message position offset for next frame</li></ul><p><code>cx_offs</code> is the horizontal position where message drawing begins; we start at the right side of the framebuffer and subtract <code>GREET_SPD</code> each frame to scroll left. You can adjust <code>GREET_SPD</code> to control the speed of the scroll and <code>SIN_SHIFT</code> to set the scale of the sine wave. If you change the message, set <code>GREET_LEN</code> to the new message length.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span><span style=color:#66d9ef>module</span> render_sinescroll #(
-</span></span><span style=display:flex><span>    <span style=color:#66d9ef>parameter</span> CORDW<span style=color:#f92672>=</span><span style=color:#ae81ff>16</span>,       <span style=color:#75715e>// signed coordinate width
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>parameter</span> GREET_FILE<span style=color:#f92672>=</span><span style=color:#e6db74>&#34;&#34;</span>,  <span style=color:#75715e>// greet text ROM .mem file
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>parameter</span> FONT_FILE<span style=color:#f92672>=</span><span style=color:#e6db74>&#34;&#34;</span>,   <span style=color:#75715e>// font glyph ROM .mem file
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>parameter</span> SIN_FILE<span style=color:#f92672>=</span><span style=color:#e6db74>&#34;&#34;</span>,    <span style=color:#75715e>// sine table ROM .mem file
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>parameter</span> SIN_SHIFT<span style=color:#f92672>=</span><span style=color:#ae81ff>3</span>,    <span style=color:#75715e>// right-shift sine values
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>parameter</span> FB_WIDTH<span style=color:#f92672>=</span><span style=color:#ae81ff>320</span>,   <span style=color:#75715e>// framebuffer width in pixels
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>parameter</span> FB_HEIGHT<span style=color:#f92672>=</span><span style=color:#ae81ff>180</span>   <span style=color:#75715e>// framebuffer height in pixels
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    ) (
-</span></span><span style=display:flex><span>    <span style=color:#66d9ef>input</span>  <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> clk,                      <span style=color:#75715e>// clock
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>input</span>  <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> rst,                      <span style=color:#75715e>// reset
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>input</span>  <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> oe,                       <span style=color:#75715e>// output enable
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>input</span>  <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> start,                    <span style=color:#75715e>// start control
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>      <span style=color:#66d9ef>logic</span> <span style=color:#66d9ef>signed</span> [CORDW<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] x, y,  <span style=color:#75715e>// drawing position
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>      <span style=color:#66d9ef>logic</span> pix,                      <span style=color:#75715e>// draw pixel at this position?
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>      <span style=color:#66d9ef>logic</span> drawing,                  <span style=color:#75715e>// drawing in progress
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>      <span style=color:#66d9ef>logic</span> done                      <span style=color:#75715e>// drawing is complete
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    );
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>    <span style=color:#75715e>// sine table
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>localparam</span> SIN_DEPTH<span style=color:#f92672>=</span><span style=color:#ae81ff>64</span>;  <span style=color:#75715e>// entires in sine ROM 0°-90°
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>localparam</span> SIN_WIDTH<span style=color:#f92672>=</span><span style=color:#ae81ff>8</span>;   <span style=color:#75715e>// width of sine ROM data
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>localparam</span> SIN_ADDRW<span style=color:#f92672>=</span>$clog2(<span style=color:#ae81ff>4</span><span style=color:#f92672>*</span>SIN_DEPTH);   <span style=color:#75715e>// full table -180° to +180°
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
-</span></span><span style=display:flex><span>    <span style=color:#66d9ef>logic</span> [SIN_ADDRW<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] sin_id, sin_offs;
-</span></span><span style=display:flex><span>    <span style=color:#66d9ef>logic</span> <span style=color:#66d9ef>signed</span> [CORDW<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] sin_data;  <span style=color:#75715e>// sign extend data to match coords
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    sine_table #(
-</span></span><span style=display:flex><span>        .ROM_DEPTH(SIN_DEPTH),
-</span></span><span style=display:flex><span>        .ROM_WIDTH(SIN_WIDTH),
-</span></span><span style=display:flex><span>        .ROM_FILE(SIN_FILE)
-</span></span><span style=display:flex><span>    ) sine_table_inst (
-</span></span><span style=display:flex><span>        .id(sin_id <span style=color:#f92672>+</span> sin_offs),
-</span></span><span style=display:flex><span>        .data(sin_data)
-</span></span><span style=display:flex><span>    );
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>    <span style=color:#75715e>// greeting message ROM
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>localparam</span> GREET_MSGS  <span style=color:#f92672>=</span>   <span style=color:#ae81ff>1</span>;  <span style=color:#75715e>// 1 message
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>localparam</span> GREET_LEN   <span style=color:#f92672>=</span>  <span style=color:#ae81ff>71</span>;  <span style=color:#75715e>// number of code points
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>localparam</span> G_ROM_WIDTH <span style=color:#f92672>=</span>   <span style=color:#ae81ff>8</span>;  <span style=color:#75715e>// highest code point is U+00FF
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>localparam</span> G_ROM_DEPTH <span style=color:#f92672>=</span> GREET_MSGS <span style=color:#f92672>*</span> GREET_LEN;
-</span></span><span style=display:flex><span>    <span style=color:#66d9ef>localparam</span> GREET_SPD   <span style=color:#f92672>=</span>   <span style=color:#ae81ff>3</span>;  <span style=color:#75715e>// speed in pixels/frame
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    
-</span></span><span style=display:flex><span>    <span style=color:#66d9ef>logic</span> [$clog2(G_ROM_DEPTH)<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] greet_rom_addr;
-</span></span><span style=display:flex><span>    <span style=color:#66d9ef>logic</span> [G_ROM_WIDTH<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] greet_rom_data;  <span style=color:#75715e>// code point
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
-</span></span><span style=display:flex><span>    rom_sync #(
-</span></span><span style=display:flex><span>        .WIDTH(G_ROM_WIDTH),
-</span></span><span style=display:flex><span>        .DEPTH(G_ROM_DEPTH),
-</span></span><span style=display:flex><span>        .INIT_F(GREET_FILE)
-</span></span><span style=display:flex><span>    ) greet_rom (
-</span></span><span style=display:flex><span>        .clk,
-</span></span><span style=display:flex><span>        .addr(greet_rom_addr),
-</span></span><span style=display:flex><span>        .data(greet_rom_data)
-</span></span><span style=display:flex><span>    );
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>    <span style=color:#75715e>// Outline 32x32 font
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>localparam</span> GLYPH_WIDTH  <span style=color:#f92672>=</span>  <span style=color:#ae81ff>32</span>;
-</span></span><span style=display:flex><span>    <span style=color:#66d9ef>localparam</span> GLYPH_SPACE  <span style=color:#f92672>=</span>   <span style=color:#ae81ff>2</span>;  <span style=color:#75715e>// horizontal spacing
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>localparam</span> GLYPH_HEIGHT <span style=color:#f92672>=</span>  <span style=color:#ae81ff>32</span>;
-</span></span><span style=display:flex><span>    <span style=color:#66d9ef>localparam</span> GLYPH_COUNT  <span style=color:#f92672>=</span>  <span style=color:#ae81ff>64</span>;
-</span></span><span style=display:flex><span>    <span style=color:#66d9ef>localparam</span> GLYPH_OFFSET <span style=color:#f92672>=</span>  <span style=color:#ae81ff>32</span>;  <span style=color:#75715e>// starts at U+0020
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>localparam</span> FONT_LSB <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span>;
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>    <span style=color:#75715e>// draw chars in framebuffer
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>localparam</span> CHAR_NUM <span style=color:#f92672>=</span> GREET_LEN;  <span style=color:#75715e>// length of message in characters
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> [$clog2(CHAR_NUM)<span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] cnt_char;  <span style=color:#75715e>// message char counter
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> <span style=color:#66d9ef>signed</span> [CORDW<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] cx, cy;  <span style=color:#75715e>// chars coords
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> <span style=color:#66d9ef>signed</span> [CORDW<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] cx_offs;  <span style=color:#75715e>// horizontal offset for scrolling
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> [<span style=color:#ae81ff>7</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] ucp;  <span style=color:#75715e>// Unicode code point (0-255 only)
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> draw_start, draw_done;  <span style=color:#75715e>// drawing signals
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
-</span></span><span style=display:flex><span>    <span style=color:#75715e>// draw state machine
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>enum</span> {IDLE, INIT, MEM_WAIT, LOAD_CHAR, CLIP, DRAW, DONE} state;
-</span></span><span style=display:flex><span>    <span style=color:#66d9ef>always_ff</span> @(<span style=color:#66d9ef>posedge</span> clk) <span style=color:#66d9ef>begin</span>
-</span></span><span style=display:flex><span>        draw_start <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
-</span></span><span style=display:flex><span>        <span style=color:#66d9ef>case</span> (state)
-</span></span><span style=display:flex><span>            INIT: <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// register coordinates and colour
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                state <span style=color:#f92672>&lt;=</span> MEM_WAIT;
-</span></span><span style=display:flex><span>                greet_rom_addr <span style=color:#f92672>&lt;=</span> cnt_char;  <span style=color:#75715e>// max address is CHAR_NUM-1 
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                sin_id <span style=color:#f92672>&lt;=</span> cnt_char <span style=color:#f92672>*</span> <span style=color:#ae81ff>16</span>;
-</span></span><span style=display:flex><span>            <span style=color:#66d9ef>end</span>
-</span></span><span style=display:flex><span>            MEM_WAIT: <span style=color:#66d9ef>begin</span>
-</span></span><span style=display:flex><span>                state <span style=color:#f92672>&lt;=</span> LOAD_CHAR;
-</span></span><span style=display:flex><span>            <span style=color:#66d9ef>end</span>
-</span></span><span style=display:flex><span>            LOAD_CHAR: <span style=color:#66d9ef>begin</span>
-</span></span><span style=display:flex><span>                ucp <span style=color:#f92672>&lt;=</span> greet_rom_data;
-</span></span><span style=display:flex><span>                cx <span style=color:#f92672>&lt;=</span> cx_offs <span style=color:#f92672>+</span> cnt_char <span style=color:#f92672>*</span> (GLYPH_WIDTH <span style=color:#f92672>+</span> GLYPH_SPACE);
-</span></span><span style=display:flex><span>                cy <span style=color:#f92672>&lt;=</span> FB_HEIGHT<span style=color:#f92672>/</span><span style=color:#ae81ff>2</span><span style=color:#f92672>-</span>GLYPH_HEIGHT<span style=color:#f92672>/</span><span style=color:#ae81ff>2</span> <span style=color:#f92672>+</span> (sin_data <span style=color:#f92672>&gt;&gt;&gt;</span> SIN_SHIFT);  <span style=color:#75715e>// centre
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                state <span style=color:#f92672>&lt;=</span> CLIP;
-</span></span><span style=display:flex><span>            <span style=color:#66d9ef>end</span>
-</span></span><span style=display:flex><span>            CLIP: <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// only render glyphs in the framebuffer area
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                <span style=color:#66d9ef>if</span> (cx <span style=color:#f92672>&gt;</span> <span style=color:#f92672>-</span>(GLYPH_WIDTH <span style=color:#f92672>+</span> GLYPH_SPACE) <span style=color:#f92672>&amp;&amp;</span> cx <span style=color:#f92672>&lt;</span> FB_WIDTH) <span style=color:#66d9ef>begin</span>
-</span></span><span style=display:flex><span>                    state <span style=color:#f92672>&lt;=</span> DRAW;
-</span></span><span style=display:flex><span>                    draw_start <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
-</span></span><span style=display:flex><span>                    <span style=color:#75715e>// $display(&#34;  DRAW: cnt_char: %d, x=%d, y=%d&#34;, cnt_char, cx, cy);
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                <span style=color:#66d9ef>end</span> <span style=color:#66d9ef>else</span> <span style=color:#66d9ef>begin</span>
-</span></span><span style=display:flex><span>                    <span style=color:#66d9ef>if</span> (cnt_char <span style=color:#f92672>==</span> CHAR_NUM<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span>) <span style=color:#66d9ef>begin</span>
-</span></span><span style=display:flex><span>                        state <span style=color:#f92672>&lt;=</span> DONE;
-</span></span><span style=display:flex><span>                    <span style=color:#66d9ef>end</span> <span style=color:#66d9ef>else</span> <span style=color:#66d9ef>begin</span>
-</span></span><span style=display:flex><span>                        state <span style=color:#f92672>&lt;=</span> INIT;
-</span></span><span style=display:flex><span>                        cnt_char <span style=color:#f92672>&lt;=</span> cnt_char <span style=color:#f92672>+</span> <span style=color:#ae81ff>1</span>;
-</span></span><span style=display:flex><span>                    <span style=color:#66d9ef>end</span>
-</span></span><span style=display:flex><span>                <span style=color:#66d9ef>end</span>
-</span></span><span style=display:flex><span>            <span style=color:#66d9ef>end</span>
-</span></span><span style=display:flex><span>            DRAW: <span style=color:#66d9ef>begin</span>
-</span></span><span style=display:flex><span>                <span style=color:#66d9ef>if</span> (draw_done) <span style=color:#66d9ef>begin</span>
-</span></span><span style=display:flex><span>                    <span style=color:#66d9ef>if</span> (cnt_char <span style=color:#f92672>==</span> CHAR_NUM<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span>) <span style=color:#66d9ef>begin</span>
-</span></span><span style=display:flex><span>                        state <span style=color:#f92672>&lt;=</span> DONE;
-</span></span><span style=display:flex><span>                    <span style=color:#66d9ef>end</span> <span style=color:#66d9ef>else</span> <span style=color:#66d9ef>begin</span>
-</span></span><span style=display:flex><span>                        state <span style=color:#f92672>&lt;=</span> INIT;
-</span></span><span style=display:flex><span>                        cnt_char <span style=color:#f92672>&lt;=</span> cnt_char <span style=color:#f92672>+</span> <span style=color:#ae81ff>1</span>;
-</span></span><span style=display:flex><span>                    <span style=color:#66d9ef>end</span>
-</span></span><span style=display:flex><span>                <span style=color:#66d9ef>end</span>
-</span></span><span style=display:flex><span>            <span style=color:#66d9ef>end</span>
-</span></span><span style=display:flex><span>            DONE: state <span style=color:#f92672>&lt;=</span> IDLE;
-</span></span><span style=display:flex><span>            <span style=color:#66d9ef>default</span><span style=color:#f92672>:</span> <span style=color:#66d9ef>if</span> (start) <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// IDLE
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                state <span style=color:#f92672>&lt;=</span> INIT;
-</span></span><span style=display:flex><span>                cnt_char <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
-</span></span><span style=display:flex><span>                sin_offs <span style=color:#f92672>&lt;=</span> sin_offs <span style=color:#f92672>+</span> <span style=color:#ae81ff>1</span>;
-</span></span><span style=display:flex><span>                <span style=color:#75715e>// if final char has been drawn off the screen, restart loop
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                cx_offs <span style=color:#f92672>&lt;=</span> (cx <span style=color:#f92672>&lt;</span> <span style=color:#f92672>-</span>GLYPH_WIDTH) <span style=color:#f92672>?</span> FB_WIDTH <span style=color:#f92672>:</span> cx_offs <span style=color:#f92672>-</span> GREET_SPD;
-</span></span><span style=display:flex><span>                <span style=color:#75715e>// $display(&#34;START: cx_offs: %d&#34;, cx_offs);
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>            <span style=color:#66d9ef>end</span>
-</span></span><span style=display:flex><span>        <span style=color:#66d9ef>endcase</span>
-</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> (rst) <span style=color:#66d9ef>begin</span>
-</span></span><span style=display:flex><span>            state <span style=color:#f92672>&lt;=</span> INIT;
-</span></span><span style=display:flex><span>            cnt_char <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
-</span></span><span style=display:flex><span>            sin_offs <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
-</span></span><span style=display:flex><span>            cx_offs <span style=color:#f92672>&lt;=</span> FB_WIDTH;
-</span></span><span style=display:flex><span>        <span style=color:#66d9ef>end</span>
-</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>    draw_char #(
-</span></span><span style=display:flex><span>        .CORDW(CORDW),
-</span></span><span style=display:flex><span>        .WIDTH(GLYPH_WIDTH),
-</span></span><span style=display:flex><span>        .HEIGHT(GLYPH_HEIGHT),
-</span></span><span style=display:flex><span>        .COUNT(GLYPH_COUNT),
-</span></span><span style=display:flex><span>        .OFFSET(GLYPH_OFFSET),
-</span></span><span style=display:flex><span>        .FONT_FILE(FONT_FILE),
-</span></span><span style=display:flex><span>        .LSB(FONT_LSB)
-</span></span><span style=display:flex><span>        ) draw_char_inst (
-</span></span><span style=display:flex><span>        .clk,
-</span></span><span style=display:flex><span>        .rst,
-</span></span><span style=display:flex><span>        .oe,
-</span></span><span style=display:flex><span>        .start(draw_start),
-</span></span><span style=display:flex><span>        .ucp,
-</span></span><span style=display:flex><span>        .cx,
-</span></span><span style=display:flex><span>        .cy,
-</span></span><span style=display:flex><span>        .x,
-</span></span><span style=display:flex><span>        .y,
-</span></span><span style=display:flex><span>        .pix,
-</span></span><span style=display:flex><span>        .drawing,
-</span></span><span style=display:flex><span>        .busy(),
-</span></span><span style=display:flex><span>        .done(draw_done)
-</span></span><span style=display:flex><span>    );
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>    <span style=color:#75715e>// done for this module
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>always_comb</span> done <span style=color:#f92672>=</span> (state <span style=color:#f92672>==</span> DONE);
-</span></span><span style=display:flex><span><span style=color:#66d9ef>endmodule</span>
-</span></span></code></pre></div><p>This module isn&rsquo;t the tightest design, being built (in a hurry) for a demo prod. For example, we consider (but don&rsquo;t draw) every character in the greeting every frame, even though the clipping check could reduce this significantly.</p><h2 id=whats-next>What&rsquo;s Next?</h2><p>Check out my <a href=/#fpga-demos>demos</a>, <a href=/posts/fpga-graphics/>FPGA graphics</a> tutorial, and guide to <a href=/posts/fpga-sine-table/>FPGA sine lookup tables</a>.</p></section><footer class="mt-12 flex flex-wrap"><a class="mb-1.5 mr-1.5 rounded-lg bg-black/[3%] px-5 py-1.5 no-underline dark:bg-white/[8%]" href=https://projectf.io/tags/graphics>graphics</a>
-<a class="mb-1.5 mr-1.5 rounded-lg bg-black/[3%] px-5 py-1.5 no-underline dark:bg-white/[8%]" href=https://projectf.io/tags/arty-a7>arty-a7</a>
-<a class="mb-1.5 mr-1.5 rounded-lg bg-black/[3%] px-5 py-1.5 no-underline dark:bg-white/[8%]" href=https://projectf.io/tags/verilator>verilator</a></footer></article></main><footer class="opaco mx-auto flex h-[4.5rem] max-w-4xl items-center px-8 text-[0.9em] opacity-60"><div class=mr-auto><a class=link href=https://projectf.io/>Project F</a>: FPGA and RISC-V. Only hardware makes it possible!
-&copy; 2025 Will Green.</div></footer></body></html>
+<!doctype html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<html
+  class="not-ready lg:text-base"
+  style="--bg: #fff"
+  lang="en-gb"
+>
+  <head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, shrink-to-fit=no"
+  />
+
+  
+  <title>Sine Scroller - Project F</title>
+
+  
+  <meta name="theme-color" />
+
+  
+  
+  
+  
+  <meta name="description" content="This FPGA demo effect renders a horizontally scrolling message along a sine wave. I created this effect with benjamin.computer for All You Need, a Chapterhouse prod released at Revision 2022." />
+  <meta name="author" content="Will Green" />
+  
+
+  
+  
+  
+  
+  
+  
+  <link rel="preload stylesheet" as="style" href="https://projectf.io/main.min.css" />
+
+  
+  
+  
+  
+  
+  <link rel="preload" as="image" href="https://projectf.io/theme.svg" />
+
+  
+  
+  
+  
+  
+
+  
+  
+  
+
+  
+  
+  <script
+    defer
+    src="https://projectf.io/highlight.min.js"
+    onload="hljs.initHighlightingOnLoad();"
+  ></script>
+  
+
+  
+  
+  
+
+  
+  <link rel="icon" href="https://projectf.io/favicon.ico" />
+  <link rel="apple-touch-icon" href="https://projectf.io/apple-touch-icon.png" />
+
+  
+  <meta name="generator" content="Hugo 0.128.2">
+
+  
+  
+  
+  
+  
+  
+  
+
+
+  
+  
+  <meta itemprop="name" content="Sine Scroller">
+  <meta itemprop="description" content="This FPGA demo effect renders a horizontally scrolling message along a sine wave. I created this effect with benjamin.computer for All You Need, a Chapterhouse prod released at Revision 2022.">
+  <meta itemprop="datePublished" content="2022-10-24T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2022-11-23T00:00:00+00:00">
+  <meta itemprop="wordCount" content="1043">
+  <meta itemprop="image" content="https://projectf.io/img/posts/sinescroll/social-card.png">
+  <meta itemprop="keywords" content="Graphics,Arty-A7,Verilator">
+  
+  <meta property="og:url" content="https://projectf.io/posts/sinescroll/">
+  <meta property="og:site_name" content="Project F">
+  <meta property="og:title" content="Sine Scroller">
+  <meta property="og:description" content="This FPGA demo effect renders a horizontally scrolling message along a sine wave. I created this effect with benjamin.computer for All You Need, a Chapterhouse prod released at Revision 2022.">
+  <meta property="og:locale" content="en_gb">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2022-10-24T00:00:00+00:00">
+    <meta property="article:modified_time" content="2022-11-23T00:00:00+00:00">
+    <meta property="article:tag" content="Graphics">
+    <meta property="article:tag" content="Arty-A7">
+    <meta property="article:tag" content="Verilator">
+    <meta property="og:image" content="https://projectf.io/img/posts/sinescroll/social-card.png">
+
+  
+  
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://projectf.io/img/posts/sinescroll/social-card.png">
+  <meta name="twitter:title" content="Sine Scroller">
+  <meta name="twitter:description" content="This FPGA demo effect renders a horizontally scrolling message along a sine wave. I created this effect with benjamin.computer for All You Need, a Chapterhouse prod released at Revision 2022.">
+
+  
+  
+  
+  <link rel="canonical" href="https://projectf.io/posts/sinescroll/" />
+  
+  
+</head>
+
+  <body class="text-black duration-200 ease-out dark:text-white">
+    <header
+  
+  class="mx-auto flex h-[4.5rem] max-w-4xl px-8 lg:justify-center"
+  
+  >
+  <div class="relative z-50 mr-auto flex items-center">
+    <a
+      class="-translate-x-[1px] -translate-y-[1px] text-2xl font-semibold"
+      href="https://projectf.io/"
+      >Project F</a
+    >
+    <div
+      class="btn-dark text-[0] ml-4 h-6 w-6 shrink-0 cursor-pointer [background:url(./theme.svg)_left_center/cover_no-repeat] dark:invert dark:[background-position:right]"
+      role="button"
+      aria-label="Dark"
+    ></div>
+  </div>
+
+  <div
+    class="btn-menu relative z-50 -mr-8 flex h-[4.5rem] w-[5rem] shrink-0 cursor-pointer flex-col items-center justify-center gap-2.5 lg:hidden"
+    role="button"
+    aria-label="Menu"
+  ></div>
+
+  
+
+  <script>
+    
+    const htmlClass = document.documentElement.classList;
+    setTimeout(() => {
+      htmlClass.remove('not-ready');
+    }, 10);
+
+    
+    const btnMenu = document.querySelector('.btn-menu');
+    btnMenu.addEventListener('click', () => {
+      htmlClass.toggle('open');
+    });
+
+    
+    const metaTheme = document.querySelector('meta[name="theme-color"]');
+    const lightBg = '#fff'.replace(/"/g, '');
+    const setDark = (isDark) => {
+      metaTheme.setAttribute('content', isDark ? '#000' : lightBg);
+      htmlClass[isDark ? 'add' : 'remove']('dark');
+      localStorage.setItem('dark', isDark);
+    };
+
+    
+    const darkScheme = window.matchMedia('(prefers-color-scheme: dark)');
+    if (htmlClass.contains('dark')) {
+      setDark(true);
+    } else {
+      const darkVal = localStorage.getItem('dark');
+      setDark(darkVal ? darkVal === 'true' : darkScheme.matches);
+    }
+
+    
+    darkScheme.addEventListener('change', (event) => {
+      setDark(event.matches);
+    });
+
+    
+    const btnDark = document.querySelector('.btn-dark');
+    btnDark.addEventListener('click', () => {
+      setDark(localStorage.getItem('dark') !== 'true');
+    });
+  </script>
+
+  <div
+    class="nav-wrapper fixed inset-x-0 top-full z-40 flex h-full select-none flex-col justify-center pb-16 duration-200 dark:bg-black lg:static lg:h-auto lg:flex-row lg:!bg-transparent lg:pb-0 lg:transition-none"
+  >
+    
+    
+    <nav class="lg:ml-12 lg:flex lg:flex-row lg:items-center lg:space-x-6">
+      
+      <a
+        class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal"
+        href="/"
+        >Home</a
+      >
+      
+      <a
+        class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal"
+        href="/about/"
+        >About</a
+      >
+      
+      <a
+        class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal"
+        href="/contact/"
+        >Contact</a
+      >
+      
+      <a
+        class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal"
+        href="/sponsor/"
+        >Sponsor</a
+      >
+      
+    </nav>
+    
+
+    
+  </div>
+</header>
+
+
+    <main
+      
+      class="prose prose-neutral relative mx-auto min-h-[calc(100%-9rem)] max-w-4xl px-8 pb-4 pt-4 dark:prose-invert"
+      
+    >
+      
+
+<article>
+  <header class="mb-4">
+    <h1 class="!my-0 pb-2.5">Sine Scroller</h1>
+
+    
+    <div class="text-sm antialiased opacity-60">
+      
+      Published
+      <time>24 Oct 2022</time>
+      
+      <span class="mx-1">&middot;</span>
+      <span>Updated
+      <time>23 Nov 2022</time></span>
+      
+      
+    </div>
+    
+  </header>
+
+  <section><p>This FPGA demo effect renders a horizontally scrolling message along a sine wave. I created this effect with <a href="https://benjamin.computer/posts/2022-05-18-fpga-demoscene-demo.html">benjamin.computer</a> for <em>All You Need</em>, a Chapterhouse prod released at <a href="https://www.revision-party.net">Revision 2022</a>.</p>
+<p>The design was originally for a custom Artix-7 dev board, but this version runs on the Digilent Arty A7 or as a Verilator/SDL simulation on your computer.</p>
+<h2 id="what-is-a-sine-scroller">What is a Sine Scroller?</h2>
+<p>A sine scroller is a classic demoscene effect where the scrolling text moves up and down in a sine wave. You can see an excellent example in the <a href="https://www.youtube.com/watch?v=mi9M8h6JrQU">SkidRow Lemmings Cracktro</a> (YouTube).</p>
+<p>Our implementation is less sophisticated, only moving each letter up and down rather than distorting each character, but the effect does at least run at a smooth 60 FPS.</p>
+<p><img src="/img/posts/sinescroll/fpga-demo.png" alt="FPGA Demo" title=""></p>
+<h2 id="building-the-demo">Building the Demo</h2>
+<p>Find the Verilog source and build instructions in the <strong>projf-explore</strong> git repo:<br>
+<a href="https://github.com/projf/projf-explore/tree/main/demos/sinescroll/">https://github.com/projf/projf-explore/tree/main/demos/sinescroll/</a></p>
+<p>New to FPGA graphics design? Start with <a href="/posts/fpga-graphics/">Beginning FPGA Graphics</a>.</p>
+<h3 id="demo-structure">Demo Structure</h3>
+<ul>
+<li>Top module with display interfaces
+<ul>
+<li>Arty (XC7): <a href="https://github.com/projf/projf-explore/blob/main/demos/sinescroll/xc7/top_sinescroll.sv">xc7/top_sinescroll.sv</a></li>
+<li>Verilator/SDL: <a href="https://github.com/projf/projf-explore/blob/main/demos/sinescroll/sim/top_sinescroll.sv">sim/top_sinescroll.sv</a></li>
+</ul>
+</li>
+<li>Scroller render module: <a href="https://github.com/projf/projf-explore/blob/main/demos/sinescroll/render_sinescroll.sv">render_sinescroll.sv</a> (see below)</li>
+<li>Project F library modules
+<ul>
+<li><a href="https://github.com/projf/projf-explore/blob/main/lib/graphics/draw_char.sv">lib/graphics/draw_char.sv</a></li>
+<li><a href="https://github.com/projf/projf-explore/blob/main/lib/maths/sine_table.sv">lib/maths/sine_table.sv</a></li>
+</ul>
+</li>
+<li>Resources
+<ul>
+<li>Outline font: <a href="https://github.com/projf/projf-explore/blob/main/demos/sinescroll/res/fonts/outline-font-32x32.mem">fonts/outline-font-32x32.mem</a></li>
+<li>Greetings text: <a href="https://github.com/projf/projf-explore/blob/main/demos/sinescroll/res/text/greet.mem">text/greet.mem</a></li>
+</ul>
+</li>
+</ul>
+<p>I&rsquo;ve written a separate post on the workings of the <a href="/posts/fpga-sine-table/">FPGA Sine Lookup Table</a>.</p>
+<h3 id="resources">Resources</h3>
+<p>The font is based on <a href="https://github.com/ianhan/BitmapFonts/blob/main/32X32-FL.png">32X32-FL.png</a> from <a href="https://twitter.com/furan">Ian Hanschen&rsquo;s</a> demoscene collection. I removed the colours and tweaked a few pixels. The final font bitmap was converted to <code>$readmemh</code> format with <a href="https://github.com/projf/fpgatools/tree/master/img2fmem">img2fmem</a>.</p>
+<p><img src="/img/posts/sinescroll/32X32-FL.png" alt="32x32 pixel outline font" title=""></p>
+<p>Our font includes 64 characters (codepoints U+0020 to U+005F), so an 8-bit value suffices for each character. The first part of the message is &ldquo;ALL YOU NEED&rdquo;, which is stored as follows (20 represents space):</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-plaintext" data-lang="plaintext"><span style="display:flex;"><span>41 4C 4C 20 59 4F 55 20 4E 45 45 44
+</span></span></code></pre></div><h2 id="scroller-rendering">Scroller Rendering</h2>
+<p>A finite state machine (but of course) drives the renderer:</p>
+<ul>
+<li>Load character code point from <code>greet.mem</code> stored in ROM</li>
+<li>Calculate character glyph position (includes sine table lookup)</li>
+<li>Check if glyph is visible; if not jump to next character</li>
+<li>Draw glyph with <code>draw_char</code> module loaded with our font</li>
+<li>Once all glyphs are drawn, update message position offset for next frame</li>
+</ul>
+<p><code>cx_offs</code> is the horizontal position where message drawing begins; we start at the right side of the framebuffer and subtract <code>GREET_SPD</code> each frame to scroll left. You can adjust <code>GREET_SPD</code> to control the speed of the scroll and <code>SIN_SHIFT</code> to set the scale of the sine wave. If you change the message, set <code>GREET_LEN</code> to the new message length.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> render_sinescroll #(
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>,       <span style="color:#75715e">// signed coordinate width
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> GREET_FILE<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;&#34;</span>,  <span style="color:#75715e">// greet text ROM .mem file
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> FONT_FILE<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;&#34;</span>,   <span style="color:#75715e">// font glyph ROM .mem file
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> SIN_FILE<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;&#34;</span>,    <span style="color:#75715e">// sine table ROM .mem file
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> SIN_SHIFT<span style="color:#f92672">=</span><span style="color:#ae81ff">3</span>,    <span style="color:#75715e">// right-shift sine values
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> FB_WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">320</span>,   <span style="color:#75715e">// framebuffer width in pixels
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> FB_HEIGHT<span style="color:#f92672">=</span><span style="color:#ae81ff">180</span>   <span style="color:#75715e">// framebuffer height in pixels
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    ) (
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,                      <span style="color:#75715e">// clock
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst,                      <span style="color:#75715e">// reset
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> oe,                       <span style="color:#75715e">// output enable
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> start,                    <span style="color:#75715e">// start control
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x, y,  <span style="color:#75715e">// drawing position
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> pix,                      <span style="color:#75715e">// draw pixel at this position?
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> drawing,                  <span style="color:#75715e">// drawing in progress
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> done                      <span style="color:#75715e">// drawing is complete
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    );
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// sine table
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> SIN_DEPTH<span style="color:#f92672">=</span><span style="color:#ae81ff">64</span>;  <span style="color:#75715e">// entires in sine ROM 0°-90°
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> SIN_WIDTH<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>;   <span style="color:#75715e">// width of sine ROM data
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> SIN_ADDRW<span style="color:#f92672">=</span>$clog2(<span style="color:#ae81ff">4</span><span style="color:#f92672">*</span>SIN_DEPTH);   <span style="color:#75715e">// full table -180° to +180°
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> [SIN_ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sin_id, sin_offs;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sin_data;  <span style="color:#75715e">// sign extend data to match coords
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    sine_table #(
+</span></span><span style="display:flex;"><span>        .ROM_DEPTH(SIN_DEPTH),
+</span></span><span style="display:flex;"><span>        .ROM_WIDTH(SIN_WIDTH),
+</span></span><span style="display:flex;"><span>        .ROM_FILE(SIN_FILE)
+</span></span><span style="display:flex;"><span>    ) sine_table_inst (
+</span></span><span style="display:flex;"><span>        .id(sin_id <span style="color:#f92672">+</span> sin_offs),
+</span></span><span style="display:flex;"><span>        .data(sin_data)
+</span></span><span style="display:flex;"><span>    );
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// greeting message ROM
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> GREET_MSGS  <span style="color:#f92672">=</span>   <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// 1 message
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> GREET_LEN   <span style="color:#f92672">=</span>  <span style="color:#ae81ff">71</span>;  <span style="color:#75715e">// number of code points
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> G_ROM_WIDTH <span style="color:#f92672">=</span>   <span style="color:#ae81ff">8</span>;  <span style="color:#75715e">// highest code point is U+00FF
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> G_ROM_DEPTH <span style="color:#f92672">=</span> GREET_MSGS <span style="color:#f92672">*</span> GREET_LEN;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">localparam</span> GREET_SPD   <span style="color:#f92672">=</span>   <span style="color:#ae81ff">3</span>;  <span style="color:#75715e">// speed in pixels/frame
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> [$clog2(G_ROM_DEPTH)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] greet_rom_addr;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> [G_ROM_WIDTH<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] greet_rom_data;  <span style="color:#75715e">// code point
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    rom_sync #(
+</span></span><span style="display:flex;"><span>        .WIDTH(G_ROM_WIDTH),
+</span></span><span style="display:flex;"><span>        .DEPTH(G_ROM_DEPTH),
+</span></span><span style="display:flex;"><span>        .INIT_F(GREET_FILE)
+</span></span><span style="display:flex;"><span>    ) greet_rom (
+</span></span><span style="display:flex;"><span>        .clk,
+</span></span><span style="display:flex;"><span>        .addr(greet_rom_addr),
+</span></span><span style="display:flex;"><span>        .data(greet_rom_data)
+</span></span><span style="display:flex;"><span>    );
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// Outline 32x32 font
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> GLYPH_WIDTH  <span style="color:#f92672">=</span>  <span style="color:#ae81ff">32</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">localparam</span> GLYPH_SPACE  <span style="color:#f92672">=</span>   <span style="color:#ae81ff">2</span>;  <span style="color:#75715e">// horizontal spacing
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> GLYPH_HEIGHT <span style="color:#f92672">=</span>  <span style="color:#ae81ff">32</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">localparam</span> GLYPH_COUNT  <span style="color:#f92672">=</span>  <span style="color:#ae81ff">64</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">localparam</span> GLYPH_OFFSET <span style="color:#f92672">=</span>  <span style="color:#ae81ff">32</span>;  <span style="color:#75715e">// starts at U+0020
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> FONT_LSB <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// draw chars in framebuffer
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> CHAR_NUM <span style="color:#f92672">=</span> GREET_LEN;  <span style="color:#75715e">// length of message in characters
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(CHAR_NUM)<span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cnt_char;  <span style="color:#75715e">// message char counter
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cx, cy;  <span style="color:#75715e">// chars coords
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cx_offs;  <span style="color:#75715e">// horizontal offset for scrolling
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] ucp;  <span style="color:#75715e">// Unicode code point (0-255 only)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> draw_start, draw_done;  <span style="color:#75715e">// drawing signals
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// draw state machine
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">enum</span> {IDLE, INIT, MEM_WAIT, LOAD_CHAR, CLIP, DRAW, DONE} state;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>        draw_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">case</span> (state)
+</span></span><span style="display:flex;"><span>            INIT: <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// register coordinates and colour
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                state <span style="color:#f92672">&lt;=</span> MEM_WAIT;
+</span></span><span style="display:flex;"><span>                greet_rom_addr <span style="color:#f92672">&lt;=</span> cnt_char;  <span style="color:#75715e">// max address is CHAR_NUM-1 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                sin_id <span style="color:#f92672">&lt;=</span> cnt_char <span style="color:#f92672">*</span> <span style="color:#ae81ff">16</span>;
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>            MEM_WAIT: <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>                state <span style="color:#f92672">&lt;=</span> LOAD_CHAR;
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>            LOAD_CHAR: <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>                ucp <span style="color:#f92672">&lt;=</span> greet_rom_data;
+</span></span><span style="display:flex;"><span>                cx <span style="color:#f92672">&lt;=</span> cx_offs <span style="color:#f92672">+</span> cnt_char <span style="color:#f92672">*</span> (GLYPH_WIDTH <span style="color:#f92672">+</span> GLYPH_SPACE);
+</span></span><span style="display:flex;"><span>                cy <span style="color:#f92672">&lt;=</span> FB_HEIGHT<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span><span style="color:#f92672">-</span>GLYPH_HEIGHT<span style="color:#f92672">/</span><span style="color:#ae81ff">2</span> <span style="color:#f92672">+</span> (sin_data <span style="color:#f92672">&gt;&gt;&gt;</span> SIN_SHIFT);  <span style="color:#75715e">// centre
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                state <span style="color:#f92672">&lt;=</span> CLIP;
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>            CLIP: <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// only render glyphs in the framebuffer area
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                <span style="color:#66d9ef">if</span> (cx <span style="color:#f92672">&gt;</span> <span style="color:#f92672">-</span>(GLYPH_WIDTH <span style="color:#f92672">+</span> GLYPH_SPACE) <span style="color:#f92672">&amp;&amp;</span> cx <span style="color:#f92672">&lt;</span> FB_WIDTH) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>                    state <span style="color:#f92672">&lt;=</span> DRAW;
+</span></span><span style="display:flex;"><span>                    draw_start <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>                    <span style="color:#75715e">// $display(&#34;  DRAW: cnt_char: %d, x=%d, y=%d&#34;, cnt_char, cx, cy);
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#66d9ef">if</span> (cnt_char <span style="color:#f92672">==</span> CHAR_NUM<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>                        state <span style="color:#f92672">&lt;=</span> DONE;
+</span></span><span style="display:flex;"><span>                    <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>                        state <span style="color:#f92672">&lt;=</span> INIT;
+</span></span><span style="display:flex;"><span>                        cnt_char <span style="color:#f92672">&lt;=</span> cnt_char <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>                    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>            DRAW: <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">if</span> (draw_done) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#66d9ef">if</span> (cnt_char <span style="color:#f92672">==</span> CHAR_NUM<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>                        state <span style="color:#f92672">&lt;=</span> DONE;
+</span></span><span style="display:flex;"><span>                    <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>                        state <span style="color:#f92672">&lt;=</span> INIT;
+</span></span><span style="display:flex;"><span>                        cnt_char <span style="color:#f92672">&lt;=</span> cnt_char <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>                    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>            DONE: state <span style="color:#f92672">&lt;=</span> IDLE;
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">if</span> (start) <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// IDLE
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                state <span style="color:#f92672">&lt;=</span> INIT;
+</span></span><span style="display:flex;"><span>                cnt_char <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>                sin_offs <span style="color:#f92672">&lt;=</span> sin_offs <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>                <span style="color:#75715e">// if final char has been drawn off the screen, restart loop
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                cx_offs <span style="color:#f92672">&lt;=</span> (cx <span style="color:#f92672">&lt;</span> <span style="color:#f92672">-</span>GLYPH_WIDTH) <span style="color:#f92672">?</span> FB_WIDTH <span style="color:#f92672">:</span> cx_offs <span style="color:#f92672">-</span> GREET_SPD;
+</span></span><span style="display:flex;"><span>                <span style="color:#75715e">// $display(&#34;START: cx_offs: %d&#34;, cx_offs);
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">endcase</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (rst) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>            state <span style="color:#f92672">&lt;=</span> INIT;
+</span></span><span style="display:flex;"><span>            cnt_char <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>            sin_offs <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>            cx_offs <span style="color:#f92672">&lt;=</span> FB_WIDTH;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    draw_char #(
+</span></span><span style="display:flex;"><span>        .CORDW(CORDW),
+</span></span><span style="display:flex;"><span>        .WIDTH(GLYPH_WIDTH),
+</span></span><span style="display:flex;"><span>        .HEIGHT(GLYPH_HEIGHT),
+</span></span><span style="display:flex;"><span>        .COUNT(GLYPH_COUNT),
+</span></span><span style="display:flex;"><span>        .OFFSET(GLYPH_OFFSET),
+</span></span><span style="display:flex;"><span>        .FONT_FILE(FONT_FILE),
+</span></span><span style="display:flex;"><span>        .LSB(FONT_LSB)
+</span></span><span style="display:flex;"><span>        ) draw_char_inst (
+</span></span><span style="display:flex;"><span>        .clk,
+</span></span><span style="display:flex;"><span>        .rst,
+</span></span><span style="display:flex;"><span>        .oe,
+</span></span><span style="display:flex;"><span>        .start(draw_start),
+</span></span><span style="display:flex;"><span>        .ucp,
+</span></span><span style="display:flex;"><span>        .cx,
+</span></span><span style="display:flex;"><span>        .cy,
+</span></span><span style="display:flex;"><span>        .x,
+</span></span><span style="display:flex;"><span>        .y,
+</span></span><span style="display:flex;"><span>        .pix,
+</span></span><span style="display:flex;"><span>        .drawing,
+</span></span><span style="display:flex;"><span>        .busy(),
+</span></span><span style="display:flex;"><span>        .done(draw_done)
+</span></span><span style="display:flex;"><span>    );
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// done for this module
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_comb</span> done <span style="color:#f92672">=</span> (state <span style="color:#f92672">==</span> DONE);
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
+</span></span></code></pre></div><p>This module isn&rsquo;t the tightest design, being built (in a hurry) for a demo prod. For example, we consider (but don&rsquo;t draw) every character in the greeting every frame, even though the clipping check could reduce this significantly.</p>
+<h2 id="whats-next">What&rsquo;s Next?</h2>
+<p>Check out my <a href="/posts/fpga-graphics/">FPGA graphics</a> tutorial and guide to <a href="/posts/fpga-sine-table/">FPGA sine lookup tables</a>.</p>
+</section>
+
+  
+  
+  <footer class="mt-12 flex flex-wrap">
+     
+    <a
+      class="mb-1.5 mr-1.5 rounded-lg bg-black/[3%] px-5 py-1.5 no-underline dark:bg-white/[8%]"
+      href="https://projectf.io/tags/graphics"
+      >graphics</a
+    >
+     
+    <a
+      class="mb-1.5 mr-1.5 rounded-lg bg-black/[3%] px-5 py-1.5 no-underline dark:bg-white/[8%]"
+      href="https://projectf.io/tags/arty-a7"
+      >arty-a7</a
+    >
+     
+    <a
+      class="mb-1.5 mr-1.5 rounded-lg bg-black/[3%] px-5 py-1.5 no-underline dark:bg-white/[8%]"
+      href="https://projectf.io/tags/verilator"
+      >verilator</a
+    >
+    
+  </footer>
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+
+  
+</article>
+
+
+    </main>
+
+    <footer
+  
+  class="opaco mx-auto flex h-[4.5rem] max-w-4xl items-center px-8 text-[0.9em] opacity-60"
+  
+>
+  <div class="mr-auto">
+    <a class="link" href="https://projectf.io/">Project F</a>: FPGA and RISC-V. Only hardware makes it possible!
+    &copy; 2025 Will Green. 
+  </div>
+</footer>
+
+  </body>
+</html>

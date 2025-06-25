@@ -1,98 +1,490 @@
-<!doctype html><html class="not-ready lg:text-base" style=--bg:#fff lang=en-gb><head><meta charset=utf-8><meta http-equiv=X-UA-Compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><title>Fixed Point Numbers in Verilog - Project F</title>
-<meta name=theme-color><meta name=description content="Sometimes you need more precision than integers can provide, but floating-point computation is not trivial (try reading IEEE 754). You could use a library or IP block, but simple fixed point maths can often get the job done with little effort. Furthermore, most FPGAs have dedicated DSP blocks that make multiplication and addition of integers fast; we can take advantage of that with a fixed-point approach."><meta name=author content="Will Green"><link rel="preload stylesheet" as=style href=https://projectf.io/main.min.css><link rel=preload as=image href=https://projectf.io/theme.svg><script defer src=https://projectf.io/highlight.min.js onload=hljs.initHighlightingOnLoad()></script><link rel=icon href=https://projectf.io/favicon.ico><link rel=apple-touch-icon href=https://projectf.io/apple-touch-icon.png><meta name=generator content="Hugo 0.128.2"><meta itemprop=name content="Fixed Point Numbers in Verilog"><meta itemprop=description content="Sometimes you need more precision than integers can provide, but floating-point computation is not trivial (try reading IEEE 754). You could use a library or IP block, but simple fixed point maths can often get the job done with little effort. Furthermore, most FPGAs have dedicated DSP blocks that make multiplication and addition of integers fast; we can take advantage of that with a fixed-point approach."><meta itemprop=datePublished content="2020-05-26T00:00:00+00:00"><meta itemprop=dateModified content="2024-04-22T00:00:00+00:00"><meta itemprop=wordCount content="1812"><meta itemprop=image content="https://projectf.io/img/posts/fixed-point-numbers-in-verilog/social-card.png"><meta itemprop=keywords content="Maths"><meta property="og:url" content="https://projectf.io/posts/fixed-point-numbers-in-verilog/"><meta property="og:site_name" content="Project F"><meta property="og:title" content="Fixed Point Numbers in Verilog"><meta property="og:description" content="Sometimes you need more precision than integers can provide, but floating-point computation is not trivial (try reading IEEE 754). You could use a library or IP block, but simple fixed point maths can often get the job done with little effort. Furthermore, most FPGAs have dedicated DSP blocks that make multiplication and addition of integers fast; we can take advantage of that with a fixed-point approach."><meta property="og:locale" content="en_gb"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2020-05-26T00:00:00+00:00"><meta property="article:modified_time" content="2024-04-22T00:00:00+00:00"><meta property="article:tag" content="Maths"><meta property="og:image" content="https://projectf.io/img/posts/fixed-point-numbers-in-verilog/social-card.png"><meta name=twitter:card content="summary_large_image"><meta name=twitter:image content="https://projectf.io/img/posts/fixed-point-numbers-in-verilog/social-card.png"><meta name=twitter:title content="Fixed Point Numbers in Verilog"><meta name=twitter:description content="Sometimes you need more precision than integers can provide, but floating-point computation is not trivial (try reading IEEE 754). You could use a library or IP block, but simple fixed point maths can often get the job done with little effort. Furthermore, most FPGAs have dedicated DSP blocks that make multiplication and addition of integers fast; we can take advantage of that with a fixed-point approach."><link rel=canonical href=https://projectf.io/posts/fixed-point-numbers-in-verilog/></head><body class="text-black duration-200 ease-out dark:text-white"><header class="mx-auto flex h-[4.5rem] max-w-4xl px-8 lg:justify-center"><div class="relative z-50 mr-auto flex items-center"><a class="-translate-x-[1px] -translate-y-[1px] text-2xl font-semibold" href=https://projectf.io/>Project F</a><div class="btn-dark text-[0] ml-4 h-6 w-6 shrink-0 cursor-pointer [background:url(./theme.svg)_left_center/cover_no-repeat] dark:invert dark:[background-position:right]" role=button aria-label=Dark></div></div><div class="btn-menu relative z-50 -mr-8 flex h-[4.5rem] w-[5rem] shrink-0 cursor-pointer flex-col items-center justify-center gap-2.5 lg:hidden" role=button aria-label=Menu></div><script>const htmlClass=document.documentElement.classList;setTimeout(()=>{htmlClass.remove("not-ready")},10);const btnMenu=document.querySelector(".btn-menu");btnMenu.addEventListener("click",()=>{htmlClass.toggle("open")});const metaTheme=document.querySelector('meta[name="theme-color"]'),lightBg="#fff".replace(/"/g,""),setDark=e=>{metaTheme.setAttribute("content",e?"#000":lightBg),htmlClass[e?"add":"remove"]("dark"),localStorage.setItem("dark",e)},darkScheme=window.matchMedia("(prefers-color-scheme: dark)");if(htmlClass.contains("dark"))setDark(!0);else{const e=localStorage.getItem("dark");setDark(e?e==="true":darkScheme.matches)}darkScheme.addEventListener("change",e=>{setDark(e.matches)});const btnDark=document.querySelector(".btn-dark");btnDark.addEventListener("click",()=>{setDark(localStorage.getItem("dark")!=="true")})</script><div class="nav-wrapper fixed inset-x-0 top-full z-40 flex h-full select-none flex-col justify-center pb-16 duration-200 dark:bg-black lg:static lg:h-auto lg:flex-row lg:!bg-transparent lg:pb-0 lg:transition-none"><nav class="lg:ml-12 lg:flex lg:flex-row lg:items-center lg:space-x-6"><a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/>Home</a>
-<a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/about/>About</a>
-<a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/contact/>Contact</a>
-<a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/sponsor/>Sponsor</a></nav></div></header><main class="prose prose-neutral relative mx-auto min-h-[calc(100%-9rem)] max-w-4xl px-8 pb-4 pt-4 dark:prose-invert"><article><header class=mb-4><h1 class="!my-0 pb-2.5">Fixed Point Numbers in Verilog</h1><div class="text-sm antialiased opacity-60">Published
-<time>26 May 2020</time>
-<span class=mx-1>&#183;</span>
-<span>Updated
-<time>22 Apr 2024</time></span></div></header><section><p>Sometimes you need more precision than integers can provide, but floating-point computation is not trivial (try reading <a href=https://en.wikipedia.org/wiki/IEEE_754>IEEE 754</a>). You could use a library or IP block, but simple fixed point maths can often get the job done with little effort. Furthermore, most FPGAs have dedicated DSP blocks that make multiplication and addition of integers fast; we can take advantage of that with a fixed-point approach.</p><p>New to the series? Start with <a href=/posts/numbers-in-verilog/>Numbers in Verilog</a>.</p><h3 id=series-outline>Series Outline</h3><ul><li><a href=/posts/numbers-in-verilog>Numbers in Verilog</a> - introduction to numbers in Verilog</li><li><a href=/posts/verilog-vectors-arrays>Vectors and Arrays</a> - working with Verilog vectors and arrays</li><li><a href=/posts/multiplication-fpga-dsps>Multiplication with FPGA DSPs</a> - efficient multiplication with DSPs</li><li>Fixed-Point Numbers in Verilog (this post) - precision without complexity</li><li><a href=/posts/division-in-verilog>Division in Verilog</a> - divided we stand</li><li><em>More maths to follow</em></li></ul><h2 id=what-is-a-fixed-point-number>What is a Fixed Point Number?</h2><p>In a regular binary integer, the bits represent powers of two, with the least significant bit being <code>1</code>.</p><p>For example, decimal <code>13</code> is <code>1101</code> in binary: <code>8 + 4 + 1 = 13</code>.</p><p>With decimal numbers, we&rsquo;re used to the idea of using a <a href=https://en.wikipedia.org/wiki/Decimal_separator>decimal separator</a>, a point or comma, to separate integer and fractional parts. 1001 is one thousand and one, whereas 10.01 is ten and one hundredth.</p><p>We can do the same thing in binary with a <em>binary point</em> and use the bits to represent any powers of two we like.</p><p>For example, we can think of <code>4.75</code> as being <code>4 + 1/2 + 1/4</code>.</p><p>In binary terms this can be visualized as:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-plaintext data-lang=plaintext><span style=display:flex><span>8    4    2    1   1/2  1/4  1/8  1/16
-</span></span><span style=display:flex><span>^    ^    ^    ^    ^    ^    ^    ^
-</span></span><span style=display:flex><span>0    1    0    0    1    1    0    0
-</span></span></code></pre></div><p>Or, with a handy point to mark the fractional part: <code>0100.1100</code>.</p><p>We&rsquo;re choosing to interpret the value as being fixed point, but from an FPGA logic point of view, it&rsquo;s just an 8-bit integer: provided we are consistent in the position of the fixed point we&rsquo;ll get the expected result from mathematical operations. See later in this post if you have existing integers you need to convert to fixed point.</p><h3 id=q-notation>Q Notation</h3><p>To express the number of integer and fractional bits we use <a href=https://en.wikipedia.org/wiki/Q_%28number_format%29>Q number format</a>: <strong>Qi.f</strong> where <strong>i</strong> is the number of integer bits and <strong>f</strong> is the number of fractional bits. <code>0100.1100</code> has four integer and four fractional bits, so is Q4.4. We&rsquo;ll mostly use Q4.4 in this post to keep the examples manageable.</p><p><em>ProTip: Some sources include the sign bit in <strong>i</strong>, but others do not. In our examples, we include the sign bit: thus Q4.4 is from -8 to 7.9375 (7 + 15/16): we discuss range later in this post.</em></p><h2 id=maths-just-works>Maths Just Works!</h2><p>All the usual binary maths work when used with fixed-point numbers. Verilog can generally synthesize addition, subtraction, and multiplication on an FPGA. We cannot synthesize division automatically, but we can multiply by fractional numbers, e.g. multiply by 0.1 instead of dividing by 10.</p><h3 id=addition--subtraction>Addition & Subtraction</h3><p>Addition works in exactly the same way as for integers:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-plaintext data-lang=plaintext><span style=display:flex><span>  0011.1010        3.6250
-</span></span><span style=display:flex><span>+ 0100.0001      + 4.0625
-</span></span><span style=display:flex><span>= 0111.1011      = 7.6875
-</span></span></code></pre></div><p>We can also do subtraction using <a href=/posts/numbers-in-verilog/#signed-numbers>two&rsquo;s complement</a> to express the negative number:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-plaintext data-lang=plaintext><span style=display:flex><span>  0011.1010        3.6250
-</span></span><span style=display:flex><span>+ 1110.1000      - 1.5000
-</span></span><span style=display:flex><span>= 0010.0010      = 2.1250
-</span></span></code></pre></div><p>How did we get the two&rsquo;s complement for -1.5?</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-plaintext data-lang=plaintext><span style=display:flex><span>1.5 = 1 + 1/2 = 0001.1000
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>Start:  0001.1000 (1.5)
-</span></span><span style=display:flex><span>Invert: 1110.0111
-</span></span><span style=display:flex><span>Add 1:  0000.0001
-</span></span><span style=display:flex><span>Result: 1110.1000 (-1.5)
-</span></span></code></pre></div><h3 id=multiplication>Multiplication</h3><p>Multiplication works as expected too, but the product contains twice the number of bits. Multiplying two Q4.4 numbers results in a Q8.8 product:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-plaintext data-lang=plaintext><span style=display:flex><span>  0011.0100        3.2500
-</span></span><span style=display:flex><span>x 0010.0001        2.0625
-</span></span></code></pre></div><p>You can do the long multiplication to produce:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-plaintext data-lang=plaintext><span style=display:flex><span>00000110.10110100 = 6.703125
-</span></span></code></pre></div><p>We can round this to our original Q4.4 format by taking the eight middle bits:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-plaintext data-lang=plaintext><span style=display:flex><span>0000[0110.1011]0100 = 0110.1011 = 6.6875
-</span></span></code></pre></div><p>You can see we lost some precision there; this often happens when you convert to the original precision after multiplication. If our result had been 8 or higher, it would have overflowed our Q4.4 format because the largest digit we can represent with four bits in two&rsquo;s complement is 7. We discuss range and precision in more detail below.</p><h3 id=division>Division</h3><p>Division is less straightforward. You can&rsquo;t synthesize it with regular Verilog unless it&rsquo;s by a power of two, which uses a right shift. A right shift truncates the result, so we lose the fractional part:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-plaintext data-lang=plaintext><span style=display:flex><span>0111    7
-</span></span><span style=display:flex><span> &gt;&gt;1    right-shift 1 bit
-</span></span><span style=display:flex><span>0011    3
-</span></span></code></pre></div><p>However, with fractional numbers, we can do accurate division by a constant using multiplication.</p><p>For example, to divide by 2 we multiple by 0.5:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-plaintext data-lang=plaintext><span style=display:flex><span>  0111.1000             7.5000
-</span></span><span style=display:flex><span>x 0000.1000             0.5000
-</span></span><span style=display:flex><span>= 00000011.11000000     3.7500
-</span></span></code></pre></div><p>Back in Q4.4: <code>0011.1100</code>. In this case, our answer is exact.</p><p>To be able to divide arbitrary fixed-point numbers see: <a href=/posts/division-in-verilog/>Division in Verilog</a>.</p><h2 id=in-verilog>In Verilog</h2><p>You can&rsquo;t use a point &lsquo;.&rsquo; in Verilog binary literals, but you can use an underscore. The following module demonstrates all the calculations we performed above:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span><span style=color:#66d9ef>module</span> fixedtest();
-</span></span><span style=display:flex><span>    <span style=color:#66d9ef>reg</span> <span style=color:#66d9ef>signed</span> [<span style=color:#ae81ff>7</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] a, b, c;
-</span></span><span style=display:flex><span>    <span style=color:#66d9ef>reg</span> <span style=color:#66d9ef>signed</span> [<span style=color:#ae81ff>15</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] ab;  <span style=color:#75715e>// large enough for product
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
-</span></span><span style=display:flex><span>    <span style=color:#66d9ef>localparam</span> SF <span style=color:#f92672>=</span> <span style=color:#ae81ff>2.0</span><span style=color:#f92672>**-</span><span style=color:#ae81ff>4.0</span>;  <span style=color:#75715e>// Q4.4 scaling factor is 2^-4
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
-</span></span><span style=display:flex><span>    <span style=color:#66d9ef>initial</span> <span style=color:#66d9ef>begin</span>
-</span></span><span style=display:flex><span>        $display(<span style=color:#e6db74>&#34;Fixed Point Examples from projectf.io.&#34;</span>);
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>        a <span style=color:#f92672>=</span> <span style=color:#ae81ff>8</span><span style=color:#ae81ff>&#39;b0011</span>_1010;  <span style=color:#75715e>// 3.6250
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>        b <span style=color:#f92672>=</span> <span style=color:#ae81ff>8</span><span style=color:#ae81ff>&#39;b0100</span>_0001;  <span style=color:#75715e>// 4.0625
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>        c <span style=color:#f92672>=</span> a <span style=color:#f92672>+</span> b;         <span style=color:#75715e>// 0111.1011 = 7.6875
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>        $display(<span style=color:#e6db74>&#34;%f + %f = %f&#34;</span>, $itor(a<span style=color:#f92672>*</span>SF), $itor(b<span style=color:#f92672>*</span>SF), $itor(c<span style=color:#f92672>*</span>SF));
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>        a <span style=color:#f92672>=</span> <span style=color:#ae81ff>8</span><span style=color:#ae81ff>&#39;b0011</span>_1010;  <span style=color:#75715e>// 3.6250
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>        b <span style=color:#f92672>=</span> <span style=color:#ae81ff>8</span><span style=color:#ae81ff>&#39;b1110</span>_1000;  <span style=color:#75715e>// -1.5000
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>        c <span style=color:#f92672>=</span> a <span style=color:#f92672>+</span> b;         <span style=color:#75715e>// 0010.0010 = 2.1250
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>        $display(<span style=color:#e6db74>&#34;%f + %f = %f&#34;</span>, $itor(a<span style=color:#f92672>*</span>SF), $itor(b<span style=color:#f92672>*</span>SF), $itor(c<span style=color:#f92672>*</span>SF));
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>        a <span style=color:#f92672>=</span> <span style=color:#ae81ff>8</span><span style=color:#ae81ff>&#39;b0011</span>_0100;  <span style=color:#75715e>// 3.2500
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>        b <span style=color:#f92672>=</span> <span style=color:#ae81ff>8</span><span style=color:#ae81ff>&#39;b0010</span>_0001;  <span style=color:#75715e>// 2.0625
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>        ab <span style=color:#f92672>=</span> a <span style=color:#f92672>*</span> b;        <span style=color:#75715e>// 00000110.10110100 = 6.703125
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>        c <span style=color:#f92672>=</span> ab[<span style=color:#ae81ff>11</span><span style=color:#f92672>:</span><span style=color:#ae81ff>4</span>];      <span style=color:#75715e>// take middle 8 bits: 0110.1011 = 6.6875
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>        $display(<span style=color:#e6db74>&#34;%f * %f = %f&#34;</span>, $itor(a<span style=color:#f92672>*</span>SF), $itor(b<span style=color:#f92672>*</span>SF), $itor(c<span style=color:#f92672>*</span>SF));
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>        a <span style=color:#f92672>=</span> <span style=color:#ae81ff>8</span><span style=color:#ae81ff>&#39;b0111</span>_1000;  <span style=color:#75715e>// 7.5000
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>        b <span style=color:#f92672>=</span> <span style=color:#ae81ff>8</span><span style=color:#ae81ff>&#39;b0000</span>_1000;  <span style=color:#75715e>// 0.5000
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>        ab <span style=color:#f92672>=</span> a <span style=color:#f92672>*</span> b;        <span style=color:#75715e>// 00000011.11000000 = 3.7500
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>        c <span style=color:#f92672>=</span> ab[<span style=color:#ae81ff>11</span><span style=color:#f92672>:</span><span style=color:#ae81ff>4</span>];      <span style=color:#75715e>// take middle 8 bits: 0011.1100 = 3.7500
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>        $display(<span style=color:#e6db74>&#34;%f * %f = %f&#34;</span>, $itor(a<span style=color:#f92672>*</span>SF), $itor(b<span style=color:#f92672>*</span>SF), $itor(c<span style=color:#f92672>*</span>SF));
-</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
-</span></span><span style=display:flex><span><span style=color:#66d9ef>endmodule</span>
-</span></span></code></pre></div><p><em>NB. My syntax highlighter doesn&rsquo;t like underscore in numbers, but they do work in actual tools.</em></p><p>The <strong><code>$itor</code></strong> function converts an integer into a real number we can display. We divide our results by 2<sup>4</sup> to account for the lower four bits being fractional. For example, <code>00101000</code> would normally be interpreted as 40 (32+8), but we want it to be 2.5 (2 + 1/2). If we divide 40 by 2<sup>4</sup>=16 we get the desired 2.5.</p><h3 id=large-numbers-small-numbers>Large Numbers, Small Numbers</h3><p>If the numbers you&rsquo;re using are very small or large, you can improve your accuracy by scaling them so that they fit comfortably into the range of your fixed-point numbers.</p><p>Let&rsquo;s say we want to perform the following: <code>3/256 x 7</code>.</p><p>The smallest fraction we can represent in Q4.4 is 1/16, so 3/256 can&rsquo;t be expressed. Rather than use a larger precision we can scale the smaller number up. If we multiply 3/256 by 2<sup>6</sup> we get 0.75, which comfortably fits within our precision. Because we&rsquo;ve multiplied one of our numbers by 2<sup>6</sup> we need to add this to the scaling factor, making it 2<sup>10</sup> (that&rsquo;s 4 bits for our Q4.4 format and 6 bits for adjusted scaling):</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span>a <span style=color:#f92672>=</span> <span style=color:#ae81ff>8</span><span style=color:#ae81ff>&#39;b0000</span>_1100;  <span style=color:#75715e>// 0.7500  (0.75 = 3/256 x 2^6)
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>b <span style=color:#f92672>=</span> <span style=color:#ae81ff>8</span><span style=color:#ae81ff>&#39;b0111</span>_0000;  <span style=color:#75715e>// 7.0000
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>ab <span style=color:#f92672>=</span> a <span style=color:#f92672>*</span> b;        <span style=color:#75715e>// 00000101.01000000
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>c <span style=color:#f92672>=</span> ab[<span style=color:#ae81ff>11</span><span style=color:#f92672>:</span><span style=color:#ae81ff>4</span>];      <span style=color:#75715e>// take middle 8 bits: 0101.1010
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>$display(<span style=color:#e6db74>&#34;%f&#34;</span>, $itor(c<span style=color:#f92672>*</span><span style=color:#ae81ff>2.0</span><span style=color:#f92672>**-</span><span style=color:#ae81ff>10.0</span>));  <span style=color:#75715e>// divide result by 2^10
-</span></span></span></code></pre></div><p>We get the result 0.082031, which is close to the exact value of 0.08203125. To improve on the accuracy further would require using more bits.</p><h2 id=range--precision>Range & Precision</h2><p>You can get a wider range by using more integer bits and better precision by using more fractional bits. However, using more bits increases the amount of FPGA logic required. Consider what your problem requires and the capabilities of your FPGA.</p><h3 id=q44>Q4.4</h3><p>Using two&rsquo;s complement, a 4-bit value ranges from -8 (<code>1000</code>) to +7 (<code>0111</code>).
-A 4-bit fraction can represent numbers as small as 1/16 (<code>0001</code>) and as large as 15/16 (<code>1111</code>).</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-plaintext data-lang=plaintext><span style=display:flex><span>Range:      -8 to 7.9375 (7 + 15/16)
-</span></span><span style=display:flex><span>Precision:  0.0625 (1/16)
-</span></span></code></pre></div><h3 id=q1616>Q16.16</h3><p>Using two&rsquo;s compliment a 16-bit value ranges from -32768 to +32767.</p><p>A 16-bit fraction can represent numbers as small as 1/65536 and as large as 65535/65536.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-plaintext data-lang=plaintext><span style=display:flex><span>Range:      -32768 to 32767.9999847...
-</span></span><span style=display:flex><span>Precision:  0.0000152...
-</span></span></code></pre></div><p>According to <a href=https://en.wikipedia.org/wiki/Fixed-point_arithmetic>Wikipedia</a>, <strong>Doom</strong> used a Q16.16 representation:</p><blockquote><p>&ldquo;&mldr;for all of its non-integer computations, including map system, geometry, rendering, player movement etc. This was done in order for the game to be playable on 386 and 486SX CPUs without an FPU. For compatibility reasons, this representation is still used in modern Doom source ports.&rdquo;</p></blockquote><h3 id=overflow>Overflow</h3><p>All results so far have fitted in our Q4.4 representation, but this doesn&rsquo;t always happen. Let&rsquo;s consider what happens when we multiply 6.5 by 4:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-plaintext data-lang=plaintext><span style=display:flex><span>  0110.1000        6.5000
-</span></span><span style=display:flex><span>x 0100.0000        4.0000
-</span></span><span style=display:flex><span>00011010.00000000 26.0000
+<!doctype html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<html
+  class="not-ready lg:text-base"
+  style="--bg: #fff"
+  lang="en-gb"
+>
+  <head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, shrink-to-fit=no"
+  />
+
+  
+  <title>Fixed Point Numbers in Verilog - Project F</title>
+
+  
+  <meta name="theme-color" />
+
+  
+  
+  
+  
+  <meta name="description" content="Sometimes you need more precision than integers can provide, but floating-point computation is not trivial (try reading IEEE 754). You could use a library or IP block, but simple fixed point maths can often get the job done with little effort. Furthermore, most FPGAs have dedicated DSP blocks that make multiplication and addition of integers fast; we can take advantage of that with a fixed-point approach." />
+  <meta name="author" content="Will Green" />
+  
+
+  
+  
+  
+  
+  
+  
+  <link rel="preload stylesheet" as="style" href="https://projectf.io/main.min.css" />
+
+  
+  
+  
+  
+  
+  <link rel="preload" as="image" href="https://projectf.io/theme.svg" />
+
+  
+  
+  
+  
+  
+
+  
+  
+  
+
+  
+  
+  <script
+    defer
+    src="https://projectf.io/highlight.min.js"
+    onload="hljs.initHighlightingOnLoad();"
+  ></script>
+  
+
+  
+  
+  
+
+  
+  <link rel="icon" href="https://projectf.io/favicon.ico" />
+  <link rel="apple-touch-icon" href="https://projectf.io/apple-touch-icon.png" />
+
+  
+  <meta name="generator" content="Hugo 0.128.2">
+
+  
+  
+  
+  
+  
+  
+  
+
+
+  
+  
+  <meta itemprop="name" content="Fixed Point Numbers in Verilog">
+  <meta itemprop="description" content="Sometimes you need more precision than integers can provide, but floating-point computation is not trivial (try reading IEEE 754). You could use a library or IP block, but simple fixed point maths can often get the job done with little effort. Furthermore, most FPGAs have dedicated DSP blocks that make multiplication and addition of integers fast; we can take advantage of that with a fixed-point approach.">
+  <meta itemprop="datePublished" content="2020-05-26T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2024-04-22T00:00:00+00:00">
+  <meta itemprop="wordCount" content="1812">
+  <meta itemprop="image" content="https://projectf.io/img/posts/fixed-point-numbers-in-verilog/social-card.png">
+  <meta itemprop="keywords" content="Maths">
+  
+  <meta property="og:url" content="https://projectf.io/posts/fixed-point-numbers-in-verilog/">
+  <meta property="og:site_name" content="Project F">
+  <meta property="og:title" content="Fixed Point Numbers in Verilog">
+  <meta property="og:description" content="Sometimes you need more precision than integers can provide, but floating-point computation is not trivial (try reading IEEE 754). You could use a library or IP block, but simple fixed point maths can often get the job done with little effort. Furthermore, most FPGAs have dedicated DSP blocks that make multiplication and addition of integers fast; we can take advantage of that with a fixed-point approach.">
+  <meta property="og:locale" content="en_gb">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2020-05-26T00:00:00+00:00">
+    <meta property="article:modified_time" content="2024-04-22T00:00:00+00:00">
+    <meta property="article:tag" content="Maths">
+    <meta property="og:image" content="https://projectf.io/img/posts/fixed-point-numbers-in-verilog/social-card.png">
+
+  
+  
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://projectf.io/img/posts/fixed-point-numbers-in-verilog/social-card.png">
+  <meta name="twitter:title" content="Fixed Point Numbers in Verilog">
+  <meta name="twitter:description" content="Sometimes you need more precision than integers can provide, but floating-point computation is not trivial (try reading IEEE 754). You could use a library or IP block, but simple fixed point maths can often get the job done with little effort. Furthermore, most FPGAs have dedicated DSP blocks that make multiplication and addition of integers fast; we can take advantage of that with a fixed-point approach.">
+
+  
+  
+  
+  <link rel="canonical" href="https://projectf.io/posts/fixed-point-numbers-in-verilog/" />
+  
+  
+</head>
+
+  <body class="text-black duration-200 ease-out dark:text-white">
+    <header
+  
+  class="mx-auto flex h-[4.5rem] max-w-4xl px-8 lg:justify-center"
+  
+  >
+  <div class="relative z-50 mr-auto flex items-center">
+    <a
+      class="-translate-x-[1px] -translate-y-[1px] text-2xl font-semibold"
+      href="https://projectf.io/"
+      >Project F</a
+    >
+    <div
+      class="btn-dark text-[0] ml-4 h-6 w-6 shrink-0 cursor-pointer [background:url(./theme.svg)_left_center/cover_no-repeat] dark:invert dark:[background-position:right]"
+      role="button"
+      aria-label="Dark"
+    ></div>
+  </div>
+
+  <div
+    class="btn-menu relative z-50 -mr-8 flex h-[4.5rem] w-[5rem] shrink-0 cursor-pointer flex-col items-center justify-center gap-2.5 lg:hidden"
+    role="button"
+    aria-label="Menu"
+  ></div>
+
+  
+
+  <script>
+    
+    const htmlClass = document.documentElement.classList;
+    setTimeout(() => {
+      htmlClass.remove('not-ready');
+    }, 10);
+
+    
+    const btnMenu = document.querySelector('.btn-menu');
+    btnMenu.addEventListener('click', () => {
+      htmlClass.toggle('open');
+    });
+
+    
+    const metaTheme = document.querySelector('meta[name="theme-color"]');
+    const lightBg = '#fff'.replace(/"/g, '');
+    const setDark = (isDark) => {
+      metaTheme.setAttribute('content', isDark ? '#000' : lightBg);
+      htmlClass[isDark ? 'add' : 'remove']('dark');
+      localStorage.setItem('dark', isDark);
+    };
+
+    
+    const darkScheme = window.matchMedia('(prefers-color-scheme: dark)');
+    if (htmlClass.contains('dark')) {
+      setDark(true);
+    } else {
+      const darkVal = localStorage.getItem('dark');
+      setDark(darkVal ? darkVal === 'true' : darkScheme.matches);
+    }
+
+    
+    darkScheme.addEventListener('change', (event) => {
+      setDark(event.matches);
+    });
+
+    
+    const btnDark = document.querySelector('.btn-dark');
+    btnDark.addEventListener('click', () => {
+      setDark(localStorage.getItem('dark') !== 'true');
+    });
+  </script>
+
+  <div
+    class="nav-wrapper fixed inset-x-0 top-full z-40 flex h-full select-none flex-col justify-center pb-16 duration-200 dark:bg-black lg:static lg:h-auto lg:flex-row lg:!bg-transparent lg:pb-0 lg:transition-none"
+  >
+    
+    
+    <nav class="lg:ml-12 lg:flex lg:flex-row lg:items-center lg:space-x-6">
+      
+      <a
+        class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal"
+        href="/"
+        >Home</a
+      >
+      
+      <a
+        class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal"
+        href="/about/"
+        >About</a
+      >
+      
+      <a
+        class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal"
+        href="/contact/"
+        >Contact</a
+      >
+      
+      <a
+        class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal"
+        href="/sponsor/"
+        >Sponsor</a
+      >
+      
+    </nav>
+    
+
+    
+  </div>
+</header>
+
+
+    <main
+      
+      class="prose prose-neutral relative mx-auto min-h-[calc(100%-9rem)] max-w-4xl px-8 pb-4 pt-4 dark:prose-invert"
+      
+    >
+      
+
+<article>
+  <header class="mb-4">
+    <h1 class="!my-0 pb-2.5">Fixed Point Numbers in Verilog</h1>
+
+    
+    <div class="text-sm antialiased opacity-60">
+      
+      Published
+      <time>26 May 2020</time>
+      
+      <span class="mx-1">&middot;</span>
+      <span>Updated
+      <time>22 Apr 2024</time></span>
+      
+      
+    </div>
+    
+  </header>
+
+  <section><p>Sometimes you need more precision than integers can provide, but floating-point computation is not trivial (try reading <a href="https://en.wikipedia.org/wiki/IEEE_754">IEEE 754</a>). You could use a library or IP block, but simple fixed point maths can often get the job done with little effort. Furthermore, most FPGAs have dedicated DSP blocks that make multiplication and addition of integers fast; we can take advantage of that with a fixed-point approach.</p>
+<p>New to the series? Start with <a href="/posts/numbers-in-verilog/">Numbers in Verilog</a>.</p>
+<h3 id="series-outline">Series Outline</h3>
+<ul>
+<li><a href="/posts/numbers-in-verilog">Numbers in Verilog</a> - introduction to numbers in Verilog</li>
+<li><a href="/posts/verilog-vectors-arrays">Vectors and Arrays</a> - working with Verilog vectors and arrays</li>
+<li><a href="/posts/multiplication-fpga-dsps">Multiplication with FPGA DSPs</a> - efficient multiplication with DSPs</li>
+<li>Fixed-Point Numbers in Verilog (this post) - precision without complexity</li>
+<li><a href="/posts/division-in-verilog">Division in Verilog</a> - divided we stand</li>
+<li><em>More maths to follow</em></li>
+</ul>
+<h2 id="what-is-a-fixed-point-number">What is a Fixed Point Number?</h2>
+<p>In a regular binary integer, the bits represent powers of two, with the least significant bit being <code>1</code>.</p>
+<p>For example, decimal <code>13</code> is <code>1101</code> in binary: <code>8 + 4 + 1 = 13</code>.</p>
+<p>With decimal numbers, we&rsquo;re used to the idea of using a <a href="https://en.wikipedia.org/wiki/Decimal_separator">decimal separator</a>, a point or comma, to separate integer and fractional parts. 1001 is one thousand and one, whereas 10.01 is ten and one hundredth.</p>
+<p>We can do the same thing in binary with a <em>binary point</em> and use the bits to represent any powers of two we like.</p>
+<p>For example, we can think of <code>4.75</code> as being <code>4 + 1/2 + 1/4</code>.</p>
+<p>In binary terms this can be visualized as:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-plaintext" data-lang="plaintext"><span style="display:flex;"><span>8    4    2    1   1/2  1/4  1/8  1/16
+</span></span><span style="display:flex;"><span>^    ^    ^    ^    ^    ^    ^    ^
+</span></span><span style="display:flex;"><span>0    1    0    0    1    1    0    0
+</span></span></code></pre></div><p>Or, with a handy point to mark the fractional part: <code>0100.1100</code>.</p>
+<p>We&rsquo;re choosing to interpret the value as being fixed point, but from an FPGA logic point of view, it&rsquo;s just an 8-bit integer: provided we are consistent in the position of the fixed point we&rsquo;ll get the expected result from mathematical operations. See later in this post if you have existing integers you need to convert to fixed point.</p>
+<h3 id="q-notation">Q Notation</h3>
+<p>To express the number of integer and fractional bits we use <a href="https://en.wikipedia.org/wiki/Q_%28number_format%29">Q number format</a>: <strong>Qi.f</strong> where <strong>i</strong> is the number of integer bits and <strong>f</strong> is the number of fractional bits. <code>0100.1100</code> has four integer and four fractional bits, so is Q4.4. We&rsquo;ll mostly use Q4.4 in this post to keep the examples manageable.</p>
+<p><em>ProTip: Some sources include the sign bit in <strong>i</strong>, but others do not. In our examples, we include the sign bit: thus Q4.4 is from -8 to 7.9375 (7 + 15/16): we discuss range later in this post.</em></p>
+<h2 id="maths-just-works">Maths Just Works!</h2>
+<p>All the usual binary maths work when used with fixed-point numbers. Verilog can generally synthesize addition, subtraction, and multiplication on an FPGA. We cannot synthesize division automatically, but we can multiply by fractional numbers, e.g. multiply by 0.1 instead of dividing by 10.</p>
+<h3 id="addition--subtraction">Addition &amp; Subtraction</h3>
+<p>Addition works in exactly the same way as for integers:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-plaintext" data-lang="plaintext"><span style="display:flex;"><span>  0011.1010        3.6250
+</span></span><span style="display:flex;"><span>+ 0100.0001      + 4.0625
+</span></span><span style="display:flex;"><span>= 0111.1011      = 7.6875
+</span></span></code></pre></div><p>We can also do subtraction using <a href="/posts/numbers-in-verilog/#signed-numbers">two&rsquo;s complement</a> to express the negative number:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-plaintext" data-lang="plaintext"><span style="display:flex;"><span>  0011.1010        3.6250
+</span></span><span style="display:flex;"><span>+ 1110.1000      - 1.5000
+</span></span><span style="display:flex;"><span>= 0010.0010      = 2.1250
+</span></span></code></pre></div><p>How did we get the two&rsquo;s complement for -1.5?</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-plaintext" data-lang="plaintext"><span style="display:flex;"><span>1.5 = 1 + 1/2 = 0001.1000
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Start:  0001.1000 (1.5)
+</span></span><span style="display:flex;"><span>Invert: 1110.0111
+</span></span><span style="display:flex;"><span>Add 1:  0000.0001
+</span></span><span style="display:flex;"><span>Result: 1110.1000 (-1.5)
+</span></span></code></pre></div><h3 id="multiplication">Multiplication</h3>
+<p>Multiplication works as expected too, but the product contains twice the number of bits. Multiplying two Q4.4 numbers results in a Q8.8 product:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-plaintext" data-lang="plaintext"><span style="display:flex;"><span>  0011.0100        3.2500
+</span></span><span style="display:flex;"><span>x 0010.0001        2.0625
+</span></span></code></pre></div><p>You can do the long multiplication to produce:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-plaintext" data-lang="plaintext"><span style="display:flex;"><span>00000110.10110100 = 6.703125
+</span></span></code></pre></div><p>We can round this to our original Q4.4 format by taking the eight middle bits:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-plaintext" data-lang="plaintext"><span style="display:flex;"><span>0000[0110.1011]0100 = 0110.1011 = 6.6875
+</span></span></code></pre></div><p>You can see we lost some precision there; this often happens when you convert to the original precision after multiplication. If our result had been 8 or higher, it would have overflowed our Q4.4 format because the largest digit we can represent with four bits in two&rsquo;s complement is 7. We discuss range and precision in more detail below.</p>
+<h3 id="division">Division</h3>
+<p>Division is less straightforward. You can&rsquo;t synthesize it with regular Verilog unless it&rsquo;s by a power of two, which uses a right shift. A right shift truncates the result, so we lose the fractional part:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-plaintext" data-lang="plaintext"><span style="display:flex;"><span>0111    7
+</span></span><span style="display:flex;"><span> &gt;&gt;1    right-shift 1 bit
+</span></span><span style="display:flex;"><span>0011    3
+</span></span></code></pre></div><p>However, with fractional numbers, we can do accurate division by a constant using multiplication.</p>
+<p>For example, to divide by 2 we multiple by 0.5:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-plaintext" data-lang="plaintext"><span style="display:flex;"><span>  0111.1000             7.5000
+</span></span><span style="display:flex;"><span>x 0000.1000             0.5000
+</span></span><span style="display:flex;"><span>= 00000011.11000000     3.7500
+</span></span></code></pre></div><p>Back in Q4.4: <code>0011.1100</code>. In this case, our answer is exact.</p>
+<p>To be able to divide arbitrary fixed-point numbers see: <a href="/posts/division-in-verilog/">Division in Verilog</a>.</p>
+<h2 id="in-verilog">In Verilog</h2>
+<p>You can&rsquo;t use a point &lsquo;.&rsquo; in Verilog binary literals, but you can use an underscore. The following module demonstrates all the calculations we performed above:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> fixedtest();
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">reg</span> <span style="color:#66d9ef">signed</span> [<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] a, b, c;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">reg</span> <span style="color:#66d9ef">signed</span> [<span style="color:#ae81ff">15</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] ab;  <span style="color:#75715e">// large enough for product
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">localparam</span> SF <span style="color:#f92672">=</span> <span style="color:#ae81ff">2.0</span><span style="color:#f92672">**-</span><span style="color:#ae81ff">4.0</span>;  <span style="color:#75715e">// Q4.4 scaling factor is 2^-4
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">initial</span> <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>        $display(<span style="color:#e6db74">&#34;Fixed Point Examples from projectf.io.&#34;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        a <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b0011</span>_1010;  <span style="color:#75715e">// 3.6250
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        b <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b0100</span>_0001;  <span style="color:#75715e">// 4.0625
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        c <span style="color:#f92672">=</span> a <span style="color:#f92672">+</span> b;         <span style="color:#75715e">// 0111.1011 = 7.6875
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        $display(<span style="color:#e6db74">&#34;%f + %f = %f&#34;</span>, $itor(a<span style="color:#f92672">*</span>SF), $itor(b<span style="color:#f92672">*</span>SF), $itor(c<span style="color:#f92672">*</span>SF));
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        a <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b0011</span>_1010;  <span style="color:#75715e">// 3.6250
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        b <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b1110</span>_1000;  <span style="color:#75715e">// -1.5000
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        c <span style="color:#f92672">=</span> a <span style="color:#f92672">+</span> b;         <span style="color:#75715e">// 0010.0010 = 2.1250
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        $display(<span style="color:#e6db74">&#34;%f + %f = %f&#34;</span>, $itor(a<span style="color:#f92672">*</span>SF), $itor(b<span style="color:#f92672">*</span>SF), $itor(c<span style="color:#f92672">*</span>SF));
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        a <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b0011</span>_0100;  <span style="color:#75715e">// 3.2500
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        b <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b0010</span>_0001;  <span style="color:#75715e">// 2.0625
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        ab <span style="color:#f92672">=</span> a <span style="color:#f92672">*</span> b;        <span style="color:#75715e">// 00000110.10110100 = 6.703125
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        c <span style="color:#f92672">=</span> ab[<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">4</span>];      <span style="color:#75715e">// take middle 8 bits: 0110.1011 = 6.6875
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        $display(<span style="color:#e6db74">&#34;%f * %f = %f&#34;</span>, $itor(a<span style="color:#f92672">*</span>SF), $itor(b<span style="color:#f92672">*</span>SF), $itor(c<span style="color:#f92672">*</span>SF));
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        a <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b0111</span>_1000;  <span style="color:#75715e">// 7.5000
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        b <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b0000</span>_1000;  <span style="color:#75715e">// 0.5000
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        ab <span style="color:#f92672">=</span> a <span style="color:#f92672">*</span> b;        <span style="color:#75715e">// 00000011.11000000 = 3.7500
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        c <span style="color:#f92672">=</span> ab[<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">4</span>];      <span style="color:#75715e">// take middle 8 bits: 0011.1100 = 3.7500
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        $display(<span style="color:#e6db74">&#34;%f * %f = %f&#34;</span>, $itor(a<span style="color:#f92672">*</span>SF), $itor(b<span style="color:#f92672">*</span>SF), $itor(c<span style="color:#f92672">*</span>SF));
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
+</span></span></code></pre></div><p><em>NB. My syntax highlighter doesn&rsquo;t like underscore in numbers, but they do work in actual tools.</em></p>
+<p>The <strong><code>$itor</code></strong> function converts an integer into a real number we can display. We divide our results by 2<sup>4</sup> to account for the lower four bits being fractional. For example, <code>00101000</code> would normally be interpreted as 40 (32+8), but we want it to be 2.5 (2 + 1/2). If we divide 40 by 2<sup>4</sup>=16 we get the desired 2.5.</p>
+<h3 id="large-numbers-small-numbers">Large Numbers, Small Numbers</h3>
+<p>If the numbers you&rsquo;re using are very small or large, you can improve your accuracy by scaling them so that they fit comfortably into the range of your fixed-point numbers.</p>
+<p>Let&rsquo;s say we want to perform the following: <code>3/256 x 7</code>.</p>
+<p>The smallest fraction we can represent in Q4.4 is 1/16, so 3/256 can&rsquo;t be expressed. Rather than use a larger precision we can scale the smaller number up. If we multiply 3/256 by 2<sup>6</sup> we get 0.75, which comfortably fits within our precision. Because we&rsquo;ve multiplied one of our numbers by 2<sup>6</sup> we need to add this to the scaling factor, making it 2<sup>10</sup> (that&rsquo;s 4 bits for our Q4.4 format and 6 bits for adjusted scaling):</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span>a <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b0000</span>_1100;  <span style="color:#75715e">// 0.7500  (0.75 = 3/256 x 2^6)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>b <span style="color:#f92672">=</span> <span style="color:#ae81ff">8</span><span style="color:#ae81ff">&#39;b0111</span>_0000;  <span style="color:#75715e">// 7.0000
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>ab <span style="color:#f92672">=</span> a <span style="color:#f92672">*</span> b;        <span style="color:#75715e">// 00000101.01000000
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>c <span style="color:#f92672">=</span> ab[<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">4</span>];      <span style="color:#75715e">// take middle 8 bits: 0101.1010
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>$display(<span style="color:#e6db74">&#34;%f&#34;</span>, $itor(c<span style="color:#f92672">*</span><span style="color:#ae81ff">2.0</span><span style="color:#f92672">**-</span><span style="color:#ae81ff">10.0</span>));  <span style="color:#75715e">// divide result by 2^10
+</span></span></span></code></pre></div><p>We get the result 0.082031, which is close to the exact value of 0.08203125. To improve on the accuracy further would require using more bits.</p>
+<h2 id="range--precision">Range &amp; Precision</h2>
+<p>You can get a wider range by using more integer bits and better precision by using more fractional bits. However, using more bits increases the amount of FPGA logic required. Consider what your problem requires and the capabilities of your FPGA.</p>
+<h3 id="q44">Q4.4</h3>
+<p>Using two&rsquo;s complement, a 4-bit value ranges from -8 (<code>1000</code>) to +7 (<code>0111</code>).
+A 4-bit fraction can represent numbers as small as 1/16 (<code>0001</code>) and as large as 15/16 (<code>1111</code>).</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-plaintext" data-lang="plaintext"><span style="display:flex;"><span>Range:      -8 to 7.9375 (7 + 15/16)
+</span></span><span style="display:flex;"><span>Precision:  0.0625 (1/16)
+</span></span></code></pre></div><h3 id="q1616">Q16.16</h3>
+<p>Using two&rsquo;s compliment a 16-bit value ranges from -32768 to +32767.</p>
+<p>A 16-bit fraction can represent numbers as small as 1/65536 and as large as 65535/65536.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-plaintext" data-lang="plaintext"><span style="display:flex;"><span>Range:      -32768 to 32767.9999847...
+</span></span><span style="display:flex;"><span>Precision:  0.0000152...
+</span></span></code></pre></div><p>According to <a href="https://en.wikipedia.org/wiki/Fixed-point_arithmetic">Wikipedia</a>, <strong>Doom</strong> used a Q16.16 representation:</p>
+<blockquote>
+<p>&ldquo;&hellip;for all of its non-integer computations, including map system, geometry, rendering, player movement etc. This was done in order for the game to be playable on 386 and 486SX CPUs without an FPU. For compatibility reasons, this representation is still used in modern Doom source ports.&rdquo;</p>
+</blockquote>
+<h3 id="overflow">Overflow</h3>
+<p>All results so far have fitted in our Q4.4 representation, but this doesn&rsquo;t always happen. Let&rsquo;s consider what happens when we multiply 6.5 by 4:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-plaintext" data-lang="plaintext"><span style="display:flex;"><span>  0110.1000        6.5000
+</span></span><span style="display:flex;"><span>x 0100.0000        4.0000
+</span></span><span style="display:flex;"><span>00011010.00000000 26.0000
 </span></span></code></pre></div><p>If we take the eight middle bits, we get 1010.0000, which is -6. Our Q4.4 representation can&rsquo;t hold 26.
-For a Q4.4 product, if any of the first four bits contain <code>1</code>, then we&rsquo;ve overflowed. You can also check for a loss of precision by looking for any 1s in the four least significant bits.</p><p>Overflow can also happen with addition:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-plaintext data-lang=plaintext><span style=display:flex><span>  0110.1010        6.6250
-</span></span><span style=display:flex><span>+ 0100.0001     +  4.0625
-</span></span><span style=display:flex><span>= 1010.1011     = -5.3125 ?!
-</span></span></code></pre></div><p>And if our result is less than -8 it will overflow in the negative direction:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-plaintext data-lang=plaintext><span style=display:flex><span>  1010.0000       -6.0000
-</span></span><span style=display:flex><span>+ 1010.0000     + -6.0000
-</span></span><span style=display:flex><span>= 0100.0000     =  4.0000 ?!
-</span></span></code></pre></div><p>Thankfully it&rsquo;s not too hard to detect this. If both our operands are positive and the result is negative, then overflow must have occurred. Similarly, if both our operands are negative and the result is positive, then it has overflowed too.</p><h2 id=converting-to-and-from-integers>Converting to and from Integers</h2><p>Conversion to and from regular binary integers simply requires using the appropriate left or right shift. For example, if we&rsquo;re using Q16.16 format we need to left-shift an integer 16 positions to create the Q16.16 fixed-point number:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-plaintext data-lang=plaintext><span style=display:flex><span>101010  // decimal 42
-</span></span><span style=display:flex><span>&lt;&lt; 16   // left shift 16 positions
-</span></span><span style=display:flex><span>101010000000000000000
-</span></span><span style=display:flex><span>0000000000101010.0000000000000000  // with all bits shown in Q16.16 notation
-</span></span></code></pre></div><p>To make long binary numbers easier to read it&rsquo;s common practice to include spaces. For example, we could represent decimal 42 in Q16.16 as:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-plaintext data-lang=plaintext><span style=display:flex><span>0000 0000 0010 1010.0000 0000 0000 0000
-</span></span></code></pre></div><p>We can then perform all the usual arithmetic operators on it with other Q16.16 numbers. For example, let&rsquo;s add decimal 2.875:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-plaintext data-lang=plaintext><span style=display:flex><span>0000 0000 0010 1010.0000 0000 0000 0000  //  42
-</span></span><span style=display:flex><span>0000 0000 0000 0010.1110 0000 0000 0000  // + 2.875
-</span></span><span style=display:flex><span>0000 0000 0010 1100.1110 0000 0000 0000  //  44.875
-</span></span></code></pre></div><p>If you need to convert a Q16.16 number back to a regular integer, you right shift 16 positions:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-plaintext data-lang=plaintext><span style=display:flex><span>0000 0000 0001 0111.1110 0000 0000 0000  // 44.875
-</span></span><span style=display:flex><span>&gt;&gt; 16  // right shift 16 positions
-</span></span><span style=display:flex><span>0000 0000 0010 1100 // 44
-</span></span></code></pre></div><p>This removes (truncates) the fractional part, so the answer ends up being <code>101100</code> (decimal 44).</p><h2 id=whats-next>What&rsquo;s Next?</h2><p>In our next installment we get all divisive with <a href=/posts/division-in-verilog>Division in Verilog</a>. Or check out some of our other maths posts: <a href=/posts/square-root-in-verilog/>square root</a>, and <a href=/posts/fpga-sine-table/>sine & cosine</a>. I also have a demo using fixed-point multiplication to render the <a href=/posts/mandelbrot-verilog/>Mandelbrot set in Verilog</a>.</p></section><footer class="mt-12 flex flex-wrap"><a class="mb-1.5 mr-1.5 rounded-lg bg-black/[3%] px-5 py-1.5 no-underline dark:bg-white/[8%]" href=https://projectf.io/tags/maths>maths</a></footer></article></main><footer class="opaco mx-auto flex h-[4.5rem] max-w-4xl items-center px-8 text-[0.9em] opacity-60"><div class=mr-auto><a class=link href=https://projectf.io/>Project F</a>: FPGA and RISC-V. Only hardware makes it possible!
-&copy; 2025 Will Green.</div></footer></body></html>
+For a Q4.4 product, if any of the first four bits contain <code>1</code>, then we&rsquo;ve overflowed. You can also check for a loss of precision by looking for any 1s in the four least significant bits.</p>
+<p>Overflow can also happen with addition:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-plaintext" data-lang="plaintext"><span style="display:flex;"><span>  0110.1010        6.6250
+</span></span><span style="display:flex;"><span>+ 0100.0001     +  4.0625
+</span></span><span style="display:flex;"><span>= 1010.1011     = -5.3125 ?!
+</span></span></code></pre></div><p>And if our result is less than -8 it will overflow in the negative direction:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-plaintext" data-lang="plaintext"><span style="display:flex;"><span>  1010.0000       -6.0000
+</span></span><span style="display:flex;"><span>+ 1010.0000     + -6.0000
+</span></span><span style="display:flex;"><span>= 0100.0000     =  4.0000 ?!
+</span></span></code></pre></div><p>Thankfully it&rsquo;s not too hard to detect this. If both our operands are positive and the result is negative, then overflow must have occurred. Similarly, if both our operands are negative and the result is positive, then it has overflowed too.</p>
+<h2 id="converting-to-and-from-integers">Converting to and from Integers</h2>
+<p>Conversion to and from regular binary integers simply requires using the appropriate left or right shift. For example, if we&rsquo;re using Q16.16 format we need to left-shift an integer 16 positions to create the Q16.16 fixed-point number:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-plaintext" data-lang="plaintext"><span style="display:flex;"><span>101010  // decimal 42
+</span></span><span style="display:flex;"><span>&lt;&lt; 16   // left shift 16 positions
+</span></span><span style="display:flex;"><span>101010000000000000000
+</span></span><span style="display:flex;"><span>0000000000101010.0000000000000000  // with all bits shown in Q16.16 notation
+</span></span></code></pre></div><p>To make long binary numbers easier to read it&rsquo;s common practice to include spaces. For example, we could represent decimal 42 in Q16.16 as:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-plaintext" data-lang="plaintext"><span style="display:flex;"><span>0000 0000 0010 1010.0000 0000 0000 0000
+</span></span></code></pre></div><p>We can then perform all the usual arithmetic operators on it with other Q16.16 numbers. For example, let&rsquo;s add decimal 2.875:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-plaintext" data-lang="plaintext"><span style="display:flex;"><span>0000 0000 0010 1010.0000 0000 0000 0000  //  42
+</span></span><span style="display:flex;"><span>0000 0000 0000 0010.1110 0000 0000 0000  // + 2.875
+</span></span><span style="display:flex;"><span>0000 0000 0010 1100.1110 0000 0000 0000  //  44.875
+</span></span></code></pre></div><p>If you need to convert a Q16.16 number back to a regular integer, you right shift 16 positions:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-plaintext" data-lang="plaintext"><span style="display:flex;"><span>0000 0000 0001 0111.1110 0000 0000 0000  // 44.875
+</span></span><span style="display:flex;"><span>&gt;&gt; 16  // right shift 16 positions
+</span></span><span style="display:flex;"><span>0000 0000 0010 1100 // 44
+</span></span></code></pre></div><p>This removes (truncates) the fractional part, so the answer ends up being <code>101100</code> (decimal 44).</p>
+<h2 id="whats-next">What&rsquo;s Next?</h2>
+<p>In our next installment we get all divisive with <a href="/posts/division-in-verilog">Division in Verilog</a>. Or check out some of our other maths posts: <a href="/posts/square-root-in-verilog/">square root</a>, and <a href="/posts/fpga-sine-table/">sine &amp; cosine</a>. I also have a demo using fixed-point multiplication to render the <a href="/posts/mandelbrot-verilog/">Mandelbrot set in Verilog</a>.</p>
+</section>
+
+  
+  
+  <footer class="mt-12 flex flex-wrap">
+     
+    <a
+      class="mb-1.5 mr-1.5 rounded-lg bg-black/[3%] px-5 py-1.5 no-underline dark:bg-white/[8%]"
+      href="https://projectf.io/tags/maths"
+      >maths</a
+    >
+    
+  </footer>
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+
+  
+</article>
+
+
+    </main>
+
+    <footer
+  
+  class="opaco mx-auto flex h-[4.5rem] max-w-4xl items-center px-8 text-[0.9em] opacity-60"
+  
+>
+  <div class="mr-auto">
+    <a class="link" href="https://projectf.io/">Project F</a>: FPGA and RISC-V. Only hardware makes it possible!
+    &copy; 2025 Will Green. 
+  </div>
+</footer>
+
+  </body>
+</html>

@@ -1,91 +1,492 @@
-<!doctype html><html class="not-ready lg:text-base" style=--bg:#fff lang=en-gb><head><meta charset=utf-8><meta http-equiv=X-UA-Compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><title>Verilog Vectors and Arrays - Project F</title>
-<meta name=theme-color><meta name=description content="Welcome back to my series covering mathematics and algorithms with FPGAs. In this part, we dig into vectors and arrays, including slicing, configurable widths, for loops, and bit and byte ordering."><meta name=author content="Will Green"><link rel="preload stylesheet" as=style href=https://projectf.io/main.min.css><link rel=preload as=image href=https://projectf.io/theme.svg><script defer src=https://projectf.io/highlight.min.js onload=hljs.initHighlightingOnLoad()></script><link rel=icon href=https://projectf.io/favicon.ico><link rel=apple-touch-icon href=https://projectf.io/apple-touch-icon.png><meta name=generator content="Hugo 0.128.2"><meta itemprop=name content="Verilog Vectors and Arrays"><meta itemprop=description content="Welcome back to my series covering mathematics and algorithms with FPGAs. In this part, we dig into vectors and arrays, including slicing, configurable widths, for loops, and bit and byte ordering."><meta itemprop=datePublished content="2022-12-13T00:00:00+00:00"><meta itemprop=dateModified content="2022-12-13T00:00:00+00:00"><meta itemprop=wordCount content="1280"><meta itemprop=image content="https://projectf.io/img/posts/verilog-vectors-arrays/social-card.png"><meta itemprop=keywords content="Maths"><meta property="og:url" content="https://projectf.io/posts/verilog-vectors-arrays/"><meta property="og:site_name" content="Project F"><meta property="og:title" content="Verilog Vectors and Arrays"><meta property="og:description" content="Welcome back to my series covering mathematics and algorithms with FPGAs. In this part, we dig into vectors and arrays, including slicing, configurable widths, for loops, and bit and byte ordering."><meta property="og:locale" content="en_gb"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2022-12-13T00:00:00+00:00"><meta property="article:modified_time" content="2022-12-13T00:00:00+00:00"><meta property="article:tag" content="Maths"><meta property="og:image" content="https://projectf.io/img/posts/verilog-vectors-arrays/social-card.png"><meta name=twitter:card content="summary_large_image"><meta name=twitter:image content="https://projectf.io/img/posts/verilog-vectors-arrays/social-card.png"><meta name=twitter:title content="Verilog Vectors and Arrays"><meta name=twitter:description content="Welcome back to my series covering mathematics and algorithms with FPGAs. In this part, we dig into vectors and arrays, including slicing, configurable widths, for loops, and bit and byte ordering."><link rel=canonical href=https://projectf.io/posts/verilog-vectors-arrays/></head><body class="text-black duration-200 ease-out dark:text-white"><header class="mx-auto flex h-[4.5rem] max-w-4xl px-8 lg:justify-center"><div class="relative z-50 mr-auto flex items-center"><a class="-translate-x-[1px] -translate-y-[1px] text-2xl font-semibold" href=https://projectf.io/>Project F</a><div class="btn-dark text-[0] ml-4 h-6 w-6 shrink-0 cursor-pointer [background:url(./theme.svg)_left_center/cover_no-repeat] dark:invert dark:[background-position:right]" role=button aria-label=Dark></div></div><div class="btn-menu relative z-50 -mr-8 flex h-[4.5rem] w-[5rem] shrink-0 cursor-pointer flex-col items-center justify-center gap-2.5 lg:hidden" role=button aria-label=Menu></div><script>const htmlClass=document.documentElement.classList;setTimeout(()=>{htmlClass.remove("not-ready")},10);const btnMenu=document.querySelector(".btn-menu");btnMenu.addEventListener("click",()=>{htmlClass.toggle("open")});const metaTheme=document.querySelector('meta[name="theme-color"]'),lightBg="#fff".replace(/"/g,""),setDark=e=>{metaTheme.setAttribute("content",e?"#000":lightBg),htmlClass[e?"add":"remove"]("dark"),localStorage.setItem("dark",e)},darkScheme=window.matchMedia("(prefers-color-scheme: dark)");if(htmlClass.contains("dark"))setDark(!0);else{const e=localStorage.getItem("dark");setDark(e?e==="true":darkScheme.matches)}darkScheme.addEventListener("change",e=>{setDark(e.matches)});const btnDark=document.querySelector(".btn-dark");btnDark.addEventListener("click",()=>{setDark(localStorage.getItem("dark")!=="true")})</script><div class="nav-wrapper fixed inset-x-0 top-full z-40 flex h-full select-none flex-col justify-center pb-16 duration-200 dark:bg-black lg:static lg:h-auto lg:flex-row lg:!bg-transparent lg:pb-0 lg:transition-none"><nav class="lg:ml-12 lg:flex lg:flex-row lg:items-center lg:space-x-6"><a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/>Home</a>
-<a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/about/>About</a>
-<a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/contact/>Contact</a>
-<a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/sponsor/>Sponsor</a></nav></div></header><main class="prose prose-neutral relative mx-auto min-h-[calc(100%-9rem)] max-w-4xl px-8 pb-4 pt-4 dark:prose-invert"><article><header class=mb-4><h1 class="!my-0 pb-2.5">Verilog Vectors and Arrays</h1><div class="text-sm antialiased opacity-60">Published
-<time>13 Dec 2022</time></div></header><section><p>Welcome back to my series covering mathematics and algorithms with FPGAs. In this part, we dig into vectors and arrays, including slicing, configurable widths, for loops, and bit and byte ordering. New to the series? Start with <a href=/posts/numbers-in-verilog/>Numbers in Verilog</a>.</p><h3 id=series-outline>Series Outline</h3><ul><li><a href=/posts/numbers-in-verilog>Numbers in Verilog</a> - introduction to numbers in Verilog</li><li>Vectors and Arrays (this post) - working with Verilog vectors and arrays</li><li><a href=/posts/multiplication-fpga-dsps>Multiplication with DSPs</a> - efficient multiplication with FPGA DSPs</li><li><a href=/posts/fixed-point-numbers-in-verilog/>Fixed-Point Numbers in Verilog</a> - precision without complexity</li><li><a href=/posts/division-in-verilog>Division in Verilog</a> - divided we stand</li><li><em>More maths to follow</em></li></ul><h2 id=what-is-a-vector>What is a Vector?</h2><p>A quick recap from <a href=/posts/numbers-in-verilog>Numbers in Verilog</a>:</p><p>By default, a Verilog register or wire is 1 bit wide. This is a <strong>scalar</strong>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span><span style=color:#66d9ef>wire</span>  x;  <span style=color:#75715e>// 1 bit wire
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#66d9ef>reg</span>   y;  <span style=color:#75715e>// also 1 bit
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#66d9ef>logic</span> z;  <span style=color:#75715e>// me too!
-</span></span></span></code></pre></div><p>A scalar can only hold 0 or 1<sup id=fnref:1><a href=#fn:1 class=footnote-ref role=doc-noteref>1</a></sup>.</p><p>We need a <strong>vector</strong> to hold something larger.</p><p>A vector is declared like this: <code>type [upper:lower] name;</code></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span><span style=color:#66d9ef>wire</span>   [<span style=color:#ae81ff>5</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] a;  <span style=color:#75715e>// 6-bit wire
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#66d9ef>reg</span>    [<span style=color:#ae81ff>7</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] b;  <span style=color:#75715e>// 8-bit reg
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#66d9ef>logic</span> [<span style=color:#ae81ff>11</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] c;  <span style=color:#75715e>// 12-bit logic
-</span></span></span></code></pre></div><p><code>a</code>, <code>b</code>, and <code>c</code> are vectors:</p><ul><li>Wire <strong>a</strong> handles 0-63 inclusive (2<sup>6</sup> is 64).</li><li>Register <strong>b</strong> handles 0-255 inclusive (2<sup>8</sup> is 256).</li><li>Logic <strong>c</strong> handles 0-4095 inclusive (2<sup>12</sup> is 4096).</li></ul><p>With that recap out of the way, let&rsquo;s look at some things we can do with vectors.</p><h2 id=slicing-vectors>Slicing Vectors</h2><p>You select an individual bit using its index; for example:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span><span style=color:#66d9ef>wire</span> [<span style=color:#ae81ff>3</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] n;  <span style=color:#75715e>// 4-bit wire vector
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#66d9ef>wire</span> p, q;     <span style=color:#75715e>// wire scalars
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
-</span></span><span style=display:flex><span><span style=color:#66d9ef>always_comb</span> <span style=color:#66d9ef>begin</span>
-</span></span><span style=display:flex><span>    p <span style=color:#f92672>=</span> n[<span style=color:#ae81ff>0</span>];
-</span></span><span style=display:flex><span>    q <span style=color:#f92672>=</span> n[<span style=color:#ae81ff>3</span>];
-</span></span><span style=display:flex><span><span style=color:#66d9ef>end</span>
-</span></span></code></pre></div><p>You select a subset by specifying the start and end bits:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span><span style=color:#66d9ef>wire</span> [<span style=color:#ae81ff>11</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] a;       <span style=color:#75715e>// 12-bit wire vector
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#66d9ef>wire</span> [<span style=color:#ae81ff>3</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] x, y, z;  <span style=color:#75715e>// 4-bit wire vectors
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
-</span></span><span style=display:flex><span><span style=color:#66d9ef>always_comb</span> <span style=color:#66d9ef>begin</span>
-</span></span><span style=display:flex><span>    x <span style=color:#f92672>=</span> a[<span style=color:#ae81ff>11</span><span style=color:#f92672>:</span><span style=color:#ae81ff>8</span>];
-</span></span><span style=display:flex><span>    y <span style=color:#f92672>=</span> a[<span style=color:#ae81ff>7</span><span style=color:#f92672>:</span><span style=color:#ae81ff>4</span>];
-</span></span><span style=display:flex><span>    z <span style=color:#f92672>=</span> a[<span style=color:#ae81ff>3</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>];
-</span></span><span style=display:flex><span><span style=color:#66d9ef>end</span>
-</span></span></code></pre></div><p>You can also use the concat operator <code>{}</code> to select bits from vectors. The following example is equivalent to the one above:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span><span style=color:#66d9ef>wire</span> [<span style=color:#ae81ff>11</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] a;       <span style=color:#75715e>// 12-bit wire vector
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#66d9ef>wire</span> [<span style=color:#ae81ff>3</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] x, y, z;  <span style=color:#75715e>// 4-bit wire vectors
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
-</span></span><span style=display:flex><span><span style=color:#66d9ef>always_comb</span> <span style=color:#66d9ef>begin</span>
-</span></span><span style=display:flex><span>    {x,y,z} <span style=color:#f92672>=</span> a;
-</span></span><span style=display:flex><span><span style=color:#66d9ef>end</span>
-</span></span></code></pre></div><p>Rather than specify an end bit, you can specify a width with <code>-</code> and <code>+</code>.</p><p>These three assignments all select the same four bits:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span><span style=color:#66d9ef>wire</span> [<span style=color:#ae81ff>11</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] a;       <span style=color:#75715e>// 12-bit wire vector
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#66d9ef>wire</span> [<span style=color:#ae81ff>3</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] x, y, z;  <span style=color:#75715e>// 4-bit wire vectors
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
-</span></span><span style=display:flex><span><span style=color:#66d9ef>always_comb</span> <span style=color:#66d9ef>begin</span>
-</span></span><span style=display:flex><span>    x <span style=color:#f92672>=</span> a[<span style=color:#ae81ff>11</span><span style=color:#f92672>:</span><span style=color:#ae81ff>8</span>];   <span style=color:#75715e>// 11:8
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    y <span style=color:#f92672>=</span> a[<span style=color:#ae81ff>11</span><span style=color:#f92672>-:</span><span style=color:#ae81ff>4</span>];  <span style=color:#75715e>// also 11:8
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    z <span style=color:#f92672>=</span> a[<span style=color:#ae81ff>8</span><span style=color:#f92672>+:</span><span style=color:#ae81ff>4</span>];   <span style=color:#75715e>// also 11:8
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#66d9ef>end</span>
-</span></span></code></pre></div><p><em>ProTip: The start bit can be a variable, but not the width.</em></p><h3 id=loss-of-sign>Loss of Sign</h3><p>With signed variables, using slices will make the value unsigned, even if you select the whole range!</p><p>However, you can force a variable to be signed with the <code>$signed</code> system function:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span><span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>signed</span> [<span style=color:#ae81ff>11</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] a <span style=color:#f92672>=</span> <span style=color:#f92672>-</span><span style=color:#ae81ff>64</span>;  <span style=color:#75715e>// 12-bit signed wire vector
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
-</span></span><span style=display:flex><span><span style=color:#66d9ef>initial</span> <span style=color:#66d9ef>begin</span>
-</span></span><span style=display:flex><span>    $display(<span style=color:#e6db74>&#34;a is signed:   %d&#34;</span>, a);
-</span></span><span style=display:flex><span>    $display(<span style=color:#e6db74>&#34;a is unsigned:  %d&#34;</span>, a[<span style=color:#ae81ff>11</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>]);
-</span></span><span style=display:flex><span>    $display(<span style=color:#e6db74>&#34;a is signed:   %d&#34;</span>, $signed(a[<span style=color:#ae81ff>11</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>]));
-</span></span><span style=display:flex><span><span style=color:#66d9ef>end</span>
-</span></span></code></pre></div><p>Produces the following:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-text data-lang=text><span style=display:flex><span>a is signed:     -64
-</span></span><span style=display:flex><span>a is unsigned:  4032
-</span></span><span style=display:flex><span>a is signed:     -64
-</span></span></code></pre></div><p><code>$signed</code> is no panacea: <a href=/posts/numbers-in-verilog#signed-expressions>sign extension</a> can still catch you out.</p><h2 id=configurable-widths>Configurable Widths</h2><p>Avoid hard-coding vector widths; it limits your design flexibility.</p><p>Parameters provide a simple way to configure vector widths:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span><span style=color:#66d9ef>parameter</span> ADDRW<span style=color:#f92672>=</span><span style=color:#ae81ff>16</span>;  <span style=color:#75715e>// address width: 16 bits for 2^16 memory locations
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
-</span></span><span style=display:flex><span><span style=color:#66d9ef>logic</span> [ADDRW<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] addr_read;
-</span></span><span style=display:flex><span><span style=color:#66d9ef>logic</span> [ADDRW<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] addr_write;
-</span></span></code></pre></div><p>The width of a vector often depends on another parameter, so calculating it yourself isn&rsquo;t ideal.</p><p>Imagine you&rsquo;re creating a game engine where the number of sprites is configurable:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span><span style=color:#66d9ef>parameter</span> SPR_CNT<span style=color:#f92672>=</span><span style=color:#ae81ff>10</span>;   <span style=color:#75715e>// maximum number of sprites on screen
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#66d9ef>logic</span> [<span style=color:#ae81ff>3</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] sprite_id;  <span style=color:#75715e>// 4 bits is correct for a count of 10, but if SPR_CNT changes?
-</span></span></span></code></pre></div><p>Changing the sprite count will break the design if we hardcode the width.</p><p>Verilog 2005 introduced <code>$clog2</code> to handle this.</p><h3 id=calculating-widths>Calculating Widths</h3><p>The <code>$clog2</code> function returns the ceiling of the logarithm to base 2.</p><p>For example, <code>$clog2(10) = 4</code> because 2<sup>3</sup> &lt; 10 ≤ 2<sup>4</sup>.</p><p>If you need to handle N things (such as sprites or memory locations), then <code>$clog2(N)</code> will tell you how wide your vector needs to be:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span><span style=color:#66d9ef>parameter</span> SPR_CNT<span style=color:#f92672>=</span><span style=color:#ae81ff>10</span>;  <span style=color:#75715e>// maximum number of sprites on screen
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#66d9ef>parameter</span> SPR_BITW<span style=color:#f92672>=</span>$clog2(SPR_CNT);  <span style=color:#75715e>// sprite ID bit width
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
-</span></span><span style=display:flex><span><span style=color:#66d9ef>logic</span> [SPR_BITW<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] sprite_id;  <span style=color:#75715e>// sprite identifier
-</span></span></span></code></pre></div><p><code>$clog2</code> is handy, but you need to be careful.</p><p>If you&rsquo;re specifying a maximum value (rather than a count), it doesn&rsquo;t do what you want:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span><span style=color:#66d9ef>parameter</span> MAX_VOLTAGE<span style=color:#f92672>=</span><span style=color:#ae81ff>256</span>;  <span style=color:#75715e>// maximum voltage
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#66d9ef>parameter</span> VOLTW<span style=color:#f92672>=</span>$clog2(MAX_VOLTAGE);  <span style=color:#75715e>// voltage bit width (INCORRECT!)
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
-</span></span><span style=display:flex><span><span style=color:#66d9ef>logic</span> [VOLTW<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] volatage;  <span style=color:#75715e>// we can&#39;t handle 256!
-</span></span></span></code></pre></div><p><code>$clog2</code> returns &lsquo;8&rsquo;, giving a voltage range of 0-255 inclusive. 256 is out of range.</p><p>If you&rsquo;re specifying a maximum value, you need to add one to the value passed to <code>$clog2</code>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span><span style=color:#66d9ef>parameter</span> MAX_VOLTAGE<span style=color:#f92672>=</span><span style=color:#ae81ff>256</span>;  <span style=color:#75715e>// maximum voltage
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#66d9ef>parameter</span> VOLTW<span style=color:#f92672>=</span>$clog2(MAX_VOLTAGE<span style=color:#f92672>+</span><span style=color:#ae81ff>1</span>);  <span style=color:#75715e>// voltage bit width (add one for max)
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
-</span></span><span style=display:flex><span><span style=color:#66d9ef>logic</span> [VOLTW<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] volatage;  <span style=color:#75715e>// we can now handle 256 volts :)
-</span></span></span></code></pre></div><p>This problem is often hidden because it doesn&rsquo;t occur if your parameter isn&rsquo;t a power of 2. For example, if you specify &lsquo;240&rsquo; as your <code>MAX_VOLTAGE</code>, you won&rsquo;t see any issues. Later, you increase <code>MAX_VOLTAGE</code> to &lsquo;256&rsquo;, and the design has a subtle bug.</p><h2 id=a-bit-significant>A Bit Significant</h2><p>Earlier, we said a vector was declared like this: <code>type [upper:lower] name;</code></p><p>A more general definition is: <code>type [msb_index:lsb_index] name;</code></p><p>Where <em>msb_index</em> is the most significant bit index, and <em>lsb_index</em> is the least significant bit index.</p><p>The usual way of declaring vectors has the least significant bit at the lowest index (LSB first):</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span><span style=color:#66d9ef>wire</span>   [<span style=color:#ae81ff>5</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] a;  <span style=color:#75715e>// 6-bit wire (LSB first)
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#66d9ef>reg</span>   [<span style=color:#ae81ff>11</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] b;  <span style=color:#75715e>// 12-bit reg (LSB first)
-</span></span></span></code></pre></div><p>The most significant bit of <code>a</code> is stored in <code>a[5]</code> and that of <code>b</code> in <code>b[11]</code>.</p><p>Alternatively, we can declare vectors with the most significant bit at the lowest index (MSB first):</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span><span style=color:#66d9ef>wire</span>   [<span style=color:#ae81ff>0</span><span style=color:#f92672>:</span><span style=color:#ae81ff>5</span>] c;  <span style=color:#75715e>// 6-bit wire (MSB first)
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#66d9ef>reg</span>   [<span style=color:#ae81ff>0</span><span style=color:#f92672>:</span><span style=color:#ae81ff>11</span>] d;  <span style=color:#75715e>// 12-bit reg (MSB first)
-</span></span></span></code></pre></div><p>The most significant bit of <code>c</code> is stored in <code>c[0]</code> and that of <code>d</code> in <code>d[0]</code>.</p><h3 id=switching-ends>Switching Ends</h3><p>MSB-first vectors are comparatively rare in Verilog. However, some hardware interfaces send the most significant bit first, for example, I<sup>2</sup>C.</p><p>Say you&rsquo;ve got an MSB first byte from I<sup>2</sup>C and want to convert it to LSB first.</p><p>You could try directly swapping the order:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span><span style=color:#66d9ef>wire</span> [<span style=color:#ae81ff>0</span><span style=color:#f92672>:</span><span style=color:#ae81ff>7</span>] i2c_x;  <span style=color:#75715e>// 8-bit wire (MSB first)
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#66d9ef>reg</span>  [<span style=color:#ae81ff>7</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] x;      <span style=color:#75715e>// 8-bit reg (LSB first)
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
-</span></span><span style=display:flex><span><span style=color:#66d9ef>always_ff</span> @(<span style=color:#66d9ef>posedge</span> clk) x <span style=color:#f92672>&lt;=</span> i2c_x;  <span style=color:#75715e>// Doesn&#39;t work in all tools :(
-</span></span></span></code></pre></div><p>Alas, some tools won&rsquo;t let you mix LSB- and MSB-first vectors in one expression.</p><p>A more general approach is to reverse the bits explicitly. All bits are swapped in parallel:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span><span style=color:#66d9ef>always_ff</span> @(<span style=color:#66d9ef>posedge</span> clk) <span style=color:#66d9ef>begin</span>
-</span></span><span style=display:flex><span>    x[<span style=color:#ae81ff>0</span>] <span style=color:#f92672>&lt;=</span> i2c_x[<span style=color:#ae81ff>7</span>];
-</span></span><span style=display:flex><span>    x[<span style=color:#ae81ff>1</span>] <span style=color:#f92672>&lt;=</span> i2c_x[<span style=color:#ae81ff>6</span>];
-</span></span><span style=display:flex><span>    x[<span style=color:#ae81ff>2</span>] <span style=color:#f92672>&lt;=</span> i2c_x[<span style=color:#ae81ff>5</span>];
-</span></span><span style=display:flex><span>    x[<span style=color:#ae81ff>3</span>] <span style=color:#f92672>&lt;=</span> i2c_x[<span style=color:#ae81ff>4</span>];
-</span></span><span style=display:flex><span>    x[<span style=color:#ae81ff>4</span>] <span style=color:#f92672>&lt;=</span> i2c_x[<span style=color:#ae81ff>3</span>];
-</span></span><span style=display:flex><span>    x[<span style=color:#ae81ff>5</span>] <span style=color:#f92672>&lt;=</span> i2c_x[<span style=color:#ae81ff>2</span>];
-</span></span><span style=display:flex><span>    x[<span style=color:#ae81ff>6</span>] <span style=color:#f92672>&lt;=</span> i2c_x[<span style=color:#ae81ff>1</span>];
-</span></span><span style=display:flex><span>    x[<span style=color:#ae81ff>7</span>] <span style=color:#f92672>&lt;=</span> i2c_x[<span style=color:#ae81ff>0</span>];
-</span></span><span style=display:flex><span><span style=color:#66d9ef>end</span>
-</span></span></code></pre></div><p>Updating individual bits is tedious, but a <code>for</code> loop can handle this for us:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span><span style=color:#66d9ef>always_ff</span> @(<span style=color:#66d9ef>posedge</span> clk) <span style=color:#66d9ef>begin</span>
-</span></span><span style=display:flex><span>    <span style=color:#66d9ef>for</span> (i<span style=color:#f92672>=</span><span style=color:#ae81ff>0</span>; i<span style=color:#f92672>&lt;</span><span style=color:#ae81ff>8</span>; i<span style=color:#f92672>=</span>i<span style=color:#f92672>+</span><span style=color:#ae81ff>1</span>) x[i] <span style=color:#f92672>&lt;=</span> i2c_x[<span style=color:#ae81ff>7</span><span style=color:#f92672>-</span>i];
-</span></span><span style=display:flex><span><span style=color:#66d9ef>end</span>
-</span></span></code></pre></div><p>Verilog <code>for</code> is NOT like a software loop: this <code>for</code> loop is unrolled into parallel bit swaps.</p><h2 id=big-endian-little-endian>Big Endian, Little Endian</h2><p>So far, we&rsquo;ve been talking about ordering at the bit level, but it also occurs in the context of bytes. If you have a 32-bit word, do you store the least significant byte at the lowest address (little-endian) or the most significant byte at the lowest address (big-endian)?</p><p>RISC-V, x86, and ARM are little-endian, while Internet protocols (TCP/IP) and Motorola 68K are big-endian. There&rsquo;s also the cursed middle-endian, but I won&rsquo;t discuss that here.</p><p><em>I&rsquo;m still writing this content.</em></p><h2 id=arrays>Arrays</h2><p><em>I&rsquo;m still writing this content.</em></p><h2 id=whats-next>What&rsquo;s Next?</h2><p>Part three covers <a href=/posts/multiplication-fpga-dsps>Multiplication with DSPs</a> or jump ahead to <a href=/posts/fixed-point-numbers-in-verilog>Fixed-Point Numbers</a>.</p><p>You can also check out our other maths posts: <a href=/posts/division-in-verilog/>division</a>, <a href=/posts/square-root-in-verilog/>square root</a>, and <a href=/posts/fpga-sine-table/>sine & cosine</a>.</p><div class=footnotes role=doc-endnotes><hr><ol><li id=fn:1><p>We&rsquo;re ignoring X and Z for the purpose of this introduction. See <a href=/posts/numbers-in-verilog/>Numbers in Verilog</a>.&#160;<a href=#fnref:1 class=footnote-backref role=doc-backlink>&#8617;&#xfe0e;</a></p></li></ol></div></section><footer class="mt-12 flex flex-wrap"><a class="mb-1.5 mr-1.5 rounded-lg bg-black/[3%] px-5 py-1.5 no-underline dark:bg-white/[8%]" href=https://projectf.io/tags/maths>maths</a></footer></article></main><footer class="opaco mx-auto flex h-[4.5rem] max-w-4xl items-center px-8 text-[0.9em] opacity-60"><div class=mr-auto><a class=link href=https://projectf.io/>Project F</a>: FPGA and RISC-V. Only hardware makes it possible!
-&copy; 2025 Will Green.</div></footer></body></html>
+<!doctype html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<html
+  class="not-ready lg:text-base"
+  style="--bg: #fff"
+  lang="en-gb"
+>
+  <head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, shrink-to-fit=no"
+  />
+
+  
+  <title>Verilog Vectors and Arrays - Project F</title>
+
+  
+  <meta name="theme-color" />
+
+  
+  
+  
+  
+  <meta name="description" content="Welcome back to my series covering mathematics and algorithms with FPGAs. In this part, we dig into vectors and arrays, including slicing, configurable widths, for loops, and bit and byte ordering." />
+  <meta name="author" content="Will Green" />
+  
+
+  
+  
+  
+  
+  
+  
+  <link rel="preload stylesheet" as="style" href="https://projectf.io/main.min.css" />
+
+  
+  
+  
+  
+  
+  <link rel="preload" as="image" href="https://projectf.io/theme.svg" />
+
+  
+  
+  
+  
+  
+
+  
+  
+  
+
+  
+  
+  <script
+    defer
+    src="https://projectf.io/highlight.min.js"
+    onload="hljs.initHighlightingOnLoad();"
+  ></script>
+  
+
+  
+  
+  
+
+  
+  <link rel="icon" href="https://projectf.io/favicon.ico" />
+  <link rel="apple-touch-icon" href="https://projectf.io/apple-touch-icon.png" />
+
+  
+  <meta name="generator" content="Hugo 0.128.2">
+
+  
+  
+  
+  
+  
+  
+  
+
+
+  
+  
+  <meta itemprop="name" content="Verilog Vectors and Arrays">
+  <meta itemprop="description" content="Welcome back to my series covering mathematics and algorithms with FPGAs. In this part, we dig into vectors and arrays, including slicing, configurable widths, for loops, and bit and byte ordering.">
+  <meta itemprop="datePublished" content="2022-12-13T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2022-12-13T00:00:00+00:00">
+  <meta itemprop="wordCount" content="1280">
+  <meta itemprop="image" content="https://projectf.io/img/posts/verilog-vectors-arrays/social-card.png">
+  <meta itemprop="keywords" content="Maths">
+  
+  <meta property="og:url" content="https://projectf.io/posts/verilog-vectors-arrays/">
+  <meta property="og:site_name" content="Project F">
+  <meta property="og:title" content="Verilog Vectors and Arrays">
+  <meta property="og:description" content="Welcome back to my series covering mathematics and algorithms with FPGAs. In this part, we dig into vectors and arrays, including slicing, configurable widths, for loops, and bit and byte ordering.">
+  <meta property="og:locale" content="en_gb">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2022-12-13T00:00:00+00:00">
+    <meta property="article:modified_time" content="2022-12-13T00:00:00+00:00">
+    <meta property="article:tag" content="Maths">
+    <meta property="og:image" content="https://projectf.io/img/posts/verilog-vectors-arrays/social-card.png">
+
+  
+  
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://projectf.io/img/posts/verilog-vectors-arrays/social-card.png">
+  <meta name="twitter:title" content="Verilog Vectors and Arrays">
+  <meta name="twitter:description" content="Welcome back to my series covering mathematics and algorithms with FPGAs. In this part, we dig into vectors and arrays, including slicing, configurable widths, for loops, and bit and byte ordering.">
+
+  
+  
+  
+  <link rel="canonical" href="https://projectf.io/posts/verilog-vectors-arrays/" />
+  
+  
+</head>
+
+  <body class="text-black duration-200 ease-out dark:text-white">
+    <header
+  
+  class="mx-auto flex h-[4.5rem] max-w-4xl px-8 lg:justify-center"
+  
+  >
+  <div class="relative z-50 mr-auto flex items-center">
+    <a
+      class="-translate-x-[1px] -translate-y-[1px] text-2xl font-semibold"
+      href="https://projectf.io/"
+      >Project F</a
+    >
+    <div
+      class="btn-dark text-[0] ml-4 h-6 w-6 shrink-0 cursor-pointer [background:url(./theme.svg)_left_center/cover_no-repeat] dark:invert dark:[background-position:right]"
+      role="button"
+      aria-label="Dark"
+    ></div>
+  </div>
+
+  <div
+    class="btn-menu relative z-50 -mr-8 flex h-[4.5rem] w-[5rem] shrink-0 cursor-pointer flex-col items-center justify-center gap-2.5 lg:hidden"
+    role="button"
+    aria-label="Menu"
+  ></div>
+
+  
+
+  <script>
+    
+    const htmlClass = document.documentElement.classList;
+    setTimeout(() => {
+      htmlClass.remove('not-ready');
+    }, 10);
+
+    
+    const btnMenu = document.querySelector('.btn-menu');
+    btnMenu.addEventListener('click', () => {
+      htmlClass.toggle('open');
+    });
+
+    
+    const metaTheme = document.querySelector('meta[name="theme-color"]');
+    const lightBg = '#fff'.replace(/"/g, '');
+    const setDark = (isDark) => {
+      metaTheme.setAttribute('content', isDark ? '#000' : lightBg);
+      htmlClass[isDark ? 'add' : 'remove']('dark');
+      localStorage.setItem('dark', isDark);
+    };
+
+    
+    const darkScheme = window.matchMedia('(prefers-color-scheme: dark)');
+    if (htmlClass.contains('dark')) {
+      setDark(true);
+    } else {
+      const darkVal = localStorage.getItem('dark');
+      setDark(darkVal ? darkVal === 'true' : darkScheme.matches);
+    }
+
+    
+    darkScheme.addEventListener('change', (event) => {
+      setDark(event.matches);
+    });
+
+    
+    const btnDark = document.querySelector('.btn-dark');
+    btnDark.addEventListener('click', () => {
+      setDark(localStorage.getItem('dark') !== 'true');
+    });
+  </script>
+
+  <div
+    class="nav-wrapper fixed inset-x-0 top-full z-40 flex h-full select-none flex-col justify-center pb-16 duration-200 dark:bg-black lg:static lg:h-auto lg:flex-row lg:!bg-transparent lg:pb-0 lg:transition-none"
+  >
+    
+    
+    <nav class="lg:ml-12 lg:flex lg:flex-row lg:items-center lg:space-x-6">
+      
+      <a
+        class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal"
+        href="/"
+        >Home</a
+      >
+      
+      <a
+        class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal"
+        href="/about/"
+        >About</a
+      >
+      
+      <a
+        class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal"
+        href="/contact/"
+        >Contact</a
+      >
+      
+      <a
+        class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal"
+        href="/sponsor/"
+        >Sponsor</a
+      >
+      
+    </nav>
+    
+
+    
+  </div>
+</header>
+
+
+    <main
+      
+      class="prose prose-neutral relative mx-auto min-h-[calc(100%-9rem)] max-w-4xl px-8 pb-4 pt-4 dark:prose-invert"
+      
+    >
+      
+
+<article>
+  <header class="mb-4">
+    <h1 class="!my-0 pb-2.5">Verilog Vectors and Arrays</h1>
+
+    
+    <div class="text-sm antialiased opacity-60">
+      
+      Published
+      <time>13 Dec 2022</time>
+      
+      
+    </div>
+    
+  </header>
+
+  <section><p>Welcome back to my series covering mathematics and algorithms with FPGAs. In this part, we dig into vectors and arrays, including slicing, configurable widths, for loops, and bit and byte ordering. New to the series? Start with <a href="/posts/numbers-in-verilog/">Numbers in Verilog</a>.</p>
+<h3 id="series-outline">Series Outline</h3>
+<ul>
+<li><a href="/posts/numbers-in-verilog">Numbers in Verilog</a> - introduction to numbers in Verilog</li>
+<li>Vectors and Arrays (this post) - working with Verilog vectors and arrays</li>
+<li><a href="/posts/multiplication-fpga-dsps">Multiplication with DSPs</a> - efficient multiplication with FPGA DSPs</li>
+<li><a href="/posts/fixed-point-numbers-in-verilog/">Fixed-Point Numbers in Verilog</a> - precision without complexity</li>
+<li><a href="/posts/division-in-verilog">Division in Verilog</a> - divided we stand</li>
+<li><em>More maths to follow</em></li>
+</ul>
+<h2 id="what-is-a-vector">What is a Vector?</h2>
+<p>A quick recap from <a href="/posts/numbers-in-verilog">Numbers in Verilog</a>:</p>
+<p>By default, a Verilog register or wire is 1 bit wide. This is a <strong>scalar</strong>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">wire</span>  x;  <span style="color:#75715e">// 1 bit wire
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">reg</span>   y;  <span style="color:#75715e">// also 1 bit
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> z;  <span style="color:#75715e">// me too!
+</span></span></span></code></pre></div><p>A scalar can only hold 0 or 1<sup id="fnref:1"><a href="#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup>.</p>
+<p>We need a <strong>vector</strong> to hold something larger.</p>
+<p>A vector is declared like this: <code>type [upper:lower] name;</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">wire</span>   [<span style="color:#ae81ff">5</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] a;  <span style="color:#75715e">// 6-bit wire
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">reg</span>    [<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] b;  <span style="color:#75715e">// 8-bit reg
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] c;  <span style="color:#75715e">// 12-bit logic
+</span></span></span></code></pre></div><p><code>a</code>, <code>b</code>, and <code>c</code> are vectors:</p>
+<ul>
+<li>Wire <strong>a</strong> handles 0-63 inclusive (2<sup>6</sup> is 64).</li>
+<li>Register <strong>b</strong> handles 0-255 inclusive (2<sup>8</sup> is 256).</li>
+<li>Logic <strong>c</strong> handles 0-4095 inclusive (2<sup>12</sup> is 4096).</li>
+</ul>
+<p>With that recap out of the way, let&rsquo;s look at some things we can do with vectors.</p>
+<h2 id="slicing-vectors">Slicing Vectors</h2>
+<p>You select an individual bit using its index; for example:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">wire</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] n;  <span style="color:#75715e">// 4-bit wire vector
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">wire</span> p, q;     <span style="color:#75715e">// wire scalars
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>    p <span style="color:#f92672">=</span> n[<span style="color:#ae81ff">0</span>];
+</span></span><span style="display:flex;"><span>    q <span style="color:#f92672">=</span> n[<span style="color:#ae81ff">3</span>];
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">end</span>
+</span></span></code></pre></div><p>You select a subset by specifying the start and end bits:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">wire</span> [<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] a;       <span style="color:#75715e">// 12-bit wire vector
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">wire</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x, y, z;  <span style="color:#75715e">// 4-bit wire vectors
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>    x <span style="color:#f92672">=</span> a[<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">8</span>];
+</span></span><span style="display:flex;"><span>    y <span style="color:#f92672">=</span> a[<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">4</span>];
+</span></span><span style="display:flex;"><span>    z <span style="color:#f92672">=</span> a[<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>];
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">end</span>
+</span></span></code></pre></div><p>You can also use the concat operator <code>{}</code> to select bits from vectors. The following example is equivalent to the one above:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">wire</span> [<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] a;       <span style="color:#75715e">// 12-bit wire vector
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">wire</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x, y, z;  <span style="color:#75715e">// 4-bit wire vectors
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>    {x,y,z} <span style="color:#f92672">=</span> a;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">end</span>
+</span></span></code></pre></div><p>Rather than specify an end bit, you can specify a width with <code>-</code> and <code>+</code>.</p>
+<p>These three assignments all select the same four bits:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">wire</span> [<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] a;       <span style="color:#75715e">// 12-bit wire vector
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">wire</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x, y, z;  <span style="color:#75715e">// 4-bit wire vectors
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">always_comb</span> <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>    x <span style="color:#f92672">=</span> a[<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">8</span>];   <span style="color:#75715e">// 11:8
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    y <span style="color:#f92672">=</span> a[<span style="color:#ae81ff">11</span><span style="color:#f92672">-:</span><span style="color:#ae81ff">4</span>];  <span style="color:#75715e">// also 11:8
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    z <span style="color:#f92672">=</span> a[<span style="color:#ae81ff">8</span><span style="color:#f92672">+:</span><span style="color:#ae81ff">4</span>];   <span style="color:#75715e">// also 11:8
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">end</span>
+</span></span></code></pre></div><p><em>ProTip: The start bit can be a variable, but not the width.</em></p>
+<h3 id="loss-of-sign">Loss of Sign</h3>
+<p>With signed variables, using slices will make the value unsigned, even if you select the whole range!</p>
+<p>However, you can force a variable to be signed with the <code>$signed</code> system function:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">signed</span> [<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] a <span style="color:#f92672">=</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">64</span>;  <span style="color:#75715e">// 12-bit signed wire vector
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">initial</span> <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>    $display(<span style="color:#e6db74">&#34;a is signed:   %d&#34;</span>, a);
+</span></span><span style="display:flex;"><span>    $display(<span style="color:#e6db74">&#34;a is unsigned:  %d&#34;</span>, a[<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>]);
+</span></span><span style="display:flex;"><span>    $display(<span style="color:#e6db74">&#34;a is signed:   %d&#34;</span>, $signed(a[<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>]));
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">end</span>
+</span></span></code></pre></div><p>Produces the following:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>a is signed:     -64
+</span></span><span style="display:flex;"><span>a is unsigned:  4032
+</span></span><span style="display:flex;"><span>a is signed:     -64
+</span></span></code></pre></div><p><code>$signed</code> is no panacea: <a href="/posts/numbers-in-verilog#signed-expressions">sign extension</a> can still catch you out.</p>
+<h2 id="configurable-widths">Configurable Widths</h2>
+<p>Avoid hard-coding vector widths; it limits your design flexibility.</p>
+<p>Parameters provide a simple way to configure vector widths:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">parameter</span> ADDRW<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>;  <span style="color:#75715e">// address width: 16 bits for 2^16 memory locations
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">logic</span> [ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] addr_read;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">logic</span> [ADDRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] addr_write;
+</span></span></code></pre></div><p>The width of a vector often depends on another parameter, so calculating it yourself isn&rsquo;t ideal.</p>
+<p>Imagine you&rsquo;re creating a game engine where the number of sprites is configurable:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">parameter</span> SPR_CNT<span style="color:#f92672">=</span><span style="color:#ae81ff">10</span>;   <span style="color:#75715e">// maximum number of sprites on screen
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">logic</span> [<span style="color:#ae81ff">3</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sprite_id;  <span style="color:#75715e">// 4 bits is correct for a count of 10, but if SPR_CNT changes?
+</span></span></span></code></pre></div><p>Changing the sprite count will break the design if we hardcode the width.</p>
+<p>Verilog 2005 introduced <code>$clog2</code> to handle this.</p>
+<h3 id="calculating-widths">Calculating Widths</h3>
+<p>The <code>$clog2</code> function returns the ceiling of the logarithm to base 2.</p>
+<p>For example, <code>$clog2(10) = 4</code> because 2<sup>3</sup> &lt; 10 ≤ 2<sup>4</sup>.</p>
+<p>If you need to handle N things (such as sprites or memory locations), then <code>$clog2(N)</code> will tell you how wide your vector needs to be:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">parameter</span> SPR_CNT<span style="color:#f92672">=</span><span style="color:#ae81ff">10</span>;  <span style="color:#75715e">// maximum number of sprites on screen
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">parameter</span> SPR_BITW<span style="color:#f92672">=</span>$clog2(SPR_CNT);  <span style="color:#75715e">// sprite ID bit width
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">logic</span> [SPR_BITW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] sprite_id;  <span style="color:#75715e">// sprite identifier
+</span></span></span></code></pre></div><p><code>$clog2</code> is handy, but you need to be careful.</p>
+<p>If you&rsquo;re specifying a maximum value (rather than a count), it doesn&rsquo;t do what you want:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">parameter</span> MAX_VOLTAGE<span style="color:#f92672">=</span><span style="color:#ae81ff">256</span>;  <span style="color:#75715e">// maximum voltage
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">parameter</span> VOLTW<span style="color:#f92672">=</span>$clog2(MAX_VOLTAGE);  <span style="color:#75715e">// voltage bit width (INCORRECT!)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">logic</span> [VOLTW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] volatage;  <span style="color:#75715e">// we can&#39;t handle 256!
+</span></span></span></code></pre></div><p><code>$clog2</code> returns &lsquo;8&rsquo;, giving a voltage range of 0-255 inclusive. 256 is out of range.</p>
+<p>If you&rsquo;re specifying a maximum value, you need to add one to the value passed to <code>$clog2</code>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">parameter</span> MAX_VOLTAGE<span style="color:#f92672">=</span><span style="color:#ae81ff">256</span>;  <span style="color:#75715e">// maximum voltage
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">parameter</span> VOLTW<span style="color:#f92672">=</span>$clog2(MAX_VOLTAGE<span style="color:#f92672">+</span><span style="color:#ae81ff">1</span>);  <span style="color:#75715e">// voltage bit width (add one for max)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">logic</span> [VOLTW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] volatage;  <span style="color:#75715e">// we can now handle 256 volts :)
+</span></span></span></code></pre></div><p>This problem is often hidden because it doesn&rsquo;t occur if your parameter isn&rsquo;t a power of 2. For example, if you specify &lsquo;240&rsquo; as your <code>MAX_VOLTAGE</code>, you won&rsquo;t see any issues. Later, you increase <code>MAX_VOLTAGE</code> to &lsquo;256&rsquo;, and the design has a subtle bug.</p>
+<h2 id="a-bit-significant">A Bit Significant</h2>
+<p>Earlier, we said a vector was declared like this: <code>type [upper:lower] name;</code></p>
+<p>A more general definition is: <code>type [msb_index:lsb_index] name;</code></p>
+<p>Where <em>msb_index</em> is the most significant bit index, and <em>lsb_index</em> is the least significant bit index.</p>
+<p>The usual way of declaring vectors has the least significant bit at the lowest index (LSB first):</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">wire</span>   [<span style="color:#ae81ff">5</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] a;  <span style="color:#75715e">// 6-bit wire (LSB first)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">reg</span>   [<span style="color:#ae81ff">11</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] b;  <span style="color:#75715e">// 12-bit reg (LSB first)
+</span></span></span></code></pre></div><p>The most significant bit of <code>a</code> is stored in <code>a[5]</code> and that of <code>b</code> in <code>b[11]</code>.</p>
+<p>Alternatively, we can declare vectors with the most significant bit at the lowest index (MSB first):</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">wire</span>   [<span style="color:#ae81ff">0</span><span style="color:#f92672">:</span><span style="color:#ae81ff">5</span>] c;  <span style="color:#75715e">// 6-bit wire (MSB first)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">reg</span>   [<span style="color:#ae81ff">0</span><span style="color:#f92672">:</span><span style="color:#ae81ff">11</span>] d;  <span style="color:#75715e">// 12-bit reg (MSB first)
+</span></span></span></code></pre></div><p>The most significant bit of <code>c</code> is stored in <code>c[0]</code> and that of <code>d</code> in <code>d[0]</code>.</p>
+<h3 id="switching-ends">Switching Ends</h3>
+<p>MSB-first vectors are comparatively rare in Verilog. However, some hardware interfaces send the most significant bit first, for example, I<sup>2</sup>C.</p>
+<p>Say you&rsquo;ve got an MSB first byte from I<sup>2</sup>C and want to convert it to LSB first.</p>
+<p>You could try directly swapping the order:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">wire</span> [<span style="color:#ae81ff">0</span><span style="color:#f92672">:</span><span style="color:#ae81ff">7</span>] i2c_x;  <span style="color:#75715e">// 8-bit wire (MSB first)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">reg</span>  [<span style="color:#ae81ff">7</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x;      <span style="color:#75715e">// 8-bit reg (LSB first)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) x <span style="color:#f92672">&lt;=</span> i2c_x;  <span style="color:#75715e">// Doesn&#39;t work in all tools :(
+</span></span></span></code></pre></div><p>Alas, some tools won&rsquo;t let you mix LSB- and MSB-first vectors in one expression.</p>
+<p>A more general approach is to reverse the bits explicitly. All bits are swapped in parallel:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>    x[<span style="color:#ae81ff">0</span>] <span style="color:#f92672">&lt;=</span> i2c_x[<span style="color:#ae81ff">7</span>];
+</span></span><span style="display:flex;"><span>    x[<span style="color:#ae81ff">1</span>] <span style="color:#f92672">&lt;=</span> i2c_x[<span style="color:#ae81ff">6</span>];
+</span></span><span style="display:flex;"><span>    x[<span style="color:#ae81ff">2</span>] <span style="color:#f92672">&lt;=</span> i2c_x[<span style="color:#ae81ff">5</span>];
+</span></span><span style="display:flex;"><span>    x[<span style="color:#ae81ff">3</span>] <span style="color:#f92672">&lt;=</span> i2c_x[<span style="color:#ae81ff">4</span>];
+</span></span><span style="display:flex;"><span>    x[<span style="color:#ae81ff">4</span>] <span style="color:#f92672">&lt;=</span> i2c_x[<span style="color:#ae81ff">3</span>];
+</span></span><span style="display:flex;"><span>    x[<span style="color:#ae81ff">5</span>] <span style="color:#f92672">&lt;=</span> i2c_x[<span style="color:#ae81ff">2</span>];
+</span></span><span style="display:flex;"><span>    x[<span style="color:#ae81ff">6</span>] <span style="color:#f92672">&lt;=</span> i2c_x[<span style="color:#ae81ff">1</span>];
+</span></span><span style="display:flex;"><span>    x[<span style="color:#ae81ff">7</span>] <span style="color:#f92672">&lt;=</span> i2c_x[<span style="color:#ae81ff">0</span>];
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">end</span>
+</span></span></code></pre></div><p>Updating individual bits is tedious, but a <code>for</code> loop can handle this for us:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> (i<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>; i<span style="color:#f92672">&lt;</span><span style="color:#ae81ff">8</span>; i<span style="color:#f92672">=</span>i<span style="color:#f92672">+</span><span style="color:#ae81ff">1</span>) x[i] <span style="color:#f92672">&lt;=</span> i2c_x[<span style="color:#ae81ff">7</span><span style="color:#f92672">-</span>i];
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">end</span>
+</span></span></code></pre></div><p>Verilog <code>for</code> is NOT like a software loop: this <code>for</code> loop is unrolled into parallel bit swaps.</p>
+<h2 id="big-endian-little-endian">Big Endian, Little Endian</h2>
+<p>So far, we&rsquo;ve been talking about ordering at the bit level, but it also occurs in the context of bytes. If you have a 32-bit word, do you store the least significant byte at the lowest address (little-endian) or the most significant byte at the lowest address (big-endian)?</p>
+<p>RISC-V, x86, and ARM are little-endian, while Internet protocols (TCP/IP) and Motorola 68K are big-endian. There&rsquo;s also the cursed middle-endian, but I won&rsquo;t discuss that here.</p>
+<p><em>I&rsquo;m still writing this content.</em></p>
+<h2 id="arrays">Arrays</h2>
+<p><em>I&rsquo;m still writing this content.</em></p>
+<h2 id="whats-next">What&rsquo;s Next?</h2>
+<p>Part three covers <a href="/posts/multiplication-fpga-dsps">Multiplication with DSPs</a> or jump ahead to <a href="/posts/fixed-point-numbers-in-verilog">Fixed-Point Numbers</a>.</p>
+<p>You can also check out our other maths posts: <a href="/posts/division-in-verilog/">division</a>, <a href="/posts/square-root-in-verilog/">square root</a>, and <a href="/posts/fpga-sine-table/">sine &amp; cosine</a>.</p>
+<div class="footnotes" role="doc-endnotes">
+<hr>
+<ol>
+<li id="fn:1">
+<p>We&rsquo;re ignoring X and Z for the purpose of this introduction. See <a href="/posts/numbers-in-verilog/">Numbers in Verilog</a>.&#160;<a href="#fnref:1" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+</ol>
+</div>
+</section>
+
+  
+  
+  <footer class="mt-12 flex flex-wrap">
+     
+    <a
+      class="mb-1.5 mr-1.5 rounded-lg bg-black/[3%] px-5 py-1.5 no-underline dark:bg-white/[8%]"
+      href="https://projectf.io/tags/maths"
+      >maths</a
+    >
+    
+  </footer>
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+
+  
+</article>
+
+
+    </main>
+
+    <footer
+  
+  class="opaco mx-auto flex h-[4.5rem] max-w-4xl items-center px-8 text-[0.9em] opacity-60"
+  
+>
+  <div class="mr-auto">
+    <a class="link" href="https://projectf.io/">Project F</a>: FPGA and RISC-V. Only hardware makes it possible!
+    &copy; 2025 Will Green. 
+  </div>
+</footer>
+
+  </body>
+</html>

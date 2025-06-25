@@ -1,288 +1,646 @@
-<!doctype html><html class="not-ready lg:text-base" style=--bg:#fff lang=en-gb><head><meta charset=utf-8><meta http-equiv=X-UA-Compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><title>Castle Drawing - Project F</title>
-<meta name=theme-color><meta name=description content="In this FPGA demo, we use multiple shapes (rectangles, triangles, circles) to render a simple picture of a castle. We don&rsquo;t use any software or CPU, just shape rasterization and finite state machines. This Verilog design runs on the Digilent Arty A7 or as a Verilator/SDL simulation on your computer."><meta name=author content="Will Green"><link rel="preload stylesheet" as=style href=https://projectf.io/main.min.css><link rel=preload as=image href=https://projectf.io/theme.svg><script defer src=https://projectf.io/highlight.min.js onload=hljs.initHighlightingOnLoad()></script><link rel=icon href=https://projectf.io/favicon.ico><link rel=apple-touch-icon href=https://projectf.io/apple-touch-icon.png><meta name=generator content="Hugo 0.128.2"><meta itemprop=name content="Castle Drawing"><meta itemprop=description content="In this FPGA demo, we use multiple shapes (rectangles, triangles, circles) to render a simple picture of a castle. We don’t use any software or CPU, just shape rasterization and finite state machines. This Verilog design runs on the Digilent Arty A7 or as a Verilator/SDL simulation on your computer."><meta itemprop=datePublished content="2022-09-11T00:00:00+00:00"><meta itemprop=dateModified content="2024-01-15T00:00:00+00:00"><meta itemprop=wordCount content="1325"><meta itemprop=image content="https://projectf.io/img/posts/castle-drawing/social-card.png"><meta itemprop=keywords content="Graphics,Arty-A7,Verilator"><meta property="og:url" content="https://projectf.io/posts/castle-drawing/"><meta property="og:site_name" content="Project F"><meta property="og:title" content="Castle Drawing"><meta property="og:description" content="In this FPGA demo, we use multiple shapes (rectangles, triangles, circles) to render a simple picture of a castle. We don’t use any software or CPU, just shape rasterization and finite state machines. This Verilog design runs on the Digilent Arty A7 or as a Verilator/SDL simulation on your computer."><meta property="og:locale" content="en_gb"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2022-09-11T00:00:00+00:00"><meta property="article:modified_time" content="2024-01-15T00:00:00+00:00"><meta property="article:tag" content="Graphics"><meta property="article:tag" content="Arty-A7"><meta property="article:tag" content="Verilator"><meta property="og:image" content="https://projectf.io/img/posts/castle-drawing/social-card.png"><meta name=twitter:card content="summary_large_image"><meta name=twitter:image content="https://projectf.io/img/posts/castle-drawing/social-card.png"><meta name=twitter:title content="Castle Drawing"><meta name=twitter:description content="In this FPGA demo, we use multiple shapes (rectangles, triangles, circles) to render a simple picture of a castle. We don’t use any software or CPU, just shape rasterization and finite state machines. This Verilog design runs on the Digilent Arty A7 or as a Verilator/SDL simulation on your computer."><link rel=canonical href=https://projectf.io/posts/castle-drawing/></head><body class="text-black duration-200 ease-out dark:text-white"><header class="mx-auto flex h-[4.5rem] max-w-4xl px-8 lg:justify-center"><div class="relative z-50 mr-auto flex items-center"><a class="-translate-x-[1px] -translate-y-[1px] text-2xl font-semibold" href=https://projectf.io/>Project F</a><div class="btn-dark text-[0] ml-4 h-6 w-6 shrink-0 cursor-pointer [background:url(./theme.svg)_left_center/cover_no-repeat] dark:invert dark:[background-position:right]" role=button aria-label=Dark></div></div><div class="btn-menu relative z-50 -mr-8 flex h-[4.5rem] w-[5rem] shrink-0 cursor-pointer flex-col items-center justify-center gap-2.5 lg:hidden" role=button aria-label=Menu></div><script>const htmlClass=document.documentElement.classList;setTimeout(()=>{htmlClass.remove("not-ready")},10);const btnMenu=document.querySelector(".btn-menu");btnMenu.addEventListener("click",()=>{htmlClass.toggle("open")});const metaTheme=document.querySelector('meta[name="theme-color"]'),lightBg="#fff".replace(/"/g,""),setDark=e=>{metaTheme.setAttribute("content",e?"#000":lightBg),htmlClass[e?"add":"remove"]("dark"),localStorage.setItem("dark",e)},darkScheme=window.matchMedia("(prefers-color-scheme: dark)");if(htmlClass.contains("dark"))setDark(!0);else{const e=localStorage.getItem("dark");setDark(e?e==="true":darkScheme.matches)}darkScheme.addEventListener("change",e=>{setDark(e.matches)});const btnDark=document.querySelector(".btn-dark");btnDark.addEventListener("click",()=>{setDark(localStorage.getItem("dark")!=="true")})</script><div class="nav-wrapper fixed inset-x-0 top-full z-40 flex h-full select-none flex-col justify-center pb-16 duration-200 dark:bg-black lg:static lg:h-auto lg:flex-row lg:!bg-transparent lg:pb-0 lg:transition-none"><nav class="lg:ml-12 lg:flex lg:flex-row lg:items-center lg:space-x-6"><a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/>Home</a>
-<a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/about/>About</a>
-<a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/contact/>Contact</a>
-<a class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal" href=/sponsor/>Sponsor</a></nav></div></header><main class="prose prose-neutral relative mx-auto min-h-[calc(100%-9rem)] max-w-4xl px-8 pb-4 pt-4 dark:prose-invert"><article><header class=mb-4><h1 class="!my-0 pb-2.5">Castle Drawing</h1><div class="text-sm antialiased opacity-60">Published
-<time>11 Sep 2022</time>
-<span class=mx-1>&#183;</span>
-<span>Updated
-<time>15 Jan 2024</time></span></div></header><section><p>In this <a href=/#fpga-demos>FPGA demo</a>, we use multiple shapes (rectangles, triangles, circles) to render a simple picture of a castle. We don&rsquo;t use any software or CPU, just shape rasterization and finite state machines. This Verilog design runs on the Digilent Arty A7 or as a Verilator/SDL simulation on your computer.</p><p><img src=/img/posts/castle-drawing/castle.png alt="Castle Verilator Simulation" title="Who would live in a house like this?"></p><h2 id=building-the-demo>Building the Demo</h2><p>Find the Verilog source and build instructions in the <strong>projf-explore</strong> git repo:
-<a href=https://github.com/projf/projf-explore/tree/main/demos/castle-drawing>https://github.com/projf/projf-explore/tree/main/demos/castle-drawing</a></p><p>To learn about hardware drawing, check out my tutorial on <a href=/posts/lines-and-triangles/>Lines and Triangles</a> and <a href=/posts/fpga-shapes/>2D Shapes</a>.</p><h3 id=demo-structure>Demo Structure</h3><ul><li>Top module with display interfaces and background drawing<ul><li>Arty (XC7): <a href=https://github.com/projf/projf-explore/blob/main/demos/castle-drawing/xc7/top_castle.sv>xc7/top_castle.sv</a></li><li>Verilator/SDL: <a href=https://github.com/projf/projf-explore/blob/main/demos/castle-drawing/sim/top_castle.sv>sim/top_castle.sv</a></li></ul></li><li>Castle render module: <a href=https://github.com/projf/projf-explore/blob/main/demos/castle-drawing/render_castle.sv>render_castle.sv</a> (see below)</li><li>Drawing routines from Project F library<ul><li><a href=https://github.com/projf/projf-explore/blob/main/lib/graphics/draw_triangle_fill.sv>lib/graphics/draw_triangle_fill.sv</a></li><li><a href=https://github.com/projf/projf-explore/blob/main/lib/graphics/draw_rectangle_fill.sv>lib/graphics/draw_rectangle_fill.sv</a></li><li><a href=https://github.com/projf/projf-explore/blob/main/lib/graphics/draw_circle_fill.sv>lib/graphics/draw_circle_fill.sv</a></li></ul></li></ul><h2 id=castle-rendering>Castle Rendering</h2><p>The castle render module is a mix of rectangles, triangles and circles drawn with a finite state machine. The background sky and grass are not drawn into the framebuffer but are rendered directly based on the screen position (see next section).</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span><span style=color:#66d9ef>module</span> render_castle #(
-</span></span><span style=display:flex><span>    <span style=color:#66d9ef>parameter</span> CORDW<span style=color:#f92672>=</span><span style=color:#ae81ff>16</span>,  <span style=color:#75715e>// signed coordinate width (bits)
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>parameter</span> CIDXW<span style=color:#f92672>=</span><span style=color:#ae81ff>4</span>,   <span style=color:#75715e>// colour index width (bits)
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>parameter</span> SCALE<span style=color:#f92672>=</span><span style=color:#ae81ff>1</span>    <span style=color:#75715e>// drawing scale: 1=320x180, 2=640x360, 4=1280x720
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    ) (
-</span></span><span style=display:flex><span>    <span style=color:#66d9ef>input</span>  <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> clk,    <span style=color:#75715e>// clock
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>input</span>  <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> rst,    <span style=color:#75715e>// reset
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>input</span>  <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> oe,     <span style=color:#75715e>// output enable
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>input</span>  <span style=color:#66d9ef>wire</span> <span style=color:#66d9ef>logic</span> start,  <span style=color:#75715e>// start drawing
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>      <span style=color:#66d9ef>logic</span> <span style=color:#66d9ef>signed</span> [CORDW<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] x,  <span style=color:#75715e>// horizontal draw position
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>      <span style=color:#66d9ef>logic</span> <span style=color:#66d9ef>signed</span> [CORDW<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] y,  <span style=color:#75715e>// vertical draw position
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>      <span style=color:#66d9ef>logic</span> [CIDXW<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] cidx,  <span style=color:#75715e>// pixel colour
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>      <span style=color:#66d9ef>logic</span> drawing,  <span style=color:#75715e>// actively drawing
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>output</span>      <span style=color:#66d9ef>logic</span> done      <span style=color:#75715e>// drawing is complete (high for one tick)
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    );
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>    <span style=color:#66d9ef>localparam</span> RBOW_CNT<span style=color:#f92672>=</span><span style=color:#ae81ff>8</span>;    <span style=color:#75715e>// number of shapes in rainbow
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>localparam</span> SHAPE_CNT<span style=color:#f92672>=</span><span style=color:#ae81ff>19</span>;  <span style=color:#75715e>// number of shapes in castle
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> [$clog2(RBOW_CNT)<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] rbow_id;    <span style=color:#75715e>// rainbow shape identifier
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> [$clog2(SHAPE_CNT)<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] shape_id;  <span style=color:#75715e>// castle shape identifier
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
-</span></span><span style=display:flex><span>    <span style=color:#66d9ef>logic</span> <span style=color:#66d9ef>signed</span> [CORDW<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] vx0, vy0, vx1, vy1, vx2, vy2;  <span style=color:#75715e>// shape coords
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> <span style=color:#66d9ef>signed</span> [CORDW<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] vr0;  <span style=color:#75715e>// circle radius
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> <span style=color:#66d9ef>signed</span> [CORDW<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] x_tri,    y_tri;     <span style=color:#75715e>// triangle framebuffer coords
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> <span style=color:#66d9ef>signed</span> [CORDW<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] x_rect,   y_rect;    <span style=color:#75715e>// rectangle framebuffer coords
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> <span style=color:#66d9ef>signed</span> [CORDW<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] x_circle, y_circle;  <span style=color:#75715e>// circle framebuffer coords
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> draw_done;  <span style=color:#75715e>// combined done signal
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> draw_start_tri, drawing_tri, draw_done_tri;           <span style=color:#75715e>// drawing triangle
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> draw_start_rect, drawing_rect, draw_done_rect;        <span style=color:#75715e>// drawing rectangle
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> draw_start_circle, drawing_circle, draw_done_circle;  <span style=color:#75715e>// drawing circle
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
-</span></span><span style=display:flex><span>    <span style=color:#75715e>// draw state machine
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>enum</span> {IDLE, INIT_RBOW, DRAW_RBOW, INIT_CASTLE, DRAW_CASTLE, DONE} state;
-</span></span><span style=display:flex><span>    <span style=color:#66d9ef>always_ff</span> @(<span style=color:#66d9ef>posedge</span> clk) <span style=color:#66d9ef>begin</span>
-</span></span><span style=display:flex><span>        <span style=color:#66d9ef>case</span> (state)
-</span></span><span style=display:flex><span>            INIT_RBOW: <span style=color:#66d9ef>begin</span>
-</span></span><span style=display:flex><span>                state <span style=color:#f92672>&lt;=</span> DRAW_RBOW;
-</span></span><span style=display:flex><span>                draw_start_circle <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
-</span></span><span style=display:flex><span>                vx0 <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>368</span>;
-</span></span><span style=display:flex><span>                vy0 <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>160</span>;
-</span></span><span style=display:flex><span>                vr0 <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>180</span> <span style=color:#f92672>-</span> <span style=color:#ae81ff>5</span> <span style=color:#f92672>*</span> rbow_id;
-</span></span><span style=display:flex><span>                cidx <span style=color:#f92672>&lt;=</span> (rbow_id <span style=color:#f92672>==</span> RBOW_CNT<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span>) <span style=color:#f92672>?</span> <span style=color:#ae81ff>&#39;h0</span> <span style=color:#f92672>:</span> <span style=color:#ae81ff>&#39;h2</span> <span style=color:#f92672>+</span> rbow_id;
-</span></span><span style=display:flex><span>            <span style=color:#66d9ef>end</span>
-</span></span><span style=display:flex><span>            DRAW_RBOW: <span style=color:#66d9ef>begin</span>
-</span></span><span style=display:flex><span>                draw_start_circle <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
-</span></span><span style=display:flex><span>                <span style=color:#66d9ef>if</span> (draw_done) <span style=color:#66d9ef>begin</span>
-</span></span><span style=display:flex><span>                    <span style=color:#66d9ef>if</span> (rbow_id <span style=color:#f92672>==</span> RBOW_CNT<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span>) <span style=color:#66d9ef>begin</span>
-</span></span><span style=display:flex><span>                        state <span style=color:#f92672>&lt;=</span> INIT_CASTLE;
-</span></span><span style=display:flex><span>                    <span style=color:#66d9ef>end</span> <span style=color:#66d9ef>else</span> <span style=color:#66d9ef>begin</span>
-</span></span><span style=display:flex><span>                        rbow_id <span style=color:#f92672>&lt;=</span> rbow_id <span style=color:#f92672>+</span> <span style=color:#ae81ff>1</span>;
-</span></span><span style=display:flex><span>                        state <span style=color:#f92672>&lt;=</span> INIT_RBOW;
-</span></span><span style=display:flex><span>                    <span style=color:#66d9ef>end</span>
-</span></span><span style=display:flex><span>                <span style=color:#66d9ef>end</span>
-</span></span><span style=display:flex><span>            <span style=color:#66d9ef>end</span>
-</span></span><span style=display:flex><span>            INIT_CASTLE: <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// register coordinates and colour (Sweetie 16 palette)
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                state <span style=color:#f92672>&lt;=</span> DRAW_CASTLE;
-</span></span><span style=display:flex><span>                <span style=color:#66d9ef>case</span> (shape_id)
-</span></span><span style=display:flex><span>                    <span style=color:#ae81ff>&#39;d0</span><span style=color:#f92672>:</span> <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// main building
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                        draw_start_rect <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
-</span></span><span style=display:flex><span>                        vx0 <span style=color:#f92672>&lt;=</span>  <span style=color:#ae81ff>60</span>; vy0 <span style=color:#f92672>&lt;=</span>  <span style=color:#ae81ff>75</span>;
-</span></span><span style=display:flex><span>                        vx1 <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>190</span>; vy1 <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>130</span>;
-</span></span><span style=display:flex><span>                        cidx <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>&#39;hE</span>;  <span style=color:#75715e>// dark grey
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                    <span style=color:#66d9ef>end</span>
-</span></span><span style=display:flex><span>                    <span style=color:#ae81ff>&#39;d1</span><span style=color:#f92672>:</span> <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// drawbridge
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                        draw_start_rect <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
-</span></span><span style=display:flex><span>                        vx0 <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>110</span>; vy0 <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>110</span>;
-</span></span><span style=display:flex><span>                        vx1 <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>140</span>; vy1 <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>130</span>;
-</span></span><span style=display:flex><span>                        cidx <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>&#39;hF</span>;  <span style=color:#75715e>// blue-grey
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                    <span style=color:#66d9ef>end</span>
-</span></span><span style=display:flex><span>                    <span style=color:#ae81ff>&#39;d2</span><span style=color:#f92672>:</span> <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// drawbridge arch
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                        draw_start_circle <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
-</span></span><span style=display:flex><span>                        vx0 <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>125</span>; vy0 <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>110</span>;
-</span></span><span style=display:flex><span>                        vr0 <span style=color:#f92672>&lt;=</span>  <span style=color:#ae81ff>15</span>;
-</span></span><span style=display:flex><span>                        cidx <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>&#39;hF</span>;  <span style=color:#75715e>// blue-grey
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                    <span style=color:#66d9ef>end</span>
-</span></span><span style=display:flex><span>                    <span style=color:#ae81ff>&#39;d3</span><span style=color:#f92672>:</span> <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// left tower
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                        draw_start_rect <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
-</span></span><span style=display:flex><span>                        vx0 <span style=color:#f92672>&lt;=</span>  <span style=color:#ae81ff>40</span>; vy0 <span style=color:#f92672>&lt;=</span>  <span style=color:#ae81ff>50</span>;
-</span></span><span style=display:flex><span>                        vx1 <span style=color:#f92672>&lt;=</span>  <span style=color:#ae81ff>60</span>; vy1 <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>130</span>;
-</span></span><span style=display:flex><span>                        cidx <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>&#39;hE</span>;  <span style=color:#75715e>// dark grey
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                    <span style=color:#66d9ef>end</span>
-</span></span><span style=display:flex><span>                    <span style=color:#ae81ff>&#39;d4</span><span style=color:#f92672>:</span> <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// middle tower
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                        draw_start_rect <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
-</span></span><span style=display:flex><span>                        vx0 <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>110</span>; vy0 <span style=color:#f92672>&lt;=</span>  <span style=color:#ae81ff>45</span>;
-</span></span><span style=display:flex><span>                        vx1 <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>140</span>; vy1 <span style=color:#f92672>&lt;=</span>  <span style=color:#ae81ff>75</span>;
-</span></span><span style=display:flex><span>                        cidx <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>&#39;hE</span>;  <span style=color:#75715e>// dark grey
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                    <span style=color:#66d9ef>end</span>
-</span></span><span style=display:flex><span>                    <span style=color:#ae81ff>&#39;d5</span><span style=color:#f92672>:</span> <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// right tower
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                        draw_start_rect <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
-</span></span><span style=display:flex><span>                        vx0 <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>190</span>; vy0 <span style=color:#f92672>&lt;=</span>  <span style=color:#ae81ff>50</span>;
-</span></span><span style=display:flex><span>                        vx1 <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>210</span>; vy1 <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>130</span>;
-</span></span><span style=display:flex><span>                        cidx <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>&#39;hE</span>;  <span style=color:#75715e>// dark grey
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                    <span style=color:#66d9ef>end</span>
-</span></span><span style=display:flex><span>                    <span style=color:#ae81ff>&#39;d6</span><span style=color:#f92672>:</span> <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// left roof
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                        draw_start_tri <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
-</span></span><span style=display:flex><span>                        vx0 <span style=color:#f92672>&lt;=</span>  <span style=color:#ae81ff>50</span>; vy0 <span style=color:#f92672>&lt;=</span>  <span style=color:#ae81ff>35</span>;
-</span></span><span style=display:flex><span>                        vx1 <span style=color:#f92672>&lt;=</span>  <span style=color:#ae81ff>65</span>; vy1 <span style=color:#f92672>&lt;=</span>  <span style=color:#ae81ff>50</span>;
-</span></span><span style=display:flex><span>                        vx2 <span style=color:#f92672>&lt;=</span>  <span style=color:#ae81ff>35</span>; vy2 <span style=color:#f92672>&lt;=</span>  <span style=color:#ae81ff>50</span>;
-</span></span><span style=display:flex><span>                        cidx <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>&#39;h2</span>;  <span style=color:#75715e>// red
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                    <span style=color:#66d9ef>end</span>
-</span></span><span style=display:flex><span>                    <span style=color:#ae81ff>&#39;d7</span><span style=color:#f92672>:</span> <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// middle roof
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                        draw_start_tri <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
-</span></span><span style=display:flex><span>                        vx0 <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>125</span>; vy0 <span style=color:#f92672>&lt;=</span>  <span style=color:#ae81ff>25</span>;
-</span></span><span style=display:flex><span>                        vx1 <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>145</span>; vy1 <span style=color:#f92672>&lt;=</span>  <span style=color:#ae81ff>45</span>;
-</span></span><span style=display:flex><span>                        vx2 <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>105</span>; vy2 <span style=color:#f92672>&lt;=</span>  <span style=color:#ae81ff>45</span>;
-</span></span><span style=display:flex><span>                        cidx <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>&#39;h2</span>;  <span style=color:#75715e>// red
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                    <span style=color:#66d9ef>end</span>
-</span></span><span style=display:flex><span>                    <span style=color:#ae81ff>&#39;d8</span><span style=color:#f92672>:</span> <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// right roof
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                        draw_start_tri <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
-</span></span><span style=display:flex><span>                        vx0 <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>200</span>; vy0 <span style=color:#f92672>&lt;=</span>  <span style=color:#ae81ff>35</span>;
-</span></span><span style=display:flex><span>                        vx1 <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>215</span>; vy1 <span style=color:#f92672>&lt;=</span>  <span style=color:#ae81ff>50</span>;
-</span></span><span style=display:flex><span>                        vx2 <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>185</span>; vy2 <span style=color:#f92672>&lt;=</span>  <span style=color:#ae81ff>50</span>;
-</span></span><span style=display:flex><span>                        cidx <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>&#39;h2</span>;  <span style=color:#75715e>// red
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                    <span style=color:#66d9ef>end</span>
-</span></span><span style=display:flex><span>                    <span style=color:#ae81ff>&#39;d9</span><span style=color:#f92672>:</span> <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// left window
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                        draw_start_rect <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
-</span></span><span style=display:flex><span>                        vx0 <span style=color:#f92672>&lt;=</span>  <span style=color:#ae81ff>46</span>; vy0 <span style=color:#f92672>&lt;=</span>  <span style=color:#ae81ff>55</span>;
-</span></span><span style=display:flex><span>                        vx1 <span style=color:#f92672>&lt;=</span>  <span style=color:#ae81ff>54</span>; vy1 <span style=color:#f92672>&lt;=</span>  <span style=color:#ae81ff>70</span>;
-</span></span><span style=display:flex><span>                        cidx <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>&#39;hF</span>;  <span style=color:#75715e>// blue-grey
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                    <span style=color:#66d9ef>end</span>
-</span></span><span style=display:flex><span>                    <span style=color:#ae81ff>&#39;d10</span><span style=color:#f92672>:</span> <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// middle window
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                        draw_start_rect <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
-</span></span><span style=display:flex><span>                        vx0 <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>120</span>; vy0 <span style=color:#f92672>&lt;=</span>  <span style=color:#ae81ff>50</span>;
-</span></span><span style=display:flex><span>                        vx1 <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>130</span>; vy1 <span style=color:#f92672>&lt;=</span>  <span style=color:#ae81ff>70</span>;
-</span></span><span style=display:flex><span>                        cidx <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>&#39;hF</span>;  <span style=color:#75715e>// blue-grey
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                    <span style=color:#66d9ef>end</span>
-</span></span><span style=display:flex><span>                    <span style=color:#ae81ff>&#39;d11</span><span style=color:#f92672>:</span> <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// right window
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                        draw_start_rect <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
-</span></span><span style=display:flex><span>                        vx0 <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>196</span>; vy0 <span style=color:#f92672>&lt;=</span>  <span style=color:#ae81ff>55</span>;
-</span></span><span style=display:flex><span>                        vx1 <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>204</span>; vy1 <span style=color:#f92672>&lt;=</span>  <span style=color:#ae81ff>70</span>;
-</span></span><span style=display:flex><span>                        cidx <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>&#39;hF</span>;  <span style=color:#75715e>// blue-grey
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                    <span style=color:#66d9ef>end</span>
-</span></span><span style=display:flex><span>                    <span style=color:#ae81ff>&#39;d12</span><span style=color:#f92672>:</span> <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// battlement 1
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                        draw_start_rect <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
-</span></span><span style=display:flex><span>                        vx0 <span style=color:#f92672>&lt;=</span>  <span style=color:#ae81ff>63</span>; vy0 <span style=color:#f92672>&lt;=</span>  <span style=color:#ae81ff>67</span>;
-</span></span><span style=display:flex><span>                        vx1 <span style=color:#f92672>&lt;=</span>  <span style=color:#ae81ff>72</span>; vy1 <span style=color:#f92672>&lt;=</span>  <span style=color:#ae81ff>75</span>;
-</span></span><span style=display:flex><span>                        cidx <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>&#39;hE</span>;  <span style=color:#75715e>// dark grey
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                    <span style=color:#66d9ef>end</span>
-</span></span><span style=display:flex><span>                    <span style=color:#ae81ff>&#39;d13</span><span style=color:#f92672>:</span> <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// battlement 2
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                        draw_start_rect <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
-</span></span><span style=display:flex><span>                        vx0 <span style=color:#f92672>&lt;=</span>   <span style=color:#ae81ff>80</span>; vy0 <span style=color:#f92672>&lt;=</span>  <span style=color:#ae81ff>67</span>;
-</span></span><span style=display:flex><span>                        vx1 <span style=color:#f92672>&lt;=</span>   <span style=color:#ae81ff>89</span>; vy1 <span style=color:#f92672>&lt;=</span>  <span style=color:#ae81ff>75</span>;
-</span></span><span style=display:flex><span>                        cidx <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>&#39;hE</span>;  <span style=color:#75715e>// dark grey
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                    <span style=color:#66d9ef>end</span>
-</span></span><span style=display:flex><span>                    <span style=color:#ae81ff>&#39;d14</span><span style=color:#f92672>:</span> <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// battlement 3
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                        draw_start_rect <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
-</span></span><span style=display:flex><span>                        vx0 <span style=color:#f92672>&lt;=</span>  <span style=color:#ae81ff>97</span>; vy0 <span style=color:#f92672>&lt;=</span>  <span style=color:#ae81ff>67</span>;
-</span></span><span style=display:flex><span>                        vx1 <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>106</span>; vy1 <span style=color:#f92672>&lt;=</span>  <span style=color:#ae81ff>75</span>;
-</span></span><span style=display:flex><span>                        cidx <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>&#39;hE</span>;  <span style=color:#75715e>// dark grey
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                    <span style=color:#66d9ef>end</span>
-</span></span><span style=display:flex><span>                    <span style=color:#ae81ff>&#39;d15</span><span style=color:#f92672>:</span> <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// battlement 4
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                        draw_start_rect <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
-</span></span><span style=display:flex><span>                        vx0 <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>144</span>; vy0 <span style=color:#f92672>&lt;=</span>  <span style=color:#ae81ff>67</span>;
-</span></span><span style=display:flex><span>                        vx1 <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>153</span>; vy1 <span style=color:#f92672>&lt;=</span>  <span style=color:#ae81ff>75</span>;
-</span></span><span style=display:flex><span>                        cidx <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>&#39;hE</span>;  <span style=color:#75715e>// dark grey
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                    <span style=color:#66d9ef>end</span>
-</span></span><span style=display:flex><span>                    <span style=color:#ae81ff>&#39;d16</span><span style=color:#f92672>:</span> <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// battlement 5
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                        draw_start_rect <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
-</span></span><span style=display:flex><span>                        vx0 <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>161</span>; vy0 <span style=color:#f92672>&lt;=</span>  <span style=color:#ae81ff>67</span>;
-</span></span><span style=display:flex><span>                        vx1 <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>170</span>; vy1 <span style=color:#f92672>&lt;=</span>  <span style=color:#ae81ff>75</span>;
-</span></span><span style=display:flex><span>                        cidx <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>&#39;hE</span>;  <span style=color:#75715e>// dark grey
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                    <span style=color:#66d9ef>end</span>
-</span></span><span style=display:flex><span>                    <span style=color:#ae81ff>&#39;d17</span><span style=color:#f92672>:</span> <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// battlement 6
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                        draw_start_rect <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
-</span></span><span style=display:flex><span>                        vx0 <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>178</span>; vy0 <span style=color:#f92672>&lt;=</span>  <span style=color:#ae81ff>67</span>;
-</span></span><span style=display:flex><span>                        vx1 <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>187</span>; vy1 <span style=color:#f92672>&lt;=</span>  <span style=color:#ae81ff>75</span>;
-</span></span><span style=display:flex><span>                        cidx <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>&#39;hE</span>;  <span style=color:#75715e>// dark grey
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                    <span style=color:#66d9ef>end</span>
-</span></span><span style=display:flex><span>                    <span style=color:#66d9ef>default</span><span style=color:#f92672>:</span> <span style=color:#66d9ef>begin</span>  <span style=color:#75715e>// clear ground
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                        draw_start_rect <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>1</span>;
-</span></span><span style=display:flex><span>                        vx0 <span style=color:#f92672>&lt;=</span>   <span style=color:#ae81ff>0</span>; vy0 <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>131</span>;
-</span></span><span style=display:flex><span>                        vx1 <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>319</span>; vy1 <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>179</span>;
-</span></span><span style=display:flex><span>                        cidx <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>&#39;h0</span>;  <span style=color:#75715e>// background (transparent)
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>                    <span style=color:#66d9ef>end</span>
-</span></span><span style=display:flex><span>                <span style=color:#66d9ef>endcase</span>
-</span></span><span style=display:flex><span>            <span style=color:#66d9ef>end</span>
-</span></span><span style=display:flex><span>            DRAW_CASTLE: <span style=color:#66d9ef>begin</span>
-</span></span><span style=display:flex><span>                draw_start_tri    <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
-</span></span><span style=display:flex><span>                draw_start_rect   <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
-</span></span><span style=display:flex><span>                draw_start_circle <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span>;
-</span></span><span style=display:flex><span>                <span style=color:#66d9ef>if</span> (draw_done) <span style=color:#66d9ef>begin</span>
-</span></span><span style=display:flex><span>                    <span style=color:#66d9ef>if</span> (shape_id <span style=color:#f92672>==</span> SHAPE_CNT<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span>) <span style=color:#66d9ef>begin</span>
-</span></span><span style=display:flex><span>                        state <span style=color:#f92672>&lt;=</span> DONE;
-</span></span><span style=display:flex><span>                    <span style=color:#66d9ef>end</span> <span style=color:#66d9ef>else</span> <span style=color:#66d9ef>begin</span>
-</span></span><span style=display:flex><span>                        shape_id <span style=color:#f92672>&lt;=</span> shape_id <span style=color:#f92672>+</span> <span style=color:#ae81ff>1</span>;
-</span></span><span style=display:flex><span>                        state <span style=color:#f92672>&lt;=</span> INIT_CASTLE;
-</span></span><span style=display:flex><span>                    <span style=color:#66d9ef>end</span>
-</span></span><span style=display:flex><span>                <span style=color:#66d9ef>end</span>
-</span></span><span style=display:flex><span>            <span style=color:#66d9ef>end</span>
-</span></span><span style=display:flex><span>            DONE: state <span style=color:#f92672>&lt;=</span> DONE;
-</span></span><span style=display:flex><span>            <span style=color:#66d9ef>default</span><span style=color:#f92672>:</span> <span style=color:#66d9ef>if</span> (start) state <span style=color:#f92672>&lt;=</span> INIT_RBOW;  <span style=color:#75715e>// IDLE
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>        <span style=color:#66d9ef>endcase</span>
-</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> (rst) state <span style=color:#f92672>&lt;=</span> IDLE;
-</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>    draw_triangle_fill #(.CORDW(CORDW)) draw_triangle_inst (
-</span></span><span style=display:flex><span>        .clk,
-</span></span><span style=display:flex><span>        .rst,
-</span></span><span style=display:flex><span>        .start(draw_start_tri),
-</span></span><span style=display:flex><span>        .oe,
-</span></span><span style=display:flex><span>        .x0(vx0 <span style=color:#f92672>*</span> SCALE),
-</span></span><span style=display:flex><span>        .y0(vy0 <span style=color:#f92672>*</span> SCALE),
-</span></span><span style=display:flex><span>        .x1(vx1 <span style=color:#f92672>*</span> SCALE),
-</span></span><span style=display:flex><span>        .y1(vy1 <span style=color:#f92672>*</span> SCALE),
-</span></span><span style=display:flex><span>        .x2(vx2 <span style=color:#f92672>*</span> SCALE),
-</span></span><span style=display:flex><span>        .y2(vy2 <span style=color:#f92672>*</span> SCALE),
-</span></span><span style=display:flex><span>        .x(x_tri),
-</span></span><span style=display:flex><span>        .y(y_tri),
-</span></span><span style=display:flex><span>        .drawing(drawing_tri),
-</span></span><span style=display:flex><span>        .busy(),
-</span></span><span style=display:flex><span>        .done(draw_done_tri)
-</span></span><span style=display:flex><span>    );
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>    draw_rectangle_fill #(.CORDW(CORDW)) draw_rectangle_inst (
-</span></span><span style=display:flex><span>        .clk,
-</span></span><span style=display:flex><span>        .rst,
-</span></span><span style=display:flex><span>        .start(draw_start_rect),
-</span></span><span style=display:flex><span>        .oe,
-</span></span><span style=display:flex><span>        .x0(vx0 <span style=color:#f92672>*</span> SCALE),
-</span></span><span style=display:flex><span>        .y0(vy0 <span style=color:#f92672>*</span> SCALE),
-</span></span><span style=display:flex><span>        .x1(vx1 <span style=color:#f92672>*</span> SCALE),
-</span></span><span style=display:flex><span>        .y1(vy1 <span style=color:#f92672>*</span> SCALE),
-</span></span><span style=display:flex><span>        .x(x_rect),
-</span></span><span style=display:flex><span>        .y(y_rect),
-</span></span><span style=display:flex><span>        .drawing(drawing_rect),
-</span></span><span style=display:flex><span>        .busy(),
-</span></span><span style=display:flex><span>        .done(draw_done_rect)
-</span></span><span style=display:flex><span>    );
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>    draw_circle_fill #(.CORDW(CORDW)) draw_circle_inst (
-</span></span><span style=display:flex><span>        .clk,
-</span></span><span style=display:flex><span>        .rst,
-</span></span><span style=display:flex><span>        .start(draw_start_circle),
-</span></span><span style=display:flex><span>        .oe,
-</span></span><span style=display:flex><span>        .x0(vx0 <span style=color:#f92672>*</span> SCALE),
-</span></span><span style=display:flex><span>        .y0(vy0 <span style=color:#f92672>*</span> SCALE),
-</span></span><span style=display:flex><span>        .r0(vr0 <span style=color:#f92672>*</span> SCALE),
-</span></span><span style=display:flex><span>        .x(x_circle),
-</span></span><span style=display:flex><span>        .y(y_circle),
-</span></span><span style=display:flex><span>        .drawing(drawing_circle),
-</span></span><span style=display:flex><span>        .busy(),
-</span></span><span style=display:flex><span>        .done(draw_done_circle)
-</span></span><span style=display:flex><span>    );
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>    <span style=color:#75715e>// output coordinates for the active shape
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>always_ff</span> @(<span style=color:#66d9ef>posedge</span> clk) <span style=color:#66d9ef>begin</span>
-</span></span><span style=display:flex><span>        x <span style=color:#f92672>&lt;=</span> drawing_tri <span style=color:#f92672>?</span> x_tri <span style=color:#f92672>:</span> (drawing_rect <span style=color:#f92672>?</span> x_rect <span style=color:#f92672>:</span> x_circle);
-</span></span><span style=display:flex><span>        y <span style=color:#f92672>&lt;=</span> drawing_tri <span style=color:#f92672>?</span> y_tri <span style=color:#f92672>:</span> (drawing_rect <span style=color:#f92672>?</span> y_rect <span style=color:#f92672>:</span> y_circle);
-</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>    <span style=color:#75715e>// drawing and done apply to all drawing types
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>always_ff</span> @(<span style=color:#66d9ef>posedge</span> clk) <span style=color:#66d9ef>begin</span>
-</span></span><span style=display:flex><span>        drawing   <span style=color:#f92672>&lt;=</span> drawing_tri   <span style=color:#f92672>||</span> drawing_rect   <span style=color:#f92672>||</span> drawing_circle;
-</span></span><span style=display:flex><span>        draw_done <span style=color:#f92672>&lt;=</span> draw_done_tri <span style=color:#f92672>||</span> draw_done_rect <span style=color:#f92672>||</span> draw_done_circle;
-</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
-</span></span><span style=display:flex><span>
-</span></span><span style=display:flex><span>    <span style=color:#75715e>// doesn&#39;t need delaying one cycle because it&#39;s based on draw_done
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>always_ff</span> @(<span style=color:#66d9ef>posedge</span> clk) done <span style=color:#f92672>&lt;=</span> (state <span style=color:#f92672>==</span> DONE);
-</span></span><span style=display:flex><span><span style=color:#66d9ef>endmodule</span>
-</span></span></code></pre></div><h2 id=rendering-background>Rendering Background</h2><p>The background is rendered in the top module but will move to its own module in time.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-verilog data-lang=verilog><span style=display:flex><span>    <span style=color:#75715e>// background colour (sy ignores 16:9 letterbox)
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>    <span style=color:#66d9ef>logic</span> [COLRW<span style=color:#f92672>-</span><span style=color:#ae81ff>1</span><span style=color:#f92672>:</span><span style=color:#ae81ff>0</span>] bg_colr;
-</span></span><span style=display:flex><span>    <span style=color:#66d9ef>always_ff</span> @(<span style=color:#66d9ef>posedge</span> clk_pix) <span style=color:#66d9ef>begin</span>
-</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> (line) <span style=color:#66d9ef>begin</span>
-</span></span><span style=display:flex><span>            <span style=color:#66d9ef>if</span>      (sy <span style=color:#f92672>==</span>   <span style=color:#ae81ff>0</span>) bg_colr <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>12&#39;h000</span>;
-</span></span><span style=display:flex><span>            <span style=color:#66d9ef>else</span> <span style=color:#66d9ef>if</span> (sy <span style=color:#f92672>==</span>  <span style=color:#ae81ff>60</span>) bg_colr <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>12&#39;h239</span>;
-</span></span><span style=display:flex><span>            <span style=color:#66d9ef>else</span> <span style=color:#66d9ef>if</span> (sy <span style=color:#f92672>==</span> <span style=color:#ae81ff>140</span>) bg_colr <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>12&#39;h24A</span>;
-</span></span><span style=display:flex><span>            <span style=color:#66d9ef>else</span> <span style=color:#66d9ef>if</span> (sy <span style=color:#f92672>==</span> <span style=color:#ae81ff>195</span>) bg_colr <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>12&#39;h25B</span>;
-</span></span><span style=display:flex><span>            <span style=color:#66d9ef>else</span> <span style=color:#66d9ef>if</span> (sy <span style=color:#f92672>==</span> <span style=color:#ae81ff>230</span>) bg_colr <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>12&#39;h26C</span>;
-</span></span><span style=display:flex><span>            <span style=color:#66d9ef>else</span> <span style=color:#66d9ef>if</span> (sy <span style=color:#f92672>==</span> <span style=color:#ae81ff>260</span>) bg_colr <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>12&#39;h27D</span>;
-</span></span><span style=display:flex><span>            <span style=color:#66d9ef>else</span> <span style=color:#66d9ef>if</span> (sy <span style=color:#f92672>==</span> <span style=color:#ae81ff>285</span>) bg_colr <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>12&#39;h29E</span>;
-</span></span><span style=display:flex><span>            <span style=color:#66d9ef>else</span> <span style=color:#66d9ef>if</span> (sy <span style=color:#f92672>==</span> <span style=color:#ae81ff>305</span>) bg_colr <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>12&#39;h2BF</span>;
-</span></span><span style=display:flex><span>            <span style=color:#66d9ef>else</span> <span style=color:#66d9ef>if</span> (sy <span style=color:#f92672>==</span> <span style=color:#ae81ff>322</span>) bg_colr <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>12&#39;h370</span>;  <span style=color:#75715e>// below castle (2x pix)
-</span></span></span><span style=display:flex><span><span style=color:#75715e></span>            <span style=color:#66d9ef>else</span> <span style=color:#66d9ef>if</span> (sy <span style=color:#f92672>==</span> <span style=color:#ae81ff>420</span>) bg_colr <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>12&#39;h000</span>;
-</span></span><span style=display:flex><span>        <span style=color:#66d9ef>end</span>
-</span></span><span style=display:flex><span>    <span style=color:#66d9ef>end</span>
-</span></span></code></pre></div><h2 id=whats-next>What&rsquo;s Next?</h2><p>Check out my other <a href=/#fpga-demos>FPGA demos</a> or the <a href=/#fpga-graphics>FPGA graphics</a> tutorial series.</p></section><footer class="mt-12 flex flex-wrap"><a class="mb-1.5 mr-1.5 rounded-lg bg-black/[3%] px-5 py-1.5 no-underline dark:bg-white/[8%]" href=https://projectf.io/tags/graphics>graphics</a>
-<a class="mb-1.5 mr-1.5 rounded-lg bg-black/[3%] px-5 py-1.5 no-underline dark:bg-white/[8%]" href=https://projectf.io/tags/arty-a7>arty-a7</a>
-<a class="mb-1.5 mr-1.5 rounded-lg bg-black/[3%] px-5 py-1.5 no-underline dark:bg-white/[8%]" href=https://projectf.io/tags/verilator>verilator</a></footer></article></main><footer class="opaco mx-auto flex h-[4.5rem] max-w-4xl items-center px-8 text-[0.9em] opacity-60"><div class=mr-auto><a class=link href=https://projectf.io/>Project F</a>: FPGA and RISC-V. Only hardware makes it possible!
-&copy; 2025 Will Green.</div></footer></body></html>
+<!doctype html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<html
+  class="not-ready lg:text-base"
+  style="--bg: #fff"
+  lang="en-gb"
+>
+  <head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, shrink-to-fit=no"
+  />
+
+  
+  <title>Castle Drawing - Project F</title>
+
+  
+  <meta name="theme-color" />
+
+  
+  
+  
+  
+  <meta name="description" content="In this FPGA demo, we use multiple shapes (rectangles, triangles, circles) to render a simple picture of a castle. We don&rsquo;t use any software or CPU, just shape rasterization and finite state machines. This Verilog design runs on the Digilent Arty A7 or as a Verilator/SDL simulation on your computer." />
+  <meta name="author" content="Will Green" />
+  
+
+  
+  
+  
+  
+  
+  
+  <link rel="preload stylesheet" as="style" href="https://projectf.io/main.min.css" />
+
+  
+  
+  
+  
+  
+  <link rel="preload" as="image" href="https://projectf.io/theme.svg" />
+
+  
+  
+  
+  
+  
+
+  
+  
+  
+
+  
+  
+  <script
+    defer
+    src="https://projectf.io/highlight.min.js"
+    onload="hljs.initHighlightingOnLoad();"
+  ></script>
+  
+
+  
+  
+  
+
+  
+  <link rel="icon" href="https://projectf.io/favicon.ico" />
+  <link rel="apple-touch-icon" href="https://projectf.io/apple-touch-icon.png" />
+
+  
+  <meta name="generator" content="Hugo 0.128.2">
+
+  
+  
+  
+  
+  
+  
+  
+
+
+  
+  
+  <meta itemprop="name" content="Castle Drawing">
+  <meta itemprop="description" content="In this FPGA demo, we use multiple shapes (rectangles, triangles, circles) to render a simple picture of a castle. We don’t use any software or CPU, just shape rasterization and finite state machines. This Verilog design runs on the Digilent Arty A7 or as a Verilator/SDL simulation on your computer.">
+  <meta itemprop="datePublished" content="2022-09-11T00:00:00+00:00">
+  <meta itemprop="dateModified" content="2024-01-15T00:00:00+00:00">
+  <meta itemprop="wordCount" content="1320">
+  <meta itemprop="image" content="https://projectf.io/img/posts/castle-drawing/social-card.png">
+  <meta itemprop="keywords" content="Graphics,Arty-A7,Verilator">
+  
+  <meta property="og:url" content="https://projectf.io/posts/castle-drawing/">
+  <meta property="og:site_name" content="Project F">
+  <meta property="og:title" content="Castle Drawing">
+  <meta property="og:description" content="In this FPGA demo, we use multiple shapes (rectangles, triangles, circles) to render a simple picture of a castle. We don’t use any software or CPU, just shape rasterization and finite state machines. This Verilog design runs on the Digilent Arty A7 or as a Verilator/SDL simulation on your computer.">
+  <meta property="og:locale" content="en_gb">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2022-09-11T00:00:00+00:00">
+    <meta property="article:modified_time" content="2024-01-15T00:00:00+00:00">
+    <meta property="article:tag" content="Graphics">
+    <meta property="article:tag" content="Arty-A7">
+    <meta property="article:tag" content="Verilator">
+    <meta property="og:image" content="https://projectf.io/img/posts/castle-drawing/social-card.png">
+
+  
+  
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://projectf.io/img/posts/castle-drawing/social-card.png">
+  <meta name="twitter:title" content="Castle Drawing">
+  <meta name="twitter:description" content="In this FPGA demo, we use multiple shapes (rectangles, triangles, circles) to render a simple picture of a castle. We don’t use any software or CPU, just shape rasterization and finite state machines. This Verilog design runs on the Digilent Arty A7 or as a Verilator/SDL simulation on your computer.">
+
+  
+  
+  
+  <link rel="canonical" href="https://projectf.io/posts/castle-drawing/" />
+  
+  
+</head>
+
+  <body class="text-black duration-200 ease-out dark:text-white">
+    <header
+  
+  class="mx-auto flex h-[4.5rem] max-w-4xl px-8 lg:justify-center"
+  
+  >
+  <div class="relative z-50 mr-auto flex items-center">
+    <a
+      class="-translate-x-[1px] -translate-y-[1px] text-2xl font-semibold"
+      href="https://projectf.io/"
+      >Project F</a
+    >
+    <div
+      class="btn-dark text-[0] ml-4 h-6 w-6 shrink-0 cursor-pointer [background:url(./theme.svg)_left_center/cover_no-repeat] dark:invert dark:[background-position:right]"
+      role="button"
+      aria-label="Dark"
+    ></div>
+  </div>
+
+  <div
+    class="btn-menu relative z-50 -mr-8 flex h-[4.5rem] w-[5rem] shrink-0 cursor-pointer flex-col items-center justify-center gap-2.5 lg:hidden"
+    role="button"
+    aria-label="Menu"
+  ></div>
+
+  
+
+  <script>
+    
+    const htmlClass = document.documentElement.classList;
+    setTimeout(() => {
+      htmlClass.remove('not-ready');
+    }, 10);
+
+    
+    const btnMenu = document.querySelector('.btn-menu');
+    btnMenu.addEventListener('click', () => {
+      htmlClass.toggle('open');
+    });
+
+    
+    const metaTheme = document.querySelector('meta[name="theme-color"]');
+    const lightBg = '#fff'.replace(/"/g, '');
+    const setDark = (isDark) => {
+      metaTheme.setAttribute('content', isDark ? '#000' : lightBg);
+      htmlClass[isDark ? 'add' : 'remove']('dark');
+      localStorage.setItem('dark', isDark);
+    };
+
+    
+    const darkScheme = window.matchMedia('(prefers-color-scheme: dark)');
+    if (htmlClass.contains('dark')) {
+      setDark(true);
+    } else {
+      const darkVal = localStorage.getItem('dark');
+      setDark(darkVal ? darkVal === 'true' : darkScheme.matches);
+    }
+
+    
+    darkScheme.addEventListener('change', (event) => {
+      setDark(event.matches);
+    });
+
+    
+    const btnDark = document.querySelector('.btn-dark');
+    btnDark.addEventListener('click', () => {
+      setDark(localStorage.getItem('dark') !== 'true');
+    });
+  </script>
+
+  <div
+    class="nav-wrapper fixed inset-x-0 top-full z-40 flex h-full select-none flex-col justify-center pb-16 duration-200 dark:bg-black lg:static lg:h-auto lg:flex-row lg:!bg-transparent lg:pb-0 lg:transition-none"
+  >
+    
+    
+    <nav class="lg:ml-12 lg:flex lg:flex-row lg:items-center lg:space-x-6">
+      
+      <a
+        class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal"
+        href="/"
+        >Home</a
+      >
+      
+      <a
+        class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal"
+        href="/about/"
+        >About</a
+      >
+      
+      <a
+        class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal"
+        href="/contact/"
+        >Contact</a
+      >
+      
+      <a
+        class="block text-center text-2xl leading-[5rem] lg:text-base lg:font-normal"
+        href="/sponsor/"
+        >Sponsor</a
+      >
+      
+    </nav>
+    
+
+    
+  </div>
+</header>
+
+
+    <main
+      
+      class="prose prose-neutral relative mx-auto min-h-[calc(100%-9rem)] max-w-4xl px-8 pb-4 pt-4 dark:prose-invert"
+      
+    >
+      
+
+<article>
+  <header class="mb-4">
+    <h1 class="!my-0 pb-2.5">Castle Drawing</h1>
+
+    
+    <div class="text-sm antialiased opacity-60">
+      
+      Published
+      <time>11 Sep 2022</time>
+      
+      <span class="mx-1">&middot;</span>
+      <span>Updated
+      <time>15 Jan 2024</time></span>
+      
+      
+    </div>
+    
+  </header>
+
+  <section><p>In this FPGA demo, we use multiple shapes (rectangles, triangles, circles) to render a simple picture of a castle. We don&rsquo;t use any software or CPU, just shape rasterization and finite state machines. This Verilog design runs on the Digilent Arty A7 or as a Verilator/SDL simulation on your computer.</p>
+<p><img src="/img/posts/castle-drawing/castle.png" alt="Castle Verilator Simulation" title="Who would live in a house like this?"></p>
+<h2 id="building-the-demo">Building the Demo</h2>
+<p>Find the Verilog source and build instructions in the <strong>projf-explore</strong> git repo:
+<a href="https://github.com/projf/projf-explore/tree/main/demos/castle-drawing">https://github.com/projf/projf-explore/tree/main/demos/castle-drawing</a></p>
+<p>To learn about hardware drawing, check out my tutorial on <a href="/posts/lines-and-triangles/">Lines and Triangles</a> and <a href="/posts/fpga-shapes/">2D Shapes</a>.</p>
+<h3 id="demo-structure">Demo Structure</h3>
+<ul>
+<li>Top module with display interfaces and background drawing
+<ul>
+<li>Arty (XC7): <a href="https://github.com/projf/projf-explore/blob/main/demos/castle-drawing/xc7/top_castle.sv">xc7/top_castle.sv</a></li>
+<li>Verilator/SDL: <a href="https://github.com/projf/projf-explore/blob/main/demos/castle-drawing/sim/top_castle.sv">sim/top_castle.sv</a></li>
+</ul>
+</li>
+<li>Castle render module: <a href="https://github.com/projf/projf-explore/blob/main/demos/castle-drawing/render_castle.sv">render_castle.sv</a> (see below)</li>
+<li>Drawing routines from Project F library
+<ul>
+<li><a href="https://github.com/projf/projf-explore/blob/main/lib/graphics/draw_triangle_fill.sv">lib/graphics/draw_triangle_fill.sv</a></li>
+<li><a href="https://github.com/projf/projf-explore/blob/main/lib/graphics/draw_rectangle_fill.sv">lib/graphics/draw_rectangle_fill.sv</a></li>
+<li><a href="https://github.com/projf/projf-explore/blob/main/lib/graphics/draw_circle_fill.sv">lib/graphics/draw_circle_fill.sv</a></li>
+</ul>
+</li>
+</ul>
+<h2 id="castle-rendering">Castle Rendering</h2>
+<p>The castle render module is a mix of rectangles, triangles and circles drawn with a finite state machine. The background sky and grass are not drawn into the framebuffer but are rendered directly based on the screen position (see next section).</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#66d9ef">module</span> render_castle #(
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">parameter</span> CORDW<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>,  <span style="color:#75715e">// signed coordinate width (bits)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> CIDXW<span style="color:#f92672">=</span><span style="color:#ae81ff">4</span>,   <span style="color:#75715e">// colour index width (bits)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">parameter</span> SCALE<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>    <span style="color:#75715e">// drawing scale: 1=320x180, 2=640x360, 4=1280x720
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    ) (
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> clk,    <span style="color:#75715e">// clock
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> rst,    <span style="color:#75715e">// reset
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> oe,     <span style="color:#75715e">// output enable
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">input</span>  <span style="color:#66d9ef">wire</span> <span style="color:#66d9ef">logic</span> start,  <span style="color:#75715e">// start drawing
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x,  <span style="color:#75715e">// horizontal draw position
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] y,  <span style="color:#75715e">// vertical draw position
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> [CIDXW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] cidx,  <span style="color:#75715e">// pixel colour
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> drawing,  <span style="color:#75715e">// actively drawing
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">output</span>      <span style="color:#66d9ef">logic</span> done      <span style="color:#75715e">// drawing is complete (high for one tick)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    );
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">localparam</span> RBOW_CNT<span style="color:#f92672">=</span><span style="color:#ae81ff">8</span>;    <span style="color:#75715e">// number of shapes in rainbow
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">localparam</span> SHAPE_CNT<span style="color:#f92672">=</span><span style="color:#ae81ff">19</span>;  <span style="color:#75715e">// number of shapes in castle
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(RBOW_CNT)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] rbow_id;    <span style="color:#75715e">// rainbow shape identifier
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [$clog2(SHAPE_CNT)<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] shape_id;  <span style="color:#75715e">// castle shape identifier
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vx0, vy0, vx1, vy1, vx2, vy2;  <span style="color:#75715e">// shape coords
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] vr0;  <span style="color:#75715e">// circle radius
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x_tri,    y_tri;     <span style="color:#75715e">// triangle framebuffer coords
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x_rect,   y_rect;    <span style="color:#75715e">// rectangle framebuffer coords
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> <span style="color:#66d9ef">signed</span> [CORDW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] x_circle, y_circle;  <span style="color:#75715e">// circle framebuffer coords
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> draw_done;  <span style="color:#75715e">// combined done signal
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> draw_start_tri, drawing_tri, draw_done_tri;           <span style="color:#75715e">// drawing triangle
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> draw_start_rect, drawing_rect, draw_done_rect;        <span style="color:#75715e">// drawing rectangle
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> draw_start_circle, drawing_circle, draw_done_circle;  <span style="color:#75715e">// drawing circle
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// draw state machine
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">enum</span> {IDLE, INIT_RBOW, DRAW_RBOW, INIT_CASTLE, DRAW_CASTLE, DONE} state;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">case</span> (state)
+</span></span><span style="display:flex;"><span>            INIT_RBOW: <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>                state <span style="color:#f92672">&lt;=</span> DRAW_RBOW;
+</span></span><span style="display:flex;"><span>                draw_start_circle <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>                vx0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">368</span>;
+</span></span><span style="display:flex;"><span>                vy0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">160</span>;
+</span></span><span style="display:flex;"><span>                vr0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">180</span> <span style="color:#f92672">-</span> <span style="color:#ae81ff">5</span> <span style="color:#f92672">*</span> rbow_id;
+</span></span><span style="display:flex;"><span>                cidx <span style="color:#f92672">&lt;=</span> (rbow_id <span style="color:#f92672">==</span> RBOW_CNT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#f92672">?</span> <span style="color:#ae81ff">&#39;h0</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">&#39;h2</span> <span style="color:#f92672">+</span> rbow_id;
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>            DRAW_RBOW: <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>                draw_start_circle <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">if</span> (draw_done) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#66d9ef">if</span> (rbow_id <span style="color:#f92672">==</span> RBOW_CNT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>                        state <span style="color:#f92672">&lt;=</span> INIT_CASTLE;
+</span></span><span style="display:flex;"><span>                    <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>                        rbow_id <span style="color:#f92672">&lt;=</span> rbow_id <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>                        state <span style="color:#f92672">&lt;=</span> INIT_RBOW;
+</span></span><span style="display:flex;"><span>                    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>            INIT_CASTLE: <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// register coordinates and colour (Sweetie 16 palette)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                state <span style="color:#f92672">&lt;=</span> DRAW_CASTLE;
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">case</span> (shape_id)
+</span></span><span style="display:flex;"><span>                    <span style="color:#ae81ff">&#39;d0</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// main building
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                        draw_start_rect <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>                        vx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">60</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">75</span>;
+</span></span><span style="display:flex;"><span>                        vx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">190</span>; vy1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">130</span>;
+</span></span><span style="display:flex;"><span>                        cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">&#39;hE</span>;  <span style="color:#75715e">// dark grey
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#ae81ff">&#39;d1</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// drawbridge
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                        draw_start_rect <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>                        vx0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">110</span>; vy0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">110</span>;
+</span></span><span style="display:flex;"><span>                        vx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">140</span>; vy1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">130</span>;
+</span></span><span style="display:flex;"><span>                        cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">&#39;hF</span>;  <span style="color:#75715e">// blue-grey
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#ae81ff">&#39;d2</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// drawbridge arch
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                        draw_start_circle <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>                        vx0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">125</span>; vy0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">110</span>;
+</span></span><span style="display:flex;"><span>                        vr0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">15</span>;
+</span></span><span style="display:flex;"><span>                        cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">&#39;hF</span>;  <span style="color:#75715e">// blue-grey
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#ae81ff">&#39;d3</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// left tower
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                        draw_start_rect <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>                        vx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">40</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">50</span>;
+</span></span><span style="display:flex;"><span>                        vx1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">60</span>; vy1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">130</span>;
+</span></span><span style="display:flex;"><span>                        cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">&#39;hE</span>;  <span style="color:#75715e">// dark grey
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#ae81ff">&#39;d4</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// middle tower
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                        draw_start_rect <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>                        vx0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">110</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">45</span>;
+</span></span><span style="display:flex;"><span>                        vx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">140</span>; vy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">75</span>;
+</span></span><span style="display:flex;"><span>                        cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">&#39;hE</span>;  <span style="color:#75715e">// dark grey
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#ae81ff">&#39;d5</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// right tower
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                        draw_start_rect <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>                        vx0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">190</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">50</span>;
+</span></span><span style="display:flex;"><span>                        vx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">210</span>; vy1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">130</span>;
+</span></span><span style="display:flex;"><span>                        cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">&#39;hE</span>;  <span style="color:#75715e">// dark grey
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#ae81ff">&#39;d6</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// left roof
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                        draw_start_tri <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>                        vx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">50</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">35</span>;
+</span></span><span style="display:flex;"><span>                        vx1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">65</span>; vy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">50</span>;
+</span></span><span style="display:flex;"><span>                        vx2 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">35</span>; vy2 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">50</span>;
+</span></span><span style="display:flex;"><span>                        cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">&#39;h2</span>;  <span style="color:#75715e">// red
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#ae81ff">&#39;d7</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// middle roof
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                        draw_start_tri <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>                        vx0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">125</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">25</span>;
+</span></span><span style="display:flex;"><span>                        vx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">145</span>; vy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">45</span>;
+</span></span><span style="display:flex;"><span>                        vx2 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">105</span>; vy2 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">45</span>;
+</span></span><span style="display:flex;"><span>                        cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">&#39;h2</span>;  <span style="color:#75715e">// red
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#ae81ff">&#39;d8</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// right roof
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                        draw_start_tri <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>                        vx0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">200</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">35</span>;
+</span></span><span style="display:flex;"><span>                        vx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">215</span>; vy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">50</span>;
+</span></span><span style="display:flex;"><span>                        vx2 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">185</span>; vy2 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">50</span>;
+</span></span><span style="display:flex;"><span>                        cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">&#39;h2</span>;  <span style="color:#75715e">// red
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#ae81ff">&#39;d9</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// left window
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                        draw_start_rect <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>                        vx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">46</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">55</span>;
+</span></span><span style="display:flex;"><span>                        vx1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">54</span>; vy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">70</span>;
+</span></span><span style="display:flex;"><span>                        cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">&#39;hF</span>;  <span style="color:#75715e">// blue-grey
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#ae81ff">&#39;d10</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// middle window
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                        draw_start_rect <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>                        vx0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">120</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">50</span>;
+</span></span><span style="display:flex;"><span>                        vx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">130</span>; vy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">70</span>;
+</span></span><span style="display:flex;"><span>                        cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">&#39;hF</span>;  <span style="color:#75715e">// blue-grey
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#ae81ff">&#39;d11</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// right window
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                        draw_start_rect <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>                        vx0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">196</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">55</span>;
+</span></span><span style="display:flex;"><span>                        vx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">204</span>; vy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">70</span>;
+</span></span><span style="display:flex;"><span>                        cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">&#39;hF</span>;  <span style="color:#75715e">// blue-grey
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#ae81ff">&#39;d12</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// battlement 1
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                        draw_start_rect <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>                        vx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">63</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">67</span>;
+</span></span><span style="display:flex;"><span>                        vx1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">72</span>; vy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">75</span>;
+</span></span><span style="display:flex;"><span>                        cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">&#39;hE</span>;  <span style="color:#75715e">// dark grey
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#ae81ff">&#39;d13</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// battlement 2
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                        draw_start_rect <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>                        vx0 <span style="color:#f92672">&lt;=</span>   <span style="color:#ae81ff">80</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">67</span>;
+</span></span><span style="display:flex;"><span>                        vx1 <span style="color:#f92672">&lt;=</span>   <span style="color:#ae81ff">89</span>; vy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">75</span>;
+</span></span><span style="display:flex;"><span>                        cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">&#39;hE</span>;  <span style="color:#75715e">// dark grey
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#ae81ff">&#39;d14</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// battlement 3
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                        draw_start_rect <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>                        vx0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">97</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">67</span>;
+</span></span><span style="display:flex;"><span>                        vx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">106</span>; vy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">75</span>;
+</span></span><span style="display:flex;"><span>                        cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">&#39;hE</span>;  <span style="color:#75715e">// dark grey
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#ae81ff">&#39;d15</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// battlement 4
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                        draw_start_rect <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>                        vx0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">144</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">67</span>;
+</span></span><span style="display:flex;"><span>                        vx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">153</span>; vy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">75</span>;
+</span></span><span style="display:flex;"><span>                        cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">&#39;hE</span>;  <span style="color:#75715e">// dark grey
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#ae81ff">&#39;d16</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// battlement 5
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                        draw_start_rect <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>                        vx0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">161</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">67</span>;
+</span></span><span style="display:flex;"><span>                        vx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">170</span>; vy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">75</span>;
+</span></span><span style="display:flex;"><span>                        cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">&#39;hE</span>;  <span style="color:#75715e">// dark grey
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#ae81ff">&#39;d17</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// battlement 6
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                        draw_start_rect <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>                        vx0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">178</span>; vy0 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">67</span>;
+</span></span><span style="display:flex;"><span>                        vx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">187</span>; vy1 <span style="color:#f92672">&lt;=</span>  <span style="color:#ae81ff">75</span>;
+</span></span><span style="display:flex;"><span>                        cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">&#39;hE</span>;  <span style="color:#75715e">// dark grey
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">begin</span>  <span style="color:#75715e">// clear ground
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                        draw_start_rect <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>                        vx0 <span style="color:#f92672">&lt;=</span>   <span style="color:#ae81ff">0</span>; vy0 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">131</span>;
+</span></span><span style="display:flex;"><span>                        vx1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">319</span>; vy1 <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">179</span>;
+</span></span><span style="display:flex;"><span>                        cidx <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">&#39;h0</span>;  <span style="color:#75715e">// background (transparent)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">endcase</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>            DRAW_CASTLE: <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>                draw_start_tri    <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>                draw_start_rect   <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>                draw_start_circle <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">if</span> (draw_done) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#66d9ef">if</span> (shape_id <span style="color:#f92672">==</span> SHAPE_CNT<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>                        state <span style="color:#f92672">&lt;=</span> DONE;
+</span></span><span style="display:flex;"><span>                    <span style="color:#66d9ef">end</span> <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>                        shape_id <span style="color:#f92672">&lt;=</span> shape_id <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>                        state <span style="color:#f92672">&lt;=</span> INIT_CASTLE;
+</span></span><span style="display:flex;"><span>                    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>            DONE: state <span style="color:#f92672">&lt;=</span> DONE;
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">if</span> (start) state <span style="color:#f92672">&lt;=</span> INIT_RBOW;  <span style="color:#75715e">// IDLE
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#66d9ef">endcase</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (rst) state <span style="color:#f92672">&lt;=</span> IDLE;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    draw_triangle_fill #(.CORDW(CORDW)) draw_triangle_inst (
+</span></span><span style="display:flex;"><span>        .clk,
+</span></span><span style="display:flex;"><span>        .rst,
+</span></span><span style="display:flex;"><span>        .start(draw_start_tri),
+</span></span><span style="display:flex;"><span>        .oe,
+</span></span><span style="display:flex;"><span>        .x0(vx0 <span style="color:#f92672">*</span> SCALE),
+</span></span><span style="display:flex;"><span>        .y0(vy0 <span style="color:#f92672">*</span> SCALE),
+</span></span><span style="display:flex;"><span>        .x1(vx1 <span style="color:#f92672">*</span> SCALE),
+</span></span><span style="display:flex;"><span>        .y1(vy1 <span style="color:#f92672">*</span> SCALE),
+</span></span><span style="display:flex;"><span>        .x2(vx2 <span style="color:#f92672">*</span> SCALE),
+</span></span><span style="display:flex;"><span>        .y2(vy2 <span style="color:#f92672">*</span> SCALE),
+</span></span><span style="display:flex;"><span>        .x(x_tri),
+</span></span><span style="display:flex;"><span>        .y(y_tri),
+</span></span><span style="display:flex;"><span>        .drawing(drawing_tri),
+</span></span><span style="display:flex;"><span>        .busy(),
+</span></span><span style="display:flex;"><span>        .done(draw_done_tri)
+</span></span><span style="display:flex;"><span>    );
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    draw_rectangle_fill #(.CORDW(CORDW)) draw_rectangle_inst (
+</span></span><span style="display:flex;"><span>        .clk,
+</span></span><span style="display:flex;"><span>        .rst,
+</span></span><span style="display:flex;"><span>        .start(draw_start_rect),
+</span></span><span style="display:flex;"><span>        .oe,
+</span></span><span style="display:flex;"><span>        .x0(vx0 <span style="color:#f92672">*</span> SCALE),
+</span></span><span style="display:flex;"><span>        .y0(vy0 <span style="color:#f92672">*</span> SCALE),
+</span></span><span style="display:flex;"><span>        .x1(vx1 <span style="color:#f92672">*</span> SCALE),
+</span></span><span style="display:flex;"><span>        .y1(vy1 <span style="color:#f92672">*</span> SCALE),
+</span></span><span style="display:flex;"><span>        .x(x_rect),
+</span></span><span style="display:flex;"><span>        .y(y_rect),
+</span></span><span style="display:flex;"><span>        .drawing(drawing_rect),
+</span></span><span style="display:flex;"><span>        .busy(),
+</span></span><span style="display:flex;"><span>        .done(draw_done_rect)
+</span></span><span style="display:flex;"><span>    );
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    draw_circle_fill #(.CORDW(CORDW)) draw_circle_inst (
+</span></span><span style="display:flex;"><span>        .clk,
+</span></span><span style="display:flex;"><span>        .rst,
+</span></span><span style="display:flex;"><span>        .start(draw_start_circle),
+</span></span><span style="display:flex;"><span>        .oe,
+</span></span><span style="display:flex;"><span>        .x0(vx0 <span style="color:#f92672">*</span> SCALE),
+</span></span><span style="display:flex;"><span>        .y0(vy0 <span style="color:#f92672">*</span> SCALE),
+</span></span><span style="display:flex;"><span>        .r0(vr0 <span style="color:#f92672">*</span> SCALE),
+</span></span><span style="display:flex;"><span>        .x(x_circle),
+</span></span><span style="display:flex;"><span>        .y(y_circle),
+</span></span><span style="display:flex;"><span>        .drawing(drawing_circle),
+</span></span><span style="display:flex;"><span>        .busy(),
+</span></span><span style="display:flex;"><span>        .done(draw_done_circle)
+</span></span><span style="display:flex;"><span>    );
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// output coordinates for the active shape
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>        x <span style="color:#f92672">&lt;=</span> drawing_tri <span style="color:#f92672">?</span> x_tri <span style="color:#f92672">:</span> (drawing_rect <span style="color:#f92672">?</span> x_rect <span style="color:#f92672">:</span> x_circle);
+</span></span><span style="display:flex;"><span>        y <span style="color:#f92672">&lt;=</span> drawing_tri <span style="color:#f92672">?</span> y_tri <span style="color:#f92672">:</span> (drawing_rect <span style="color:#f92672">?</span> y_rect <span style="color:#f92672">:</span> y_circle);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// drawing and done apply to all drawing types
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>        drawing   <span style="color:#f92672">&lt;=</span> drawing_tri   <span style="color:#f92672">||</span> drawing_rect   <span style="color:#f92672">||</span> drawing_circle;
+</span></span><span style="display:flex;"><span>        draw_done <span style="color:#f92672">&lt;=</span> draw_done_tri <span style="color:#f92672">||</span> draw_done_rect <span style="color:#f92672">||</span> draw_done_circle;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// doesn&#39;t need delaying one cycle because it&#39;s based on draw_done
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk) done <span style="color:#f92672">&lt;=</span> (state <span style="color:#f92672">==</span> DONE);
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">endmodule</span>
+</span></span></code></pre></div><h2 id="rendering-background">Rendering Background</h2>
+<p>The background is rendered in the top module but will move to its own module in time.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span>    <span style="color:#75715e">// background colour (sy ignores 16:9 letterbox)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">logic</span> [COLRW<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">0</span>] bg_colr;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">always_ff</span> @(<span style="color:#66d9ef">posedge</span> clk_pix) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (line) <span style="color:#66d9ef">begin</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span>      (sy <span style="color:#f92672">==</span>   <span style="color:#ae81ff">0</span>) bg_colr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">12&#39;h000</span>;
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span>  <span style="color:#ae81ff">60</span>) bg_colr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">12&#39;h239</span>;
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> <span style="color:#ae81ff">140</span>) bg_colr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">12&#39;h24A</span>;
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> <span style="color:#ae81ff">195</span>) bg_colr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">12&#39;h25B</span>;
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> <span style="color:#ae81ff">230</span>) bg_colr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">12&#39;h26C</span>;
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> <span style="color:#ae81ff">260</span>) bg_colr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">12&#39;h27D</span>;
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> <span style="color:#ae81ff">285</span>) bg_colr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">12&#39;h29E</span>;
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> <span style="color:#ae81ff">305</span>) bg_colr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">12&#39;h2BF</span>;
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> <span style="color:#ae81ff">322</span>) bg_colr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">12&#39;h370</span>;  <span style="color:#75715e">// below castle (2x pix)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (sy <span style="color:#f92672">==</span> <span style="color:#ae81ff">420</span>) bg_colr <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">12&#39;h000</span>;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">end</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">end</span>
+</span></span></code></pre></div><h2 id="whats-next">What&rsquo;s Next?</h2>
+<p>Check out my <a href="/#fpga-graphics">FPGA graphics</a> tutorial series.</p>
+</section>
+
+  
+  
+  <footer class="mt-12 flex flex-wrap">
+     
+    <a
+      class="mb-1.5 mr-1.5 rounded-lg bg-black/[3%] px-5 py-1.5 no-underline dark:bg-white/[8%]"
+      href="https://projectf.io/tags/graphics"
+      >graphics</a
+    >
+     
+    <a
+      class="mb-1.5 mr-1.5 rounded-lg bg-black/[3%] px-5 py-1.5 no-underline dark:bg-white/[8%]"
+      href="https://projectf.io/tags/arty-a7"
+      >arty-a7</a
+    >
+     
+    <a
+      class="mb-1.5 mr-1.5 rounded-lg bg-black/[3%] px-5 py-1.5 no-underline dark:bg-white/[8%]"
+      href="https://projectf.io/tags/verilator"
+      >verilator</a
+    >
+    
+  </footer>
+  
+
+  
+  
+
+  
+  
+
+  
+  
+
+  
+
+  
+</article>
+
+
+    </main>
+
+    <footer
+  
+  class="opaco mx-auto flex h-[4.5rem] max-w-4xl items-center px-8 text-[0.9em] opacity-60"
+  
+>
+  <div class="mr-auto">
+    <a class="link" href="https://projectf.io/">Project F</a>: FPGA and RISC-V. Only hardware makes it possible!
+    &copy; 2025 Will Green. 
+  </div>
+</footer>
+
+  </body>
+</html>
